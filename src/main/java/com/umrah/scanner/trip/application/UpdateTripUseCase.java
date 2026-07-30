@@ -1,0 +1,69 @@
+package com.umrah.scanner.trip.application;
+
+import com.umrah.scanner.common.exception.ValidationException;
+import com.umrah.scanner.trip.domain.Trip;
+import com.umrah.scanner.trip.domain.TripHotel;
+import com.umrah.scanner.trip.domain.TripStatus;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class UpdateTripUseCase {
+
+    private final TripOwnershipGuard tripOwnershipGuard;
+
+    public UpdateTripUseCase(TripOwnershipGuard tripOwnershipGuard) {
+        this.tripOwnershipGuard = tripOwnershipGuard;
+    }
+
+    @Transactional
+    public Trip execute(UUID companyUserId, UUID tripId, UpdateTripCommand command) {
+        Trip trip = tripOwnershipGuard.findOwnedTrip(companyUserId, tripId);
+
+        if (trip.getStatus() == TripStatus.CLOSED) {
+            throw new ValidationException("A closed trip can no longer be edited");
+        }
+        if (!command.returnDate().isAfter(command.departureDate())) {
+            throw new ValidationException("Return date must be after the departure date");
+        }
+
+        trip.setTitle(command.title());
+        trip.setDepartureDate(command.departureDate());
+        trip.setReturnDate(command.returnDate());
+        trip.setDepartureAirport(command.departureAirport());
+        trip.setArrivalAirport(command.arrivalAirport());
+        trip.setAirline(command.airline());
+        trip.setFlightNumber(command.flightNumber());
+        trip.setTransitCount(command.transitCount());
+        trip.setTransitCity(command.transitCity());
+        trip.setTransitDuration(command.transitDuration());
+        trip.setDaysInMakkah(command.daysInMakkah());
+        trip.setDaysInMadinah(command.daysInMadinah());
+        trip.setVisaIncluded(command.visaIncluded());
+        trip.setTransportationIncluded(command.transportationIncluded());
+        trip.setMealsIncluded(command.mealsIncluded());
+        trip.setGuideIncluded(command.guideIncluded());
+        trip.setZamzamIncluded(command.zamzamIncluded());
+        trip.setDescription(command.description());
+        trip.setCurrency(command.currency());
+        trip.setAvailableSeats(command.availableSeats());
+        trip.setLastUpdate(Instant.now());
+
+        if (command.hotels() != null) {
+            trip.getHotels().clear();
+            for (TripHotelInput input : command.hotels()) {
+                TripHotel hotel = new TripHotel();
+                hotel.setCity(input.city());
+                hotel.setHotelName(input.hotelName());
+                hotel.setStars(input.stars());
+                hotel.setDistanceToHaramM(input.distanceToHaramM());
+                hotel.setLocationUrl(input.locationUrl());
+                trip.addHotel(hotel);
+            }
+        }
+
+        return trip;
+    }
+}

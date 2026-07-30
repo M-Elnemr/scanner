@@ -1,0 +1,74 @@
+package com.umrah.scanner.lead.application;
+
+import com.umrah.scanner.common.exception.ForbiddenException;
+import com.umrah.scanner.common.exception.NotFoundException;
+import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
+import com.umrah.scanner.customer.infrastructure.CustomerProfileRepository;
+import com.umrah.scanner.lead.domain.Lead;
+import com.umrah.scanner.lead.domain.LeadStatus;
+import com.umrah.scanner.lead.domain.LeadStatusHistory;
+import com.umrah.scanner.lead.infrastructure.LeadRepository;
+import com.umrah.scanner.lead.infrastructure.LeadStatusHistoryRepository;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class LeadQueryService {
+
+    private final LeadRepository leadRepository;
+    private final LeadStatusHistoryRepository leadStatusHistoryRepository;
+    private final CustomerProfileRepository customerProfileRepository;
+    private final CompanyProfileRepository companyProfileRepository;
+
+    public LeadQueryService(
+            LeadRepository leadRepository,
+            LeadStatusHistoryRepository leadStatusHistoryRepository,
+            CustomerProfileRepository customerProfileRepository,
+            CompanyProfileRepository companyProfileRepository) {
+        this.leadRepository = leadRepository;
+        this.leadStatusHistoryRepository = leadStatusHistoryRepository;
+        this.customerProfileRepository = customerProfileRepository;
+        this.companyProfileRepository = companyProfileRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Lead> listForCustomer(UUID customerUserId, LeadStatus status, Pageable pageable) {
+        UUID customerId = customerProfileRepository.findByUserId(customerUserId)
+                .orElseThrow(() -> NotFoundException.of("CustomerProfile", customerUserId))
+                .getId();
+        return status == null
+                ? leadRepository.findAllByCustomerId(customerId, pageable)
+                : leadRepository.findAllByCustomerIdAndStatus(customerId, status, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Lead> listForCompany(UUID companyUserId, LeadStatus status, Pageable pageable) {
+        UUID companyId = companyProfileRepository.findByUserId(companyUserId)
+                .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyUserId))
+                .getId();
+        return status == null
+                ? leadRepository.findAllByCompanyId(companyId, pageable)
+                : leadRepository.findAllByCompanyIdAndStatus(companyId, status, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Lead> listForAdmin(LeadStatus status, Pageable pageable) {
+        return status == null ? leadRepository.findAll(pageable) : leadRepository.findAllByStatus(status, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LeadStatusHistory> getHistory(UUID leadId, UUID callerUserId, boolean isAdmin) {
+        Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        boolean owns = isAdmin
+                || lead.getCustomer().getUser().getId().equals(callerUserId)
+                || lead.getCompany().getUser().getId().equals(callerUserId);
+        if (!owns) {
+            throw new ForbiddenException("This lead does not belong to the caller");
+        }
+        return leadStatusHistoryRepository.findAllByLeadIdOrderByChangedAtAsc(leadId);
+    }
+}
