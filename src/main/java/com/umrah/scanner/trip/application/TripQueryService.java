@@ -36,10 +36,16 @@ public class TripQueryService {
     /** Company identity is only revealed once the viewing customer already has a lead on this trip. */
     @Transactional(readOnly = true)
     public TripDetailResult getPublicDetail(UUID tripId, Optional<UUID> viewingCustomerId) {
-        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
+        Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
         boolean companyVisible = viewingCustomerId
                 .map(customerId -> leadRepository.findByCustomerIdAndTripId(customerId, tripId).isPresent())
                 .orElse(false);
         return new TripDetailResult(trip, companyVisible);
+    }
+
+    @Transactional(readOnly = true)
+    public Trip getOwnedDetail(UUID companyId, UUID tripId) {
+        return tripRepository.findWithDetailsByIdAndCompanyId(tripId, companyId)
+                .orElseThrow(() -> NotFoundException.of("Trip", tripId));
     }
 }

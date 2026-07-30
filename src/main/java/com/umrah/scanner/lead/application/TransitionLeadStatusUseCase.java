@@ -48,7 +48,7 @@ public class TransitionLeadStatusUseCase {
 
     @Transactional
     public Lead execute(UUID leadId, LeadStatus target, Role actorRole, UUID actorUserId) {
-        Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
         requireOwnership(lead, actorRole, actorUserId);
 
         LeadStatus current = lead.getStatus();
@@ -64,10 +64,29 @@ public class TransitionLeadStatusUseCase {
         return lead;
     }
 
+    /**
+     * "Confirm payment" is a single fixed action from the customer's point of view — the server
+     * decides whether that means moving to CUSTOMER_CONFIRMED or on to PAYMENT_PENDING, so the
+     * client never has to know the exact state machine.
+     */
+    @Transactional
+    public Lead confirmPayment(UUID leadId, UUID customerUserId) {
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        requireOwnership(lead, Role.CUSTOMER, customerUserId);
+
+        LeadStatus target = switch (lead.getStatus()) {
+            case INTERESTED, COMPANY_CONTACTED -> LeadStatus.CUSTOMER_CONFIRMED;
+            case CUSTOMER_CONFIRMED -> LeadStatus.PAYMENT_PENDING;
+            default -> throw new ConflictException("Payment cannot be confirmed from " + lead.getStatus());
+        };
+        applyTransition(lead, target, customerUserId);
+        return lead;
+    }
+
     /** Used by admin-side use cases (commission release, cashback send) that already own the ADMIN check. */
     @Transactional
     public Lead applyAsAdmin(UUID leadId, LeadStatus target, UUID adminUserId) {
-        Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
         LeadStatus current = lead.getStatus();
         if (!LeadTransitionPolicy.isAllowed(current, target, Role.ADMIN)) {
             throw new ConflictException("Cannot move lead from " + current + " to " + target + " as ADMIN");

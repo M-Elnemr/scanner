@@ -42,7 +42,7 @@ public class ReleaseCommissionUseCase {
         if (amount == null || amount.signum() < 0) {
             throw new ValidationException("Commission amount must be zero or positive");
         }
-        Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
         if (lead.getStatus() != LeadStatus.ADMIN_REVIEW) {
             throw new ConflictException("Commission can only be released for a lead in ADMIN_REVIEW");
         }

@@ -1,6 +1,7 @@
 package com.umrah.scanner.config;
 
-import java.util.Optional;
+import com.umrah.scanner.common.security.AuthenticatedUser;
+import com.umrah.scanner.common.security.CurrentUserAccessor;
 import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,12 +12,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableJpaAuditing(auditorAwareRef = "auditorAware")
 public class JpaAuditingConfig {
 
-    /**
-     * Placeholder until Spring Security is wired in — will resolve the authenticated
-     * principal's user id from the security context instead of always returning empty.
-     */
     @Bean
-    public AuditorAware<UUID> auditorAware() {
-        return Optional::empty;
+    public AuditorAware<UUID> auditorAware(CurrentUserAccessor currentUserAccessor) {
+        return () -> currentUserAccessor.get().map(AuthenticatedUser::userId);
     }
 }

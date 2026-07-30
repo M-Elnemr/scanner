@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -23,4 +24,11 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     Page<Trip> findAllByStatus(TripStatus status, Pageable pageable);
 
     List<Trip> findAllByIdInAndStatus(List<UUID> ids, TripStatus status);
+
+    /** Fetch-joins hotels and room prices in one query — for single-trip reads only, never a paginated list (avoids in-memory pagination). */
+    @EntityGraph(attributePaths = {"hotels", "roomPrices", "company"})
+    Optional<Trip> findWithDetailsById(UUID id);
+
+    @EntityGraph(attributePaths = {"hotels", "roomPrices", "company"})
+    Optional<Trip> findWithDetailsByIdAndCompanyId(UUID id, UUID companyId);
 }

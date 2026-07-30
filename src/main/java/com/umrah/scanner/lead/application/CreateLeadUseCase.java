@@ -56,7 +56,7 @@ public class CreateLeadUseCase {
             throw new ValidationException("Complete your profile before contacting a company");
         }
 
-        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
+        Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
         if (trip.getStatus() != TripStatus.PUBLISHED) {
             throw new ValidationException("This trip is not available");
         }

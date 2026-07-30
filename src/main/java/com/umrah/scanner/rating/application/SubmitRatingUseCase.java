@@ -38,7 +38,7 @@ public class SubmitRatingUseCase {
         if (stars < 1 || stars > 5) {
             throw new ValidationException("Stars must be between 1 and 5");
         }
-        Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
         if (!lead.getCustomer().getUser().getId().equals(customerUserId)) {
             throw new ForbiddenException("This lead does not belong to the caller");
         }

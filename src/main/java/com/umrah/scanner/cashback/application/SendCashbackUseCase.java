@@ -43,7 +43,7 @@ public class SendCashbackUseCase {
         if (amount == null || amount.signum() < 0) {
             throw new ValidationException("Cashback amount must be zero or positive");
         }
-        Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
         if (lead.getStatus() != LeadStatus.COMMISSION_RELEASED) {
             throw new ConflictException("Cashback can only be sent for a lead in COMMISSION_RELEASED");
         }
