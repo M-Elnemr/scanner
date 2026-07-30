@@ -20,7 +20,7 @@ CREATE TABLE trips (
     guide_included            BOOLEAN NOT NULL DEFAULT false,
     zamzam_included           BOOLEAN NOT NULL DEFAULT false,
     description               TEXT,
-    currency                  CHAR(3) NOT NULL,
+    currency                  VARCHAR(3) NOT NULL,
     available_seats           INTEGER NOT NULL DEFAULT 0,
     status                    VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
     last_update               TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -7,6 +7,7 @@ import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
 import java.util.Optional;
 import java.util.UUID;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class TripQueryService {
     @Transactional(readOnly = true)
     public TripDetailResult getPublicDetail(UUID tripId, Optional<UUID> viewingCustomerId) {
         Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
+        initializeCollections(trip);
         boolean companyVisible = viewingCustomerId
                 .map(customerId -> leadRepository.findByCustomerIdAndTripId(customerId, tripId).isPresent())
                 .orElse(false);
@@ -45,7 +47,19 @@ public class TripQueryService {
 
     @Transactional(readOnly = true)
     public Trip getOwnedDetail(UUID companyId, UUID tripId) {
-        return tripRepository.findWithDetailsByIdAndCompanyId(tripId, companyId)
+        Trip trip = tripRepository.findWithDetailsByIdAndCompanyId(tripId, companyId)
                 .orElseThrow(() -> NotFoundException.of("Trip", tripId));
+        initializeCollections(trip);
+        return trip;
+    }
+
+    /**
+     * Hibernate can't fetch-join hotels and roomPrices together (two bags, one query) — each is
+     * loaded here with its own simple query instead, while the session is still open, so the
+     * controller can safely read both after this transaction commits.
+     */
+    private void initializeCollections(Trip trip) {
+        Hibernate.initialize(trip.getHotels());
+        Hibernate.initialize(trip.getRoomPrices());
     }
 }

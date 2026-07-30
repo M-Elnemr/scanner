@@ -25,10 +25,15 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
 
     List<Trip> findAllByIdInAndStatus(List<UUID> ids, TripStatus status);
 
-    /** Fetch-joins hotels and room prices in one query — for single-trip reads only, never a paginated list (avoids in-memory pagination). */
-    @EntityGraph(attributePaths = {"hotels", "roomPrices", "company"})
+    /**
+     * Fetch-joins company only — hotels and roomPrices are both collections, and Hibernate
+     * cannot fetch-join two bags in one query ({@code MultipleBagFetchException}). The caller
+     * initializes those two separately (still inside the same transaction, still no lazy
+     * exception later) via {@link com.umrah.scanner.trip.application.TripQueryService}.
+     */
+    @EntityGraph(attributePaths = "company")
     Optional<Trip> findWithDetailsById(UUID id);
 
-    @EntityGraph(attributePaths = {"hotels", "roomPrices", "company"})
+    @EntityGraph(attributePaths = "company")
     Optional<Trip> findWithDetailsByIdAndCompanyId(UUID id, UUID companyId);
 }
