@@ -4,6 +4,7 @@ import com.umrah.scanner.auth.infrastructure.JjwtAccessTokenIssuer;
 import com.umrah.scanner.auth.infrastructure.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,20 +24,30 @@ public class SecurityConfig {
     private static final String API_V1 = "/api/v1";
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JjwtAccessTokenIssuer accessTokenIssuer, ObjectMapper objectMapper)
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JjwtAccessTokenIssuer accessTokenIssuer,
+            ObjectMapper objectMapper,
+            @Value("${app.dev-auth.enabled:false}") boolean devAuthEnabled)
             throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, API_V1 + "/auth/google", API_V1 + "/auth/refresh", API_V1 + "/auth/logout")
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET, API_V1 + "/trips/**", API_V1 + "/companies/*/ratings")
-                        .permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health")
-                        .permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.POST, API_V1 + "/auth/google", API_V1 + "/auth/refresh", API_V1 + "/auth/logout")
+                            .permitAll()
+                            .requestMatchers(HttpMethod.GET, API_V1 + "/trips/**", API_V1 + "/companies/*/ratings")
+                            .permitAll()
+                            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health")
+                            .permitAll();
+                    // Independent of DevAuthController's own @Profile("dev") + flag check — this
+                    // path is only ever open here too when the exact same flag is explicitly set.
+                    if (devAuthEnabled) {
+                        auth.requestMatchers(HttpMethod.POST, API_V1 + "/auth/dev-google-test").permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, ex) ->
                                 writeJsonError(response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized", ex.getMessage()))

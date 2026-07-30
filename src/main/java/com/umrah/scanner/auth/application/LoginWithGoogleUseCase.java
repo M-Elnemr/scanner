@@ -47,7 +47,16 @@ public class LoginWithGoogleUseCase {
     @Transactional
     public LoginResult execute(String googleIdToken, Role requestedRoleForNewAccount) {
         GoogleIdentity identity = googleIdTokenVerifier.verify(googleIdToken);
+        return executeForVerifiedIdentity(identity, requestedRoleForNewAccount);
+    }
 
+    /**
+     * Find-or-create-and-issue-tokens, for a {@link GoogleIdentity} the caller has already
+     * obtained by some means. Public only so the dev-only Google-bypass login (never wired
+     * up outside the "dev" profile) can reuse this exact logic instead of duplicating it.
+     */
+    @Transactional
+    public LoginResult executeForVerifiedIdentity(GoogleIdentity identity, Role requestedRoleForNewAccount) {
         User user = userRepository.findByGoogleSub(identity.subject())
                 .or(() -> userRepository.findByEmail(identity.email()))
                 .orElseGet(() -> registerNewUser(identity, requestedRoleForNewAccount));
