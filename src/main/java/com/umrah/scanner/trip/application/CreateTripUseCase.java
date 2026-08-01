@@ -5,7 +5,6 @@ import com.umrah.scanner.common.exception.ConflictException;
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.company.domain.CompanyProfile;
-import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripHotel;
@@ -37,9 +36,6 @@ public class CreateTripUseCase {
         CompanyProfile company = companyProfileRepository.findByUserId(companyUserId)
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyUserId));
 
-        if (company.getStatus() != CompanyStatus.APPROVED) {
-            throw new ValidationException("Only an approved company can create trips");
-        }
         if (tripRepository.existsByTripCode(command.tripCode())) {
             throw new ConflictException("Trip code already in use: " + command.tripCode());
         }
