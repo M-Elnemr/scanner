@@ -6,6 +6,7 @@ import com.umrah.scanner.favourite.domain.Favourite;
 import com.umrah.scanner.favourite.infrastructure.FavouriteRepository;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
 import java.util.UUID;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,18 +30,22 @@ public class FavouriteService {
 
     @Transactional
     public Favourite addFavourite(UUID customerId, UUID tripId) {
-        return favouriteRepository.findByCustomerIdAndTripId(customerId, tripId).orElseGet(() -> {
+        Favourite favourite = favouriteRepository.findByCustomerIdAndTripId(customerId, tripId).orElseGet(() -> {
             if (!customerProfileRepository.existsById(customerId)) {
                 throw NotFoundException.of("CustomerProfile", customerId);
             }
             if (!tripRepository.existsById(tripId)) {
                 throw NotFoundException.of("Trip", tripId);
             }
-            Favourite favourite = new Favourite();
-            favourite.setCustomer(customerProfileRepository.getReferenceById(customerId));
-            favourite.setTrip(tripRepository.getReferenceById(tripId));
-            return favouriteRepository.save(favourite);
+            Favourite newFavourite = new Favourite();
+            newFavourite.setCustomer(customerProfileRepository.getReferenceById(customerId));
+            newFavourite.setTrip(tripRepository.getReferenceById(tripId));
+            return favouriteRepository.save(newFavourite);
         });
+        // The controller maps the response after this transaction/session closes (open-in-view is
+        // off), so the lazy trip association it reads must be force-initialized here first.
+        Hibernate.initialize(favourite.getTrip());
+        return favourite;
     }
 
     @Transactional

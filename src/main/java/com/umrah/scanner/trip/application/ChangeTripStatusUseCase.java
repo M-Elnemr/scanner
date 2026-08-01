@@ -30,6 +30,10 @@ public class ChangeTripStatusUseCase {
 
         trip.setStatus(target);
         trip.setLastUpdate(Instant.now());
+        // The controller maps the response after this transaction/session closes (open-in-view is
+        // off), so any lazy collection it touches must be force-initialized here first.
+        trip.getHotels().size();
+        trip.getRoomPrices().size();
         return trip;
     }
 
