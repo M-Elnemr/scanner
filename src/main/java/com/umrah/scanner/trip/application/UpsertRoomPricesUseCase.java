@@ -33,6 +33,9 @@ public class UpsertRoomPricesUseCase {
             trip.addRoomPrice(roomPrice);
         }
         trip.setLastUpdate(Instant.now());
+        // The controller maps the response after this transaction/session closes (open-in-view is
+        // off), so any lazy collection it touches must be force-initialized here first.
+        trip.getHotels().size();
         return trip;
     }
 }
