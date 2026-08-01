@@ -1,9 +1,11 @@
 package com.umrah.scanner.trip.application;
 
 import com.umrah.scanner.common.exception.ValidationException;
+import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripHotel;
 import com.umrah.scanner.trip.domain.TripStatus;
+import com.umrah.scanner.trip.infrastructure.TripRepository;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -13,9 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdateTripUseCase {
 
     private final TripOwnershipGuard tripOwnershipGuard;
+    private final TripRepository tripRepository;
 
-    public UpdateTripUseCase(TripOwnershipGuard tripOwnershipGuard) {
+    public UpdateTripUseCase(TripOwnershipGuard tripOwnershipGuard, TripRepository tripRepository) {
         this.tripOwnershipGuard = tripOwnershipGuard;
+        this.tripRepository = tripRepository;
     }
 
     @Transactional
@@ -49,10 +53,15 @@ public class UpdateTripUseCase {
         trip.setDescription(command.description());
         trip.setCurrency(command.currency());
         trip.setAvailableSeats(command.availableSeats());
+        trip.setTier(command.tier());
         trip.setLastUpdate(Instant.now());
 
         if (command.hotels() != null) {
             trip.getHotels().clear();
+            // Force the orphan-removal deletes to run now, before the inserts below. Otherwise
+            // Hibernate flushes inserts first and a replacement row for the same (trip_id, city)
+            // hits uq_trip_hotels_trip_city before the old row is gone.
+            tripRepository.flush();
             for (TripHotelInput input : command.hotels()) {
                 TripHotel hotel = new TripHotel();
                 hotel.setCity(input.city());
@@ -61,6 +70,17 @@ public class UpdateTripUseCase {
                 hotel.setDistanceToHaramM(input.distanceToHaramM());
                 hotel.setLocationUrl(input.locationUrl());
                 trip.addHotel(hotel);
+            }
+        }
+        if (command.roomPrices() != null) {
+            trip.getRoomPrices().clear();
+            // Same ordering hazard as hotels above, against uq_room_prices_trip_room_type.
+            tripRepository.flush();
+            for (RoomPriceInput input : command.roomPrices()) {
+                RoomPrice roomPrice = new RoomPrice();
+                roomPrice.setRoomType(input.roomType());
+                roomPrice.setPrice(input.price());
+                trip.addRoomPrice(roomPrice);
             }
         }
 

@@ -16,10 +16,14 @@ import com.umrah.scanner.trip.application.TripQueryService;
 import com.umrah.scanner.trip.application.UpdateTripCommand;
 import com.umrah.scanner.trip.application.UpdateTripUseCase;
 import com.umrah.scanner.trip.application.UpsertRoomPricesUseCase;
+import com.umrah.scanner.trip.domain.Trip;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,6 +41,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class TripController {
+
+    private static final String DEFAULT_CURRENCY = "EGP";
 
     private final CreateTripUseCase createTripUseCase;
     private final UpdateTripUseCase updateTripUseCase;
@@ -119,7 +125,9 @@ public class TripController {
     public ApiResponse<PageResponse<TripSummaryResponse>> listMine(
             @AuthenticationPrincipal AuthenticatedUser currentUser, Pageable pageable) {
         UUID companyId = companyQueryService.getByUserId(currentUser.userId()).getId();
-        return ApiResponse.of(PageResponse.of(tripQueryService.listForCompany(companyId, pageable), TripSummaryResponse::from));
+        Page<Trip> trips = tripQueryService.listForCompany(companyId, pageable);
+        Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
+        return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))));
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -133,7 +141,9 @@ public class TripController {
 
     @GetMapping("/api/v1/trips")
     public ApiResponse<PageResponse<TripSummaryResponse>> browse(Pageable pageable) {
-        return ApiResponse.of(PageResponse.of(tripQueryService.browsePublished(pageable), TripSummaryResponse::from));
+        Page<Trip> trips = tripQueryService.browsePublished(pageable);
+        Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
+        return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))));
     }
 
     @GetMapping("/api/v1/trips/{id}")
@@ -146,7 +156,13 @@ public class TripController {
     @PreAuthorize("hasRole('CUSTOMER')")
     @GetMapping("/api/v1/trips/compare")
     public ApiResponse<List<TripSummaryResponse>> compare(@RequestParam List<UUID> ids) {
-        return ApiResponse.of(compareTripsUseCase.execute(ids).stream().map(TripSummaryResponse::from).toList());
+        List<Trip> trips = compareTripsUseCase.execute(ids);
+        Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(trips.stream().map(Trip::getId).toList());
+        return ApiResponse.of(trips.stream().map(trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))).toList());
+    }
+
+    private List<UUID> tripIds(Page<Trip> trips) {
+        return trips.getContent().stream().map(Trip::getId).toList();
     }
 
     private Optional<UUID> resolveCustomerProfileId(AuthenticatedUser currentUser) {
@@ -161,7 +177,8 @@ public class TripController {
                 r.tripCode(), r.title(), r.departureDate(), r.returnDate(), r.departureAirport(), r.arrivalAirport(),
                 r.airline(), r.flightNumber(), r.transitCount(), r.transitCity(), r.transitDuration(),
                 r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
-                r.guideIncluded(), r.zamzamIncluded(), r.description(), r.currency(), r.availableSeats(), toHotelInputs(r.hotels()));
+                r.guideIncluded(), r.zamzamIncluded(), r.description(), currencyOrDefault(r.currency()), r.availableSeats(),
+                toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
     }
 
     private UpdateTripCommand toUpdateCommand(UpdateTripRequest r) {
@@ -169,15 +186,29 @@ public class TripController {
                 r.title(), r.departureDate(), r.returnDate(), r.departureAirport(), r.arrivalAirport(),
                 r.airline(), r.flightNumber(), r.transitCount(), r.transitCity(), r.transitDuration(),
                 r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
-                r.guideIncluded(), r.zamzamIncluded(), r.description(), r.currency(), r.availableSeats(), toHotelInputs(r.hotels()));
+                r.guideIncluded(), r.zamzamIncluded(), r.description(), currencyOrDefault(r.currency()), r.availableSeats(),
+                toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
     }
 
+    private String currencyOrDefault(String currency) {
+        return (currency == null || currency.isBlank()) ? DEFAULT_CURRENCY : currency;
+    }
+
+    // null means "omitted" (leave untouched on update); an empty list is an explicit clear.
     private List<TripHotelInput> toHotelInputs(List<TripHotelRequest> hotels) {
         if (hotels == null) {
-            return List.of();
+            return null;
         }
         return hotels.stream()
                 .map(h -> new TripHotelInput(h.city(), h.hotelName(), h.stars(), h.distanceToHaramM(), h.locationUrl()))
                 .toList();
+    }
+
+    // null means "omitted" (leave untouched on update); an empty list is an explicit clear.
+    private List<RoomPriceInput> toRoomPriceInputs(List<RoomPriceRequest> prices) {
+        if (prices == null) {
+            return null;
+        }
+        return prices.stream().map(p -> new RoomPriceInput(p.roomType(), p.price())).toList();
     }
 }

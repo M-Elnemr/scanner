@@ -2,11 +2,18 @@ package com.umrah.scanner.trip.application;
 
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
+import com.umrah.scanner.trip.domain.RoomPrice;
+import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
+import com.umrah.scanner.trip.infrastructure.RoomPriceRepository;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,10 +25,22 @@ public class TripQueryService {
 
     private final TripRepository tripRepository;
     private final LeadRepository leadRepository;
+    private final RoomPriceRepository roomPriceRepository;
 
-    public TripQueryService(TripRepository tripRepository, LeadRepository leadRepository) {
+    public TripQueryService(TripRepository tripRepository, LeadRepository leadRepository, RoomPriceRepository roomPriceRepository) {
         this.tripRepository = tripRepository;
         this.leadRepository = leadRepository;
+        this.roomPriceRepository = roomPriceRepository;
+    }
+
+    /** "Price starts from" — the QUAD (4-bed) room price is the cheapest per-person rate we sell. */
+    @Transactional(readOnly = true)
+    public Map<UUID, BigDecimal> priceStartsFrom(List<UUID> tripIds) {
+        if (tripIds.isEmpty()) {
+            return Map.of();
+        }
+        return roomPriceRepository.findAllByTripIdInAndRoomType(tripIds, RoomType.QUAD).stream()
+                .collect(Collectors.toMap(rp -> rp.getTrip().getId(), RoomPrice::getPrice));
     }
 
     @Transactional(readOnly = true)

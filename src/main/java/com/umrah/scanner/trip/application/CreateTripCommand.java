@@ -1,5 +1,6 @@
 package com.umrah.scanner.trip.application;
 
+import com.umrah.scanner.trip.domain.TripTier;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -25,5 +26,7 @@ public record CreateTripCommand(
         String description,
         String currency,
         int availableSeats,
-        List<TripHotelInput> hotels) {
+        List<TripHotelInput> hotels,
+        List<RoomPriceInput> roomPrices,
+        TripTier tier) {
 }

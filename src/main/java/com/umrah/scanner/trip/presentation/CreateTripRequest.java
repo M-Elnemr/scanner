@@ -1,5 +1,6 @@
 package com.umrah.scanner.trip.presentation;
 
+import com.umrah.scanner.trip.domain.TripTier;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -28,7 +29,9 @@ public record CreateTripRequest(
         boolean guideIncluded,
         boolean zamzamIncluded,
         String description,
-        @NotBlank @Size(min = 3, max = 3) String currency,
+        @Size(min = 3, max = 3) String currency,
         @PositiveOrZero int availableSeats,
-        @Valid List<TripHotelRequest> hotels) {
+        @Valid List<TripHotelRequest> hotels,
+        @Valid List<RoomPriceRequest> prices,
+        @NotNull TripTier tier) {
 }

@@ -6,6 +6,7 @@ import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.company.domain.CompanyProfile;
 import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
+import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripHotel;
 import com.umrah.scanner.trip.domain.TripStatus;
@@ -66,7 +67,8 @@ public class CreateTripUseCase {
         trip.setDescription(command.description());
         trip.setCurrency(command.currency());
         trip.setAvailableSeats(command.availableSeats());
-        trip.setStatus(TripStatus.DRAFT);
+        trip.setStatus(TripStatus.PUBLISHED);
+        trip.setTier(command.tier());
         trip.setLastUpdate(Instant.now());
 
         if (command.hotels() != null) {
@@ -78,6 +80,14 @@ public class CreateTripUseCase {
                 hotel.setDistanceToHaramM(input.distanceToHaramM());
                 hotel.setLocationUrl(input.locationUrl());
                 trip.addHotel(hotel);
+            }
+        }
+        if (command.roomPrices() != null) {
+            for (RoomPriceInput input : command.roomPrices()) {
+                RoomPrice roomPrice = new RoomPrice();
+                roomPrice.setRoomType(input.roomType());
+                roomPrice.setPrice(input.price());
+                trip.addRoomPrice(roomPrice);
             }
         }
 

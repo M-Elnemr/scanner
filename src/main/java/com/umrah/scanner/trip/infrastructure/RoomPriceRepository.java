@@ -12,4 +12,6 @@ public interface RoomPriceRepository extends JpaRepository<RoomPrice, UUID> {
     List<RoomPrice> findAllByTripId(UUID tripId);
 
     Optional<RoomPrice> findByTripIdAndRoomType(UUID tripId, RoomType roomType);
+
+    List<RoomPrice> findAllByTripIdInAndRoomType(List<UUID> tripIds, RoomType roomType);
 }

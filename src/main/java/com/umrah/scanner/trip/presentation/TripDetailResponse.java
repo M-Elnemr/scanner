@@ -3,6 +3,7 @@ package com.umrah.scanner.trip.presentation;
 import com.umrah.scanner.trip.application.TripDetailResult;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
+import com.umrah.scanner.trip.domain.TripTier;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -32,6 +33,7 @@ public record TripDetailResponse(
         String currency,
         int availableSeats,
         TripStatus status,
+        TripTier tier,
         Instant lastUpdate,
         List<TripHotelResponse> hotels,
         List<RoomPriceResponse> roomPrices,
@@ -54,7 +56,7 @@ public record TripDetailResponse(
                 trip.getDaysInMakkah(), trip.getDaysInMadinah(),
                 trip.isVisaIncluded(), trip.isTransportationIncluded(), trip.isMealsIncluded(),
                 trip.isGuideIncluded(), trip.isZamzamIncluded(), trip.getDescription(),
-                trip.getCurrency(), trip.getAvailableSeats(), trip.getStatus(), trip.getLastUpdate(),
+                trip.getCurrency(), trip.getAvailableSeats(), trip.getStatus(), trip.getTier(), trip.getLastUpdate(),
                 trip.getHotels().stream().map(TripHotelResponse::from).toList(),
                 trip.getRoomPrices().stream().map(RoomPriceResponse::from).toList(),
                 contact);

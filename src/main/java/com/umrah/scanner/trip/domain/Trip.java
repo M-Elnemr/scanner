@@ -102,6 +102,10 @@ public class Trip extends SoftDeletableEntity {
     @Column(name = "status", nullable = false, length = 20)
     private TripStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tier", nullable = false, length = 20)
+    private TripTier tier;
+
     @Column(name = "last_update", nullable = false)
     private Instant lastUpdate;
 
