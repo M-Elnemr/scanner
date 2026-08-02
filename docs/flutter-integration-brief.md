@@ -532,3 +532,10 @@ Old types `LEAD_ADMIN_REVIEW`, `COMMISSION_RELEASED` and `CASHBACK_SENT` no long
   landing page).
 - Postman: `postman/Umrah-Scanner.postman_collection.json` — the **Lead** folder walks one lead
   through all seven numbered steps in order and is the fastest way to see real payloads.
+- Seed data: `src/main/resources/db/seed/dev-seed.sql` gives the dev database 5 companies with
+  10 published trips each (50 trips, real Egyptian governorates, real airlines and Makkah/Madinah
+  hotels, prices spanning ECONOMIC/PREMIUM/VIP and off-peak through Ramadan). Every company has a
+  different `commissionPerTraveler`, so `cashbackPerTraveler` varies between 300 and 625 EGP across
+  the catalogue — useful for checking the UI does not hardcode a value. Sign in as any of them in
+  the dev profile with `POST /api/v1/auth/dev-google-test`, e.g.
+  `{"email": "nour-al-haram@seed.test", "role": "COMPANY"}`.
