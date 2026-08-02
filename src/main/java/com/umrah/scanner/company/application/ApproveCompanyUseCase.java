@@ -35,6 +35,7 @@ public class ApproveCompanyUseCase {
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyId));
 
         if (company.getStatus() == CompanyStatus.APPROVED) {
+            CompanyProfileInitializer.initializeAddresses(company);
             return company;
         }
         if (company.getStatus() == CompanyStatus.SUSPENDED) {
@@ -55,6 +56,7 @@ public class ApproveCompanyUseCase {
                 Map.of("companyId", company.getId().toString()));
 
         auditLogService.record(adminUserId, "COMPANY_APPROVED", "CompanyProfile", companyId, previous, company.getStatus());
+        CompanyProfileInitializer.initializeAddresses(company);
         return company;
     }
 }

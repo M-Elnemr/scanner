@@ -1,13 +1,15 @@
 package com.umrah.scanner.company.presentation;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 
 public record UpdateCompanyProfileRequest(
         @NotBlank @Size(max = 255) String companyName,
-        @NotBlank @Size(max = 100) String city,
-        @NotBlank @Size(max = 500) String address,
         String logoUrl,
         String whatsapp,
-        String description) {
+        String description,
+        @NotEmpty @Valid List<CompanyAddressRequest> addresses) {
 }

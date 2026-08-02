@@ -8,7 +8,9 @@ import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.infrastructure.RoomPriceRepository;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
+import com.umrah.scanner.trip.infrastructure.TripSpecifications;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,8 +47,23 @@ public class TripQueryService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Trip> browsePublished(Pageable pageable) {
-        return tripRepository.findAllByStatus(TripStatus.PUBLISHED, pageable);
+    public Page<Trip> browsePublished(TripBrowseFilter filter, Pageable pageable) {
+        List<Specification<Trip>> specs = new ArrayList<>();
+        specs.add(TripSpecifications.hasStatus(TripStatus.PUBLISHED));
+        if (filter.tiers() != null && !filter.tiers().isEmpty()) {
+            specs.add(TripSpecifications.hasTierIn(filter.tiers()));
+        }
+        if (filter.departureFrom() != null || filter.departureTo() != null) {
+            specs.add(TripSpecifications.departureBetween(filter.departureFrom(), filter.departureTo()));
+        }
+        if (filter.minDays() != null || filter.maxDays() != null) {
+            specs.add(TripSpecifications.durationBetween(filter.minDays(), filter.maxDays()));
+        }
+        if (filter.minPrice() != null || filter.maxPrice() != null) {
+            RoomType roomType = filter.priceRoomType() != null ? filter.priceRoomType() : RoomType.QUAD;
+            specs.add(TripSpecifications.priceForRoomTypeBetween(roomType, filter.minPrice(), filter.maxPrice()));
+        }
+        return tripRepository.findAll(Specification.allOf(specs), pageable);
     }
 
     @Transactional(readOnly = true)

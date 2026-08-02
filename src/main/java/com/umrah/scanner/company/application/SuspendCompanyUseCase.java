@@ -48,6 +48,7 @@ public class SuspendCompanyUseCase {
                 Map.of("companyId", company.getId().toString()));
 
         auditLogService.record(adminUserId, "COMPANY_SUSPENDED", "CompanyProfile", companyId, CompanyStatus.APPROVED, company.getStatus());
+        CompanyProfileInitializer.initializeAddresses(company);
         return company;
     }
 }

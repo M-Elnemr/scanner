@@ -2,16 +2,20 @@ package com.umrah.scanner.company.domain;
 
 import com.umrah.scanner.common.domain.SoftDeletableEntity;
 import com.umrah.scanner.user.domain.User;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,12 +39,6 @@ public class CompanyProfile extends SoftDeletableEntity {
 
     @Column(name = "license_number", nullable = false, length = 100)
     private String licenseNumber;
-
-    @Column(name = "city", nullable = false, length = 100)
-    private String city;
-
-    @Column(name = "address", nullable = false, length = 500)
-    private String address;
 
     @Column(name = "logo_url", length = 500)
     private String logoUrl;
@@ -69,4 +67,12 @@ public class CompanyProfile extends SoftDeletableEntity {
 
     @Column(name = "rating_count", nullable = false)
     private int ratingCount;
+
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<CompanyAddress> addresses = new ArrayList<>();
+
+    public void addAddress(CompanyAddress address) {
+        addresses.add(address);
+        address.setCompany(this);
+    }
 }

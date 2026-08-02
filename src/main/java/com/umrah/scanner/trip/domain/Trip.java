@@ -109,6 +109,10 @@ public class Trip extends SoftDeletableEntity {
     @Column(name = "last_update", nullable = false)
     private Instant lastUpdate;
 
+    /** Postgres-computed (return_date - departure_date); read-only, backs the browse days-range filter. */
+    @Column(name = "duration_days", nullable = false, insertable = false, updatable = false)
+    private int durationDays;
+
     @Version
     @Column(name = "version", nullable = false)
     private long version;

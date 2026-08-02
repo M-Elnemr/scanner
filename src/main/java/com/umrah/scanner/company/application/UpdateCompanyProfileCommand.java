@@ -1,10 +1,11 @@
 package com.umrah.scanner.company.application;
 
+import java.util.List;
+
 public record UpdateCompanyProfileCommand(
         String companyName,
-        String city,
-        String address,
         String logoUrl,
         String whatsapp,
-        String description) {
+        String description,
+        List<CompanyAddressInput> addresses) {
 }

@@ -5,20 +5,25 @@ import com.umrah.scanner.common.response.PageResponse;
 import com.umrah.scanner.common.security.AuthenticatedUser;
 import com.umrah.scanner.company.application.CompanyQueryService;
 import com.umrah.scanner.customer.application.CustomerQueryService;
+import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.trip.application.ChangeTripStatusUseCase;
 import com.umrah.scanner.trip.application.CompareTripsUseCase;
 import com.umrah.scanner.trip.application.CreateTripCommand;
 import com.umrah.scanner.trip.application.CreateTripUseCase;
 import com.umrah.scanner.trip.application.DeleteTripUseCase;
 import com.umrah.scanner.trip.application.RoomPriceInput;
+import com.umrah.scanner.trip.application.TripBrowseFilter;
 import com.umrah.scanner.trip.application.TripHotelInput;
 import com.umrah.scanner.trip.application.TripQueryService;
 import com.umrah.scanner.trip.application.UpdateTripCommand;
 import com.umrah.scanner.trip.application.UpdateTripUseCase;
 import com.umrah.scanner.trip.application.UpsertRoomPricesUseCase;
+import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
+import com.umrah.scanner.trip.domain.TripTier;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -140,10 +145,36 @@ public class TripController {
     // --- Public browsing ---
 
     @GetMapping("/api/v1/trips")
-    public ApiResponse<PageResponse<TripSummaryResponse>> browse(Pageable pageable) {
-        Page<Trip> trips = tripQueryService.browsePublished(pageable);
+    public ApiResponse<PageResponse<TripSummaryResponse>> browse(
+            @RequestParam(required = false) List<TripTier> tiers,
+            @RequestParam(required = false) Integer roomSize,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Integer minDays,
+            @RequestParam(required = false) Integer maxDays,
+            @RequestParam(required = false) LocalDate departureFrom,
+            @RequestParam(required = false) LocalDate departureTo,
+            Pageable pageable) {
+        var filter = new TripBrowseFilter(
+                tiers, roomTypeForSize(roomSize), minPrice, maxPrice, minDays, maxDays, departureFrom, departureTo);
+        Page<Trip> trips = tripQueryService.browsePublished(filter, pageable);
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
         return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))));
+    }
+
+    // "Room size" is the customer-facing term for how many people the room sleeps; null defaults
+    // to QUAD (4-bed), the same room type "price starts from" is based on.
+    private RoomType roomTypeForSize(Integer roomSize) {
+        if (roomSize == null) {
+            return null;
+        }
+        return switch (roomSize) {
+            case 1 -> RoomType.SINGLE;
+            case 2 -> RoomType.DOUBLE;
+            case 3 -> RoomType.TRIPLE;
+            case 4 -> RoomType.QUAD;
+            default -> throw new ValidationException("roomSize must be 1, 2, 3, or 4");
+        };
     }
 
     @GetMapping("/api/v1/trips/{id}")

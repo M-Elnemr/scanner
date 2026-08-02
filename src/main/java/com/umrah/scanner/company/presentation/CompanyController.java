@@ -1,6 +1,7 @@
 package com.umrah.scanner.company.presentation;
 
 import com.umrah.scanner.company.application.ApproveCompanyUseCase;
+import com.umrah.scanner.company.application.CompanyAddressInput;
 import com.umrah.scanner.company.application.CompanyQueryService;
 import com.umrah.scanner.company.application.RegisterCompanyCommand;
 import com.umrah.scanner.company.application.RegisterCompanyUseCase;
@@ -15,6 +16,7 @@ import com.umrah.scanner.common.response.ApiResponse;
 import com.umrah.scanner.common.response.PageResponse;
 import com.umrah.scanner.common.security.AuthenticatedUser;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -71,8 +73,8 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> register(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody RegisterCompanyRequest request) {
         var command = new RegisterCompanyCommand(
-                request.companyName(), request.licenseNumber(), request.city(), request.address(),
-                request.logoUrl(), request.whatsapp(), request.description(), request.phoneNumbers());
+                request.companyName(), request.licenseNumber(), request.logoUrl(), request.whatsapp(),
+                request.description(), toAddressInputs(request.addresses()));
         var company = registerCompanyUseCase.execute(currentUser.userId(), command);
         return ApiResponse.of(CompanyResponse.from(company));
     }
@@ -88,7 +90,8 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> updateMine(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody UpdateCompanyProfileRequest request) {
         var command = new UpdateCompanyProfileCommand(
-                request.companyName(), request.city(), request.address(), request.logoUrl(), request.whatsapp(), request.description());
+                request.companyName(), request.logoUrl(), request.whatsapp(), request.description(),
+                toAddressInputs(request.addresses()));
         var company = updateCompanyProfileUseCase.execute(currentUser.userId(), command);
         return ApiResponse.of(CompanyResponse.from(company));
     }
@@ -143,5 +146,9 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> suspend(
             @AuthenticationPrincipal AuthenticatedUser admin, @PathVariable UUID id, @Valid @RequestBody CompanyDecisionRequest request) {
         return ApiResponse.of(CompanyResponse.from(suspendCompanyUseCase.execute(admin.userId(), id, request.reason())));
+    }
+
+    private List<CompanyAddressInput> toAddressInputs(List<CompanyAddressRequest> addresses) {
+        return addresses.stream().map(r -> new CompanyAddressInput(r.cityId(), r.addressText(), r.mobileNumber())).toList();
     }
 }

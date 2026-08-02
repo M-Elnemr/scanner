@@ -4,14 +4,14 @@ import com.umrah.scanner.company.domain.CompanyProfile;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record CompanyResponse(
         UUID id,
         String companyName,
         String licenseNumber,
-        String city,
-        String address,
+        List<CompanyAddressResponse> addresses,
         String logoUrl,
         String whatsapp,
         String description,
@@ -27,8 +27,7 @@ public record CompanyResponse(
                 company.getId(),
                 company.getCompanyName(),
                 company.getLicenseNumber(),
-                company.getCity(),
-                company.getAddress(),
+                company.getAddresses().stream().map(CompanyAddressResponse::from).toList(),
                 company.getLogoUrl(),
                 company.getWhatsapp(),
                 company.getDescription(),

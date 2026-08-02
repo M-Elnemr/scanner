@@ -53,6 +53,7 @@ public class RejectCompanyUseCase {
                 Map.of("companyId", company.getId().toString()));
 
         auditLogService.record(adminUserId, "COMPANY_REJECTED", "CompanyProfile", companyId, previous, company.getStatus());
+        CompanyProfileInitializer.initializeAddresses(company);
         return company;
     }
 }

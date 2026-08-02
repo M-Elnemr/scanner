@@ -21,18 +21,24 @@ public class CompanyQueryService {
 
     @Transactional(readOnly = true)
     public CompanyProfile getByUserId(UUID userId) {
-        return companyProfileRepository.findByUserId(userId)
+        CompanyProfile company = companyProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", userId));
+        CompanyProfileInitializer.initializeAddresses(company);
+        return company;
     }
 
     @Transactional(readOnly = true)
     public CompanyProfile getById(UUID companyId) {
-        return companyProfileRepository.findById(companyId)
+        CompanyProfile company = companyProfileRepository.findById(companyId)
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyId));
+        CompanyProfileInitializer.initializeAddresses(company);
+        return company;
     }
 
     @Transactional(readOnly = true)
     public Page<CompanyProfile> listByStatus(CompanyStatus status, Pageable pageable) {
-        return companyProfileRepository.findAllByStatus(status, pageable);
+        Page<CompanyProfile> companies = companyProfileRepository.findAllByStatus(status, pageable);
+        companies.forEach(CompanyProfileInitializer::initializeAddresses);
+        return companies;
     }
 }
