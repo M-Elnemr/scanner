@@ -60,15 +60,27 @@ public class LeadQueryService {
         return status == null ? leadRepository.findAll(pageable) : leadRepository.findAllByStatus(status, pageable);
     }
 
+    /** A single lead, visible to its own customer, its own company, or any admin. */
+    @Transactional(readOnly = true)
+    public Lead getForCaller(UUID leadId, UUID callerUserId, boolean isAdmin) {
+        Lead lead = leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        requireVisibility(lead, callerUserId, isAdmin);
+        return lead;
+    }
+
     @Transactional(readOnly = true)
     public List<LeadStatusHistory> getHistory(UUID leadId, UUID callerUserId, boolean isAdmin) {
         Lead lead = leadRepository.findById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
+        requireVisibility(lead, callerUserId, isAdmin);
+        return leadStatusHistoryRepository.findAllByLeadIdOrderByChangedAtAsc(leadId);
+    }
+
+    private void requireVisibility(Lead lead, UUID callerUserId, boolean isAdmin) {
         boolean owns = isAdmin
                 || lead.getCustomer().getUser().getId().equals(callerUserId)
                 || lead.getCompany().getUser().getId().equals(callerUserId);
         if (!owns) {
             throw new ForbiddenException("This lead does not belong to the caller");
         }
-        return leadStatusHistoryRepository.findAllByLeadIdOrderByChangedAtAsc(leadId);
     }
 }

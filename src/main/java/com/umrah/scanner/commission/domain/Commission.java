@@ -22,6 +22,10 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+/**
+ * The ledger row for what a company owes the platform on one lead. The amount is copied from the
+ * lead's pricing snapshot, never recalculated here.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -45,11 +49,17 @@ public class Commission extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private CommissionStatus status;
 
-    @Column(name = "released_by")
-    private UUID releasedBy;
+    @Column(name = "reported_by")
+    private UUID reportedBy;
 
-    @Column(name = "released_at")
-    private Instant releasedAt;
+    @Column(name = "reported_at")
+    private Instant reportedAt;
+
+    @Column(name = "confirmed_by")
+    private UUID confirmedBy;
+
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

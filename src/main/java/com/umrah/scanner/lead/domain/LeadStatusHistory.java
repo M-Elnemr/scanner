@@ -31,11 +31,11 @@ public class LeadStatusHistory extends BaseEntity {
     private Lead lead;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "from_status", length = 30)
+    @Column(name = "from_status", length = 40)
     private LeadStatus fromStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "to_status", nullable = false, length = 30)
+    @Column(name = "to_status", nullable = false, length = 40)
     private LeadStatus toStatus;
 
     @Column(name = "changed_by")

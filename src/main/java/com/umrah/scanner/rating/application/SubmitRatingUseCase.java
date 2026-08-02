@@ -42,8 +42,11 @@ public class SubmitRatingUseCase {
         if (!lead.getCustomer().getUser().getId().equals(customerUserId)) {
             throw new ForbiddenException("This lead does not belong to the caller");
         }
-        if (lead.getStatus() != LeadStatus.CASHBACK_SENT) {
-            throw new ValidationException("Rating is only available once the trip is complete");
+        // A confirmed deposit is the point at which the customer has genuinely dealt with the
+        // company and has something to review — waiting for the whole payout chain to finish would
+        // silence most of them. isAtLeast keeps every later stage eligible too.
+        if (!lead.getStatus().isAtLeast(LeadStatus.DEPOSIT_PAID)) {
+            throw new ValidationException("A review can only be submitted once the deposit is confirmed");
         }
         if (ratingRepository.existsByLeadId(leadId)) {
             throw new ConflictException("This lead has already been rated");

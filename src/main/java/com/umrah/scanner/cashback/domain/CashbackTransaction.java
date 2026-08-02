@@ -16,6 +16,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -54,6 +55,10 @@ public class CashbackTransaction extends BaseEntity {
 
     @Column(name = "sent_at")
     private Instant sentAt;
+
+    /** The admin who authorised the transfer. Null once payouts become automated. */
+    @Column(name = "paid_by")
+    private UUID paidBy;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

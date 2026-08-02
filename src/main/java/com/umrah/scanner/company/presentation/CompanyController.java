@@ -6,6 +6,7 @@ import com.umrah.scanner.company.application.CompanyQueryService;
 import com.umrah.scanner.company.application.RegisterCompanyCommand;
 import com.umrah.scanner.company.application.RegisterCompanyUseCase;
 import com.umrah.scanner.company.application.RejectCompanyUseCase;
+import com.umrah.scanner.company.application.SetCompanyCommissionUseCase;
 import com.umrah.scanner.company.application.SuspendCompanyUseCase;
 import com.umrah.scanner.company.application.UpdateCompanyProfileCommand;
 import com.umrah.scanner.company.application.UpdateCompanyProfileUseCase;
@@ -15,6 +16,9 @@ import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.common.response.ApiResponse;
 import com.umrah.scanner.common.response.PageResponse;
 import com.umrah.scanner.common.security.AuthenticatedUser;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +38,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "Companies", description = "Company profiles, verification, and admin-configured commission.")
 @RestController
 public class CompanyController {
 
@@ -44,6 +49,7 @@ public class CompanyController {
     private final SuspendCompanyUseCase suspendCompanyUseCase;
     private final UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase;
     private final UploadCompanyLogoUseCase uploadCompanyLogoUseCase;
+    private final SetCompanyCommissionUseCase setCompanyCommissionUseCase;
     private final CompanyQueryService companyQueryService;
 
     public CompanyController(
@@ -54,6 +60,7 @@ public class CompanyController {
             SuspendCompanyUseCase suspendCompanyUseCase,
             UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase,
             UploadCompanyLogoUseCase uploadCompanyLogoUseCase,
+            SetCompanyCommissionUseCase setCompanyCommissionUseCase,
             CompanyQueryService companyQueryService) {
         this.registerCompanyUseCase = registerCompanyUseCase;
         this.updateCompanyProfileUseCase = updateCompanyProfileUseCase;
@@ -62,6 +69,7 @@ public class CompanyController {
         this.suspendCompanyUseCase = suspendCompanyUseCase;
         this.uploadCompanyDocumentUseCase = uploadCompanyDocumentUseCase;
         this.uploadCompanyLogoUseCase = uploadCompanyLogoUseCase;
+        this.setCompanyCommissionUseCase = setCompanyCommissionUseCase;
         this.companyQueryService = companyQueryService;
     }
 
@@ -113,6 +121,23 @@ public class CompanyController {
         return ApiResponse.of(CompanyDocumentResponse.from(document));
     }
 
+    // --- Customer-facing ---
+
+    @Operation(summary = "Get a company's profile",
+            description = "Branches, contact numbers, licence and rating. Visible to a customer only once they have "
+                    + "contacted this company about a trip, to the company itself, and to admins. Contains no "
+                    + "commission or verification data — see the PublicCompany schema.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Company profile"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Caller has no lead with this company")})
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/api/v1/companies/{id}")
+    public ApiResponse<PublicCompanyResponse> getPublicById(
+            @AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id) {
+        var company = companyQueryService.getVisibleTo(id, currentUser.userId(), currentUser.role());
+        return ApiResponse.of(PublicCompanyResponse.from(company));
+    }
+
     // --- Admin ---
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -139,6 +164,19 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> reject(
             @AuthenticationPrincipal AuthenticatedUser admin, @PathVariable UUID id, @Valid @RequestBody CompanyDecisionRequest request) {
         return ApiResponse.of(CompanyResponse.from(rejectCompanyUseCase.execute(admin.userId(), id, request.reason())));
+    }
+
+    @Operation(summary = "Set a company's commission per traveler",
+            description = "Admin-only. Companies can read this value on their own profile but can never change it. "
+                    + "Takes effect for leads created after the change; existing leads keep the amounts they were priced with.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/api/v1/admin/companies/{id}/commission")
+    public ApiResponse<CompanyResponse> setCommission(
+            @AuthenticationPrincipal AuthenticatedUser admin,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCompanyCommissionRequest request) {
+        var company = setCompanyCommissionUseCase.execute(admin.userId(), id, request.commissionPerTraveler());
+        return ApiResponse.of(CompanyResponse.from(company));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

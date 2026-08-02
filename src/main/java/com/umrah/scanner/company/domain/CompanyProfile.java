@@ -68,6 +68,14 @@ public class CompanyProfile extends SoftDeletableEntity {
     @Column(name = "rating_count", nullable = false)
     private int ratingCount;
 
+    /**
+     * What this company pays the platform per billable traveller, in EGP. Admin-configured only —
+     * see {@code SetCompanyCommissionUseCase}, the sole writer. Leads snapshot it at creation, so
+     * editing it here affects future leads and never repriced ones.
+     */
+    @Column(name = "commission_per_traveler", nullable = false, precision = 10, scale = 2)
+    private BigDecimal commissionPerTraveler = BigDecimal.ZERO;
+
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CompanyAddress> addresses = new ArrayList<>();
 

@@ -88,7 +88,7 @@ public class TripController {
     public ApiResponse<TripDetailResponse> create(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody CreateTripRequest request) {
         var trip = createTripUseCase.execute(currentUser.userId(), toCreateCommand(request));
-        return ApiResponse.of(TripDetailResponse.ownedBy(trip));
+        return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -96,7 +96,7 @@ public class TripController {
     public ApiResponse<TripDetailResponse> update(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id, @Valid @RequestBody UpdateTripRequest request) {
         var trip = updateTripUseCase.execute(currentUser.userId(), id, toUpdateCommand(request));
-        return ApiResponse.of(TripDetailResponse.ownedBy(trip));
+        return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -107,7 +107,7 @@ public class TripController {
                 .map(p -> new RoomPriceInput(p.roomType(), p.price()))
                 .toList();
         var trip = upsertRoomPricesUseCase.execute(currentUser.userId(), id, inputs);
-        return ApiResponse.of(TripDetailResponse.ownedBy(trip));
+        return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -115,7 +115,7 @@ public class TripController {
     public ApiResponse<TripDetailResponse> changeStatus(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id, @Valid @RequestBody ChangeTripStatusRequest request) {
         var trip = changeTripStatusUseCase.execute(currentUser.userId(), id, request.status());
-        return ApiResponse.of(TripDetailResponse.ownedBy(trip));
+        return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -139,7 +139,7 @@ public class TripController {
     @GetMapping("/api/v1/companies/me/trips/{id}")
     public ApiResponse<TripDetailResponse> getMine(@AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id) {
         UUID companyId = companyQueryService.getByUserId(currentUser.userId()).getId();
-        return ApiResponse.of(TripDetailResponse.ownedBy(tripQueryService.getOwnedDetail(companyId, id)));
+        return ApiResponse.of(TripDetailResponse.from(tripQueryService.getOwnedDetail(companyId, id)));
     }
 
     // --- Public browsing ---

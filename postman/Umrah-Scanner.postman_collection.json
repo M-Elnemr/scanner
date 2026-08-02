@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "d0e359af-244e-4f37-b00b-cd589912f574",
     "name": "Umrah Scanner API",
-    "description": "Complete API collection for the Umrah Scanner marketplace backend (Spring Boot 4 / Java 17, Clean Architecture, feature-based modules).\n\n## Running this collection end to end\n1. Boot the app with the `dev` profile active so `/auth/dev-google-test` exists (`SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun`) \u2014 it never exists otherwise.\n2. Run **Auth > Dev Login - Customer** and **Auth > Dev Login - Company** \u2014 these auto-capture tokens into collection variables via their Tests scripts.\n3. Run **Company > Register Company**, then bootstrap an admin token per the instructions on the two **Dev Login - Admin** requests, then **Admin: Approve Company**.\n4. Run **Trip > Create Trip**, **Upsert Room Prices** (see Known Issues \u2014 the write succeeds even though this call currently 500s), **Publish Trip** \u2014 all auto-capture `tripId`.\n5. Run **Lead > Contact Company** (as customer) to create a lead, then run the numbered requests 1\u20137 in that folder in order \u2014 they walk the same lead all the way from INTERESTED through COMPANY_CONTACTED, CUSTOMER_CONFIRMED, PAYMENT_PENDING, COMPANY_MARKED_PAID, ADMIN_REVIEW (automatic), COMMISSION_RELEASED, CASHBACK_SENT, and finally a rating.\n\nEvery request that needs a specific role's token references a collection variable (`{{customerAccessToken}}`, `{{companyAccessToken}}`, `{{adminAccessToken}}`) as its own Authorization \u2014 set once by the login requests' Tests scripts, used everywhere else.\n\n## Two requests are deliberately terminal\n**Admin: Suspend Company** and **Delete Trip (soft delete)** are placed last in their folders on purpose \u2014 running either one breaks every later request in this collection that depends on that company/trip still being usable (there is no un-suspend or undelete endpoint). Skip them while you're still exploring; run them last, or against a disposable trip/company, when you specifically want to see that behavior.\n\n## Known live issues found while validating this collection\nRunning every request against the real API (via Newman) surfaced two confirmed, reproducible bugs in the backend itself \u2014 not in these requests:\n\n1. **Update Trip silently deletes all of a trip's hotels when `hotels` is omitted (`null`).** `TripController.toHotelInputs()` converts a null `hotels` list into an *empty* list before it reaches the use case, so `UpdateTripUseCase`'s `if (command.hotels() != null)` guard sees a non-null empty list, clears the existing hotels, and adds none back. Verified by direct DB inspection: hotel count went from 2 to 0 after an Update Trip call that sent `hotels: null` expecting them to be left alone.\n2. **Update Trip and Upsert Room Prices both throw a 500 even when the underlying write succeeds.** Both use cases fetch the trip via a plain lazy query with no entity graph; the controller then builds `TripDetailResponse`, which touches *both* `hotels` and `roomPrices` \u2014 but each use case only happens to initialize whichever one it itself mutated, so accessing the other throws `LazyInitializationException: no session`. Confirmed by DB inspection that Upsert Room Prices' write actually commits (room_prices rows exist) despite the client receiving a 500.\n3. Sending a *populated* `hotels` list to Update Trip hits a third, different error: a `uq_trip_hotels_trip_city` duplicate-key violation, because Hibernate inserts the replacement rows before deleting the orphaned old ones for the same (trip_id, city).\n\nNet effect: **Update Trip cannot currently be called successfully at all** if the trip has hotels \u2014 every path (send hotels, omit hotels) fails, and omitting them actively destroys data rather than leaving it untouched. This needs a real code fix, not a workaround in this collection.\n\nA third, independent instance of the same root cause: **Add Favourite** always returns 500 (confirmed) \u2014 the trip/customer are attached via `getReferenceById` with no eager fetch, then the response mapper reads trip fields after the transaction has closed. **List Favourites** works because its query already carries an `@EntityGraph` on `trip`; the write path never got the same treatment.",
+    "description": "Complete API collection for the Umrah Scanner marketplace backend (Spring Boot 4 / Java 17, Clean Architecture, feature-based modules).\n\n## Running this collection end to end\n1. Boot the app with the `dev` profile active so `/auth/dev-google-test` exists (`SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun`) — it never exists otherwise.\n2. Run **Auth > Dev Login - Customer** and **Auth > Dev Login - Company** — these auto-capture tokens into collection variables via their Tests scripts.\n3. Run **Company > Register Company**, then bootstrap an admin token per the instructions on the two **Dev Login - Admin** requests, then **Admin: Approve Company**.\n4. Run **Trip > Create Trip**, **Upsert Room Prices** (see Known Issues — the write succeeds even though this call currently 500s), **Publish Trip** — all auto-capture `tripId`.\n5. Run **Company > Admin: Set Company Commission Per Traveler** — leads created before a rate is set price at zero commission and zero cashback, permanently.\n6. Run **Lead > Contact Company** (as customer, with traveler counts) to create a lead, then run the numbered requests 1–7 in that folder in order — they walk the same lead from INTERESTED through PENDING_DEPOSIT_CONFIRMATION, DEPOSIT_PAID, PENDING_FULL_PAYMENT_CONFIRMATION, FULLY_PAID, PENDING_COMMISSION_CONFIRMATION, COMMISSION_PAID and CASHBACK_PAID. A review can be submitted any time from DEPOSIT_PAID onwards — it no longer has to wait for the payout chain to finish.\n\nEvery request that needs a specific role's token references a collection variable (`{{customerAccessToken}}`, `{{companyAccessToken}}`, `{{adminAccessToken}}`) as its own Authorization — set once by the login requests' Tests scripts, used everywhere else.\n\n## Two requests are deliberately terminal\n**Admin: Suspend Company** and **Delete Trip (soft delete)** are placed last in their folders on purpose — running either one breaks every later request in this collection that depends on that company/trip still being usable (there is no un-suspend or undelete endpoint). Skip them while you're still exploring; run them last, or against a disposable trip/company, when you specifically want to see that behavior.\n\n## Known live issues found while validating this collection\nRunning every request against the real API (via Newman) surfaced two confirmed, reproducible bugs in the backend itself — not in these requests:\n\n1. **Update Trip silently deletes all of a trip's hotels when `hotels` is omitted (`null`).** `TripController.toHotelInputs()` converts a null `hotels` list into an *empty* list before it reaches the use case, so `UpdateTripUseCase`'s `if (command.hotels() != null)` guard sees a non-null empty list, clears the existing hotels, and adds none back. Verified by direct DB inspection: hotel count went from 2 to 0 after an Update Trip call that sent `hotels: null` expecting them to be left alone.\n2. **Update Trip and Upsert Room Prices both throw a 500 even when the underlying write succeeds.** Both use cases fetch the trip via a plain lazy query with no entity graph; the controller then builds `TripDetailResponse`, which touches *both* `hotels` and `roomPrices` — but each use case only happens to initialize whichever one it itself mutated, so accessing the other throws `LazyInitializationException: no session`. Confirmed by DB inspection that Upsert Room Prices' write actually commits (room_prices rows exist) despite the client receiving a 500.\n3. Sending a *populated* `hotels` list to Update Trip hits a third, different error: a `uq_trip_hotels_trip_city` duplicate-key violation, because Hibernate inserts the replacement rows before deleting the orphaned old ones for the same (trip_id, city).\n\nNet effect: **Update Trip cannot currently be called successfully at all** if the trip has hotels — every path (send hotels, omit hotels) fails, and omitting them actively destroys data rather than leaving it untouched. This needs a real code fix, not a workaround in this collection.\n\nA third, independent instance of the same root cause: **Add Favourite** always returns 500 (confirmed) — the trip/customer are attached via `getReferenceById` with no eager fetch, then the response mapper reads trip fields after the transaction has closed. **List Favourites** works because its query already carries an `@EntityGraph` on `trip`; the write path never got the same treatment.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -129,7 +129,7 @@
                 "dev-google-test"
               ]
             },
-            "description": "Bypasses real Google verification \u2014 only exists when the app is booted with `--spring.profiles.active=dev` AND `app.dev-auth.enabled=true` (the dev profile sets this automatically via application-dev.properties). In any other profile this path returns 401 (no controller is even registered). Creates the customer account on first call; later calls with the same email log back into the same account.",
+            "description": "Bypasses real Google verification — only exists when the app is booted with `--spring.profiles.active=dev` AND `app.dev-auth.enabled=true` (the dev profile sets this automatically via application-dev.properties). In any other profile this path returns 401 (no controller is even registered). Creates the customer account on first call; later calls with the same email log back into the same account.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"name\": \"Ahmed Hassan\",\n  \"pictureUrl\": \"https://lh3.googleusercontent.com/a/dev-avatar.png\",\n  \"role\": \"CUSTOMER\"\n}",
@@ -329,7 +329,7 @@
                 "dev-google-test"
               ]
             },
-            "description": "There is no API that creates an ADMIN account \u2014 by design, only COMPANY/CUSTOMER can self-register (see LoginWithGoogleUseCase). To get an admin token for local testing:\n\n1. Run this request once (creates a normal CUSTOMER-role row for {{adminEmail}}).\n2. Promote it directly in your local dev Postgres:\n   `UPDATE users SET role = 'ADMIN' WHERE email = '{{adminEmail}}';`\n3. Run **Dev Login - Admin, Step 2** below to mint a token reflecting the new role.",
+            "description": "There is no API that creates an ADMIN account — by design, only COMPANY/CUSTOMER can self-register (see LoginWithGoogleUseCase). To get an admin token for local testing:\n\n1. Run this request once (creates a normal CUSTOMER-role row for {{adminEmail}}).\n2. Promote it directly in your local dev Postgres:\n   `UPDATE users SET role = 'ADMIN' WHERE email = '{{adminEmail}}';`\n3. Run **Dev Login - Admin, Step 2** below to mint a token reflecting the new role.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"name\": \"Platform Admin\",\n  \"pictureUrl\": \"\",\n  \"role\": \"CUSTOMER\"\n}",
@@ -412,7 +412,7 @@
                 "dev-google-test"
               ]
             },
-            "description": "Run only after the SQL UPDATE described in Step 1 \u2014 the existing user is found by email, so `role` here is ignored; the token now carries ADMIN.",
+            "description": "Run only after the SQL UPDATE described in Step 1 — the existing user is found by email, so `role` here is ignored; the token now carries ADMIN.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"name\": \"Platform Admin\",\n  \"pictureUrl\": \"\",\n  \"role\": \"CUSTOMER\"\n}",
@@ -512,7 +512,7 @@
                 "google"
               ]
             },
-            "description": "The real login path \u2014 needs a genuine Google ID token from the mobile app's Google Sign-In SDK, so it can't be exercised as-is from Postman. `role` only matters the first time a given Google account logs in (COMPANY or CUSTOMER; ADMIN is rejected).",
+            "description": "The real login path — needs a genuine Google ID token from the mobile app's Google Sign-In SDK, so it can't be exercised as-is from Postman. `role` only matters the first time a given Google account logs in (COMPANY or CUSTOMER; ADMIN is rejected).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"idToken\": \"{{googleIdToken}}\",\n  \"role\": \"CUSTOMER\"\n}",
@@ -864,7 +864,7 @@
                 "logout-all"
               ]
             },
-            "description": "Revokes every active refresh token for the calling user \u2014 the same effect as the theft-detection path in refresh, triggered deliberately.",
+            "description": "Revokes every active refresh token for the calling user — the same effect as the theft-detection path in refresh, triggered deliberately.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1176,6 +1176,113 @@
           ]
         },
         {
+          "name": "Get Company Profile (customer-visible)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "companies",
+                "{{companyId}}"
+              ]
+            },
+            "description": "Branches with their own phone numbers, licence, description and rating. Visible to a customer only AFTER they have contacted this company (i.e. a lead exists) — run Lead > Contact Company first or this returns 403. The company itself and admins can always read it.\n\nContains no commission and no verification data: commissionPerTraveler, status, rejectionReason and approval metadata are absent from this shape by construction, not redacted.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "companies",
+                    "{{companyId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"licenseNumber\": \"TRV-2024-8891\",\n    \"logoUrl\": \"http://localhost:8080/uploads/logos/al-noor.png\",\n    \"whatsapp\": \"+201000000000\",\n    \"description\": \"Licensed Umrah operator since 2009.\",\n    \"ratingAvg\": 4.50,\n    \"ratingCount\": 12,\n    \"addresses\": [\n      {\n        \"id\": \"…\",\n        \"cityId\": \"…\",\n        \"cityName\": \"Cairo\",\n        \"addressText\": \"12 Talaat Harb St, Downtown\",\n        \"mobileNumber\": \"+201000000001\"\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "403 No lead with this company yet",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/companies/{{companyId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "companies",
+                    "{{companyId}}"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Forbidden\",\n  \"status\": 403,\n  \"detail\": \"Contact this company about a trip to see its full details\",\n  \"instance\": \"\"\n}"
+            }
+          ]
+        },
+        {
           "name": "Update My Company Profile",
           "request": {
             "method": "PUT",
@@ -1288,7 +1395,7 @@
                 "documents"
               ]
             },
-            "description": "fileUrl points at an object already uploaded to storage (e.g. via a pre-signed URL) \u2014 no file bytes travel through this API.",
+            "description": "fileUrl points at an object already uploaded to storage (e.g. via a pre-signed URL) — no file bytes travel through this API.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"docType\": \"TOURISM_LICENSE\",\n  \"fileUrl\": \"https://storage.umrahscanner.dev/docs/al-noor-license.pdf\"\n}",
@@ -1608,6 +1715,146 @@
           ]
         },
         {
+          "name": "Admin: Set Company Commission Per Traveler",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/companies/{{companyId}}/commission",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "companies",
+                "{{companyId}}",
+                "commission"
+              ]
+            },
+            "description": "Admin-only. Companies can read commissionPerTraveler on their own profile but can never change it. Applies to leads created after this call — existing leads keep the amounts they were priced with. The customer-facing cashbackPerTraveler on the trip details page is derived from this value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commissionPerTraveler\": 2000.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/companies/{{companyId}}/commission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "companies",
+                    "{{companyId}}",
+                    "commission"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"commissionPerTraveler\": 2000.00\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"status\": \"APPROVED\",\n    \"commissionPerTraveler\": 2000.00,\n    \"ratingAvg\": 4.50,\n    \"ratingCount\": 12\n  }\n}"
+            },
+            {
+              "name": "400 Negative amount",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/companies/{{companyId}}/commission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "companies",
+                    "{{companyId}}",
+                    "commission"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"commissionPerTraveler\": -1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Bad Request\",\n  \"status\": 400,\n  \"detail\": \"Request failed validation\",\n  \"instance\": \"\",\n  \"fieldErrors\": {\n    \"commissionPerTraveler\": \"Commission per traveler must be zero or positive\"\n  }\n}"
+            }
+          ]
+        },
+        {
           "name": "Admin: Reject Company",
           "request": {
             "method": "PATCH",
@@ -1748,7 +1995,7 @@
           ]
         },
         {
-          "name": "Admin: Suspend Company \u2014 terminal, run last",
+          "name": "Admin: Suspend Company — terminal, run last",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1771,7 +2018,7 @@
                 "suspend"
               ]
             },
-            "description": "\u26a0\ufe0f Terminal for this demo company: there is currently no reinstate/un-suspend endpoint anywhere in the API, so once this runs, {{companyId}} can never be approved again and every downstream request in this collection that needs an APPROVED company (Create Trip, etc.) will start failing. Run this only after you're done exploring the rest of the collection with this company.",
+            "description": "⚠️ Terminal for this demo company: there is currently no reinstate/un-suspend endpoint anywhere in the API, so once this runs, {{companyId}} can never be approved again and every downstream request in this collection that needs an APPROVED company (Create Trip, etc.) will start failing. Run this only after you're done exploring the rest of the collection with this company.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"reason\": \"Multiple verified customer complaints of undelivered packages.\"\n}",
@@ -1915,7 +2162,7 @@
                 "me"
               ]
             },
-            "description": "The profile is created lazily \u2014 before the first PUT, this returns an empty/incomplete shape rather than a 404.",
+            "description": "The profile is created lazily — before the first PUT, this returns an empty/incomplete shape rather than a 404.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2119,7 +2366,7 @@
                 "trips"
               ]
             },
-            "description": "COMPANY must be APPROVED. Starts in DRAFT \u2014 use Publish Trip below once room prices are set.",
+            "description": "COMPANY must be APPROVED. Starts in DRAFT — use Publish Trip below once room prices are set.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
@@ -2316,7 +2563,7 @@
                 "{{tripId}}"
               ]
             },
-            "description": "\u26a0\ufe0f Currently broken in the live API regardless of what you send for `hotels` \u2014 see the collection-level description for the confirmed root cause. The body/example here document the intended contract, not what you'll actually get back today.",
+            "description": "⚠️ Currently broken in the live API regardless of what you send for `hotels` — see the collection-level description for the confirmed root cause. The body/example here document the intended contract, not what you'll actually get back today.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": null\n}",
@@ -2339,7 +2586,7 @@
           },
           "response": [
             {
-              "name": "200 OK (intended \u2014 not what today's build returns)",
+              "name": "200 OK (intended — not what today's build returns)",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -2411,7 +2658,7 @@
                 "room-prices"
               ]
             },
-            "description": "Replaces the full room-price set for the trip \u2014 send every room type you want to sell, not a delta.\n\n\u26a0\ufe0f Currently returns a 500 in the live API even though the write itself succeeds (confirmed via direct DB inspection) \u2014 see the collection-level description for the root cause (a lazy-loading gap when building the response).",
+            "description": "Replaces the full room-price set for the trip — send every room type you want to sell, not a delta.\n\n⚠️ Currently returns a 500 in the live API even though the write itself succeeds (confirmed via direct DB inspection) — see the collection-level description for the root cause (a lazy-loading gap when building the response).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"prices\": [\n    {\n      \"roomType\": \"SINGLE\",\n      \"price\": 5200.0\n    },\n    {\n      \"roomType\": \"DOUBLE\",\n      \"price\": 3800.0\n    },\n    {\n      \"roomType\": \"TRIPLE\",\n      \"price\": 3200.0\n    },\n    {\n      \"roomType\": \"QUAD\",\n      \"price\": 2900.0\n    },\n    {\n      \"roomType\": \"CHILD\",\n      \"price\": 2000.0\n    },\n    {\n      \"roomType\": \"INFANT\",\n      \"price\": 500.0\n    }\n  ]\n}",
@@ -2434,7 +2681,7 @@
           },
           "response": [
             {
-              "name": "200 OK (intended \u2014 not what today's build returns)",
+              "name": "200 OK (intended — not what today's build returns)",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -2507,7 +2754,7 @@
                 "status"
               ]
             },
-            "description": "DRAFT \u2192 PUBLISHED requires at least one room price and hotel details for both Makkah and Madinah. PUBLISHED \u2192 CLOSED is the only other legal move.",
+            "description": "DRAFT → PUBLISHED requires at least one room price and hotel details for both Makkah and Madinah. PUBLISHED → CLOSED is the only other legal move.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"PUBLISHED\"\n}",
@@ -2915,7 +3162,7 @@
           },
           "response": [
             {
-              "name": "200 OK (no lead yet \u2014 company hidden)",
+              "name": "200 OK (no lead yet — company hidden)",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -2950,7 +3197,7 @@
               "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": null\n  }\n}"
             },
             {
-              "name": "200 OK (caller has a lead \u2014 company shown)",
+              "name": "200 OK (caller has a lead — company shown)",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -3049,7 +3296,7 @@
                 }
               ]
             },
-            "description": "CUSTOMER role only. 1\u20134 trip ids, published trips only.",
+            "description": "CUSTOMER role only. 1–4 trip ids, published trips only.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3147,7 +3394,7 @@
           ]
         },
         {
-          "name": "Delete Trip (soft delete) \u2014 terminal, run last",
+          "name": "Delete Trip (soft delete) — terminal, run last",
           "request": {
             "method": "DELETE",
             "header": [
@@ -3170,7 +3417,7 @@
                 "{{tripId}}"
               ]
             },
-            "description": "\u26a0\ufe0f Terminal for this demo trip: soft-deletes it, so it disappears from every other request in this collection that references {{tripId}} (browse, detail, favourites, contact-company, ratings). There is no undelete endpoint. Run this only after you're completely done exploring Favourite/Lead/Rating with this trip \u2014 or better, skip it and just create a fresh trip next time you want to see this endpoint.",
+            "description": "⚠️ Terminal for this demo trip: soft-deletes it, so it disappears from every other request in this collection that references {{tripId}} (browse, detail, favourites, contact-company, ratings). There is no undelete endpoint. Run this only after you're completely done exploring Favourite/Lead/Rating with this trip — or better, skip it and just create a fresh trip next time you want to see this endpoint.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3252,7 +3499,7 @@
                 "{{tripId}}"
               ]
             },
-            "description": "\u26a0\ufe0f Currently returns a 500 in the live API (confirmed): the trip is fetched via getReferenceById/a non-eager query, then the response mapper reads TripSummaryResponse fields off it after the transaction has already closed, throwing LazyInitializationException. List Favourites works today because its repository query already has an @EntityGraph on `trip` \u2014 this endpoint's write path never got the same treatment.",
+            "description": "⚠️ Currently returns a 500 in the live API (confirmed): the trip is fetched via getReferenceById/a non-eager query, then the response mapper reads TripSummaryResponse fields off it after the transaction has already closed, throwing LazyInitializationException. List Favourites works today because its repository query already has an @EntityGraph on `trip` — this endpoint's write path never got the same treatment.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3266,7 +3513,7 @@
           },
           "response": [
             {
-              "name": "201 Created (intended \u2014 not what today's build returns)",
+              "name": "201 Created (intended — not what today's build returns)",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -3478,7 +3725,7 @@
     },
     {
       "name": "Lead",
-      "description": "The core marketplace CRM \u2014 contact-company through the full status lifecycle.",
+      "description": "The booking lifecycle: INTERESTED → PENDING_DEPOSIT_CONFIRMATION → DEPOSIT_PAID → PENDING_FULL_PAYMENT_CONFIRMATION → FULLY_PAID → PENDING_COMMISSION_CONFIRMATION → COMMISSION_PAID → CASHBACK_PAID. Whoever reports a payment first decides the path: a customer report parks the lead in the matching PENDING_* state until the other side confirms, while a company (or, for commission, an admin) recording it goes straight to the settled state. Set the company's commission (Company folder) before creating a lead, or it will price at zero. Traveler counts stay editable until FULLY_PAID — always read the lead's travelersEditable flag.",
       "item": [
         {
           "name": "Contact Company (create lead)",
@@ -3503,7 +3750,16 @@
                 "contact-company"
               ]
             },
-            "description": "Idempotent \u2014 contacting the same trip again returns the existing lead instead of erroring. Company identity becomes visible on this trip for this customer from here on.",
+            "description": "Creates the lead and permanently fixes its commission and cashback for these traveler counts. adultCount is the billable traveler count — commission = the company's commissionPerTraveler x adultCount, and cashback is a quarter of that. Idempotent: contacting the same trip again returns the existing lead (refreshing the counts only while it is still before FULLY_PAID). Company identity becomes visible on this trip for this customer from here on.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adultCount\": 2,\n  \"childCount\": 1,\n  \"infantCount\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3538,6 +3794,15 @@
                     "{{tripId}}",
                     "contact-company"
                   ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adultCount\": 2,\n  \"childCount\": 1,\n  \"infantCount\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
               },
               "status": "Created",
@@ -3550,7 +3815,52 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"status\": \"INTERESTED\",\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:00:00Z\"\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"INTERESTED\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": null,\n    \"commissionPerTraveler\": null,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_DEPOSIT\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Validation failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/trips/{{tripId}}/contact-company",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "trips",
+                    "{{tripId}}",
+                    "contact-company"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adultCount\": 0,\n  \"childCount\": 0,\n  \"infantCount\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Bad Request\",\n  \"status\": 400,\n  \"detail\": \"Request failed validation\",\n  \"instance\": \"\",\n  \"fieldErrors\": {\n    \"adultCount\": \"At least one adult traveler is required\"\n  }\n}"
             },
             {
               "name": "422 Profile incomplete",
@@ -3574,6 +3884,15 @@
                     "{{tripId}}",
                     "contact-company"
                   ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adultCount\": 2,\n  \"childCount\": 1,\n  \"infantCount\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
               },
               "status": "Unprocessable Content",
@@ -3610,6 +3929,15 @@
                     "{{tripId}}",
                     "contact-company"
                   ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adultCount\": 2,\n  \"childCount\": 1,\n  \"infantCount\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
               },
               "status": "Unprocessable Content",
@@ -3651,7 +3979,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/customers/me/leads?page=0&size=20",
+              "raw": "{{baseUrl}}/api/v1/customers/me/leads",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -3661,19 +3989,9 @@
                 "customers",
                 "me",
                 "leads"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
               ]
             },
-            "description": "",
+            "description": "Customer projection: traveler counts and cashback are present, commission fields are always null — what the company owes the platform is never shown to customers.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3697,7 +4015,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers/me/leads?page=0&size=20",
+                  "raw": "{{baseUrl}}/api/v1/customers/me/leads",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3707,16 +4025,6 @@
                     "customers",
                     "me",
                     "leads"
-                  ],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "0"
-                    },
-                    {
-                      "key": "size",
-                      "value": "20"
-                    }
                   ]
                 }
               },
@@ -3730,7 +4038,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{leadId}}\",\n        \"customerId\": \"{{customerProfileId}}\",\n        \"tripId\": \"{{tripId}}\",\n        \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n        \"companyId\": \"{{companyId}}\",\n        \"companyName\": \"Al Noor Travel & Tourism\",\n        \"status\": \"INTERESTED\",\n        \"confirmedRoomType\": null,\n        \"confirmedPrice\": null,\n        \"createdAt\": \"2026-07-20T08:00:00Z\",\n        \"updatedAt\": \"2026-07-20T08:00:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"INTERESTED\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": null,\n    \"commissionPerTraveler\": null,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_DEPOSIT\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },
@@ -3745,7 +4053,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/companies/me/leads?page=0&size=20&status=INTERESTED",
+              "raw": "{{baseUrl}}/api/v1/companies/me/leads",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -3755,23 +4063,9 @@
                 "companies",
                 "me",
                 "leads"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                },
-                {
-                  "key": "status",
-                  "value": "INTERESTED"
-                }
               ]
             },
-            "description": "",
+            "description": "Company projection: includes commissionAmount and the commissionPerTraveler rate this lead was priced at.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -3795,7 +4089,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/companies/me/leads?page=0&size=20&status=INTERESTED",
+                  "raw": "{{baseUrl}}/api/v1/companies/me/leads",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3805,20 +4099,6 @@
                     "companies",
                     "me",
                     "leads"
-                  ],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "0"
-                    },
-                    {
-                      "key": "size",
-                      "value": "20"
-                    },
-                    {
-                      "key": "status",
-                      "value": "INTERESTED"
-                    }
                   ]
                 }
               },
@@ -3832,12 +4112,155 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{leadId}}\",\n        \"customerId\": \"{{customerProfileId}}\",\n        \"tripId\": \"{{tripId}}\",\n        \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n        \"companyId\": \"{{companyId}}\",\n        \"companyName\": \"Al Noor Travel & Tourism\",\n        \"status\": \"INTERESTED\",\n        \"confirmedRoomType\": null,\n        \"confirmedPrice\": null,\n        \"createdAt\": \"2026-07-20T08:00:00Z\",\n        \"updatedAt\": \"2026-07-20T08:00:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"INTERESTED\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"MARK_DEPOSIT_PAID\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },
         {
-          "name": "1. Update Lead Status (Company) \u2192 COMPANY_CONTACTED",
+          "name": "Update Traveler Counts (Customer)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/travelers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "me",
+                "leads",
+                "{{leadId}}",
+                "travelers"
+              ]
+            },
+            "description": "Allowed only while the lead's travelersEditable flag is true (before FULLY_PAID). Does NOT reprice the lead — commission and cashback stay exactly as they were fixed at creation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adultCount\": 3,\n  \"childCount\": 1,\n  \"infantCount\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/travelers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "me",
+                    "leads",
+                    "{{leadId}}",
+                    "travelers"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adultCount\": 3,\n  \"childCount\": 1,\n  \"infantCount\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"INTERESTED\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": null,\n    \"commissionPerTraveler\": null,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_DEPOSIT\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Locked once paid in full",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/travelers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "me",
+                    "leads",
+                    "{{leadId}}",
+                    "travelers"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adultCount\": 3,\n  \"childCount\": 1,\n  \"infantCount\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Traveler counts cannot be changed once the booking is paid in full\",\n  \"instance\": \"\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "1. Report Deposit (Customer) → PENDING_DEPOSIT_CONFIRMATION",
           "request": {
             "method": "PATCH",
             "header": [
@@ -3847,7 +4270,150 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/status",
+              "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/report-deposit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "me",
+                "leads",
+                "{{leadId}}",
+                "report-deposit"
+              ]
+            },
+            "description": "The numbered requests in this folder walk one lead from INTERESTED to CASHBACK_PAID — run them in order. Each endpoint names an action, never a target status: the server derives the target from where the lead currently sits, so an illegal jump cannot be requested at all. The body is optional; a note is recorded on the status-history entry. Skip this step if the company reports the deposit first (step 2 works straight from INTERESTED).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/report-deposit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "me",
+                    "leads",
+                    "{{leadId}}",
+                    "report-deposit"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"PENDING_DEPOSIT_CONFIRMATION\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": null,\n    \"commissionPerTraveler\": null,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_DEPOSIT\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Not available from this status",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/report-deposit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "me",
+                    "leads",
+                    "{{leadId}}",
+                    "report-deposit"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"REPORT_DEPOSIT is not available while the lead is DEPOSIT_PAID\",\n  \"instance\": \"\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Mark Deposit Paid (Company) → DEPOSIT_PAID",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/deposit-paid",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -3858,13 +4424,13 @@
                 "me",
                 "leads",
                 "{{leadId}}",
-                "status"
+                "deposit-paid"
               ]
             },
-            "description": "The full lifecycle in this folder walks one lead from INTERESTED all the way to CASHBACK_SENT, in the numbered order these requests appear \u2014 run them in sequence. Allow-listed by role: COMPANY may only move INTERESTED\u2192COMPANY_CONTACTED or PAYMENT_PENDING\u2192COMPANY_MARKED_PAID (which auto-cascades to ADMIN_REVIEW).",
+            "description": "One action, two entry points: it confirms a customer's report from PENDING_DEPOSIT_CONFIRMATION, or records the deposit directly from INTERESTED with no customer confirmation needed. Reviews unlock from here.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"COMPANY_CONTACTED\"\n}",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3894,7 +4460,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/status",
+                  "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/deposit-paid",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3905,12 +4471,12 @@
                     "me",
                     "leads",
                     "{{leadId}}",
-                    "status"
+                    "deposit-paid"
                   ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"COMPANY_CONTACTED\"\n}",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3928,59 +4494,12 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"status\": \"COMPANY_CONTACTED\",\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:00:00Z\"\n  }\n}"
-            },
-            {
-              "name": "409 Illegal transition",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "companies",
-                    "me",
-                    "leads",
-                    "{{leadId}}",
-                    "status"
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"status\": \"COMPANY_CONTACTED\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Conflict",
-              "code": 409,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Cannot move lead from INTERESTED to CASHBACK_SENT as COMPANY\",\n  \"instance\": \"\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"DEPOSIT_PAID\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"MARK_FULLY_PAID\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
             }
           ]
         },
         {
-          "name": "2. Confirm Payment (Customer) \u2192 CUSTOMER_CONFIRMED",
+          "name": "3. Report Full Payment (Customer) → PENDING_FULL_PAYMENT_CONFIRMATION",
           "request": {
             "method": "PATCH",
             "header": [
@@ -3990,7 +4509,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/confirm-payment",
+              "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/report-full-payment",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -4001,10 +4520,19 @@
                 "me",
                 "leads",
                 "{{leadId}}",
-                "confirm-payment"
+                "report-full-payment"
               ]
             },
-            "description": "A single fixed action \u2014 the server decides whether this means INTERESTED/COMPANY_CONTACTED \u2192 CUSTOMER_CONFIRMED, or CUSTOMER_CONFIRMED \u2192 PAYMENT_PENDING. Call it twice in a row (this request and the next) to walk both steps.",
+            "description": "Same report/confirm shape as the deposit. Skip if the company records full payment first (step 4 works straight from DEPOSIT_PAID).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4028,7 +4556,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/confirm-payment",
+                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/report-full-payment",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -4039,8 +4567,17 @@
                     "me",
                     "leads",
                     "{{leadId}}",
-                    "confirm-payment"
+                    "report-full-payment"
                   ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
               },
               "status": "OK",
@@ -4053,50 +4590,12 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"status\": \"CUSTOMER_CONFIRMED\",\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:00:00Z\"\n  }\n}"
-            },
-            {
-              "name": "409 Wrong state",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/confirm-payment",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "customers",
-                    "me",
-                    "leads",
-                    "{{leadId}}",
-                    "confirm-payment"
-                  ]
-                }
-              },
-              "status": "Conflict",
-              "code": 409,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Payment cannot be confirmed from CASHBACK_SENT\",\n  \"instance\": \"\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"PENDING_FULL_PAYMENT_CONFIRMATION\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": null,\n    \"commissionPerTraveler\": null,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_FULL_PAYMENT\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
             }
           ]
         },
         {
-          "name": "3. Confirm Payment (Customer) \u2192 PAYMENT_PENDING",
+          "name": "4. Mark Fully Paid (Company) → FULLY_PAID",
           "request": {
             "method": "PATCH",
             "header": [
@@ -4106,85 +4605,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/confirm-payment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers",
-                "me",
-                "leads",
-                "{{leadId}}",
-                "confirm-payment"
-              ]
-            },
-            "description": "Same endpoint as the previous request, called again \u2014 now that the lead is CUSTOMER_CONFIRMED, this same action advances it one more step.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{customerAccessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 OK",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers/me/leads/{{leadId}}/confirm-payment",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "customers",
-                    "me",
-                    "leads",
-                    "{{leadId}}",
-                    "confirm-payment"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"status\": \"PAYMENT_PENDING\",\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:00:00Z\"\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "4. Update Lead Status (Company) \u2192 COMPANY_MARKED_PAID",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/status",
+              "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/fully-paid",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -4195,13 +4616,13 @@
                 "me",
                 "leads",
                 "{{leadId}}",
-                "status"
+                "fully-paid"
               ]
             },
-            "description": "Auto-cascades straight to ADMIN_REVIEW server-side \u2014 no separate request needed for that step.",
+            "description": "Confirms the customer's report, or records full payment directly from DEPOSIT_PAID. The company now owes the platform its commission.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"COMPANY_MARKED_PAID\"\n}",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4221,7 +4642,7 @@
           },
           "response": [
             {
-              "name": "200 OK (now ADMIN_REVIEW)",
+              "name": "200 OK",
               "originalRequest": {
                 "method": "PATCH",
                 "header": [
@@ -4231,7 +4652,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/status",
+                  "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/fully-paid",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -4242,12 +4663,12 @@
                     "me",
                     "leads",
                     "{{leadId}}",
-                    "status"
+                    "fully-paid"
                   ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"COMPANY_MARKED_PAID\"\n}",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4265,7 +4686,337 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"status\": \"ADMIN_REVIEW\",\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:00:00Z\"\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"FULLY_PAID\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": false,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_COMMISSION_PAID\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Report Commission Paid (Company) → PENDING_COMMISSION_CONFIRMATION",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/report-commission-paid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "companies",
+                "me",
+                "leads",
+                "{{leadId}}",
+                "report-commission-paid"
+              ]
+            },
+            "description": "The company states it has settled its commission with the platform. An admin must confirm (step 6) before any cashback can be released. Skip if the admin records the payment directly.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{companyAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/companies/me/leads/{{leadId}}/report-commission-paid",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "companies",
+                    "me",
+                    "leads",
+                    "{{leadId}}",
+                    "report-commission-paid"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"PENDING_COMMISSION_CONFIRMATION\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": false,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "6. Confirm Commission (Admin) → COMMISSION_PAID",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/confirm-commission",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "leads",
+                "{{leadId}}",
+                "confirm-commission"
+              ]
+            },
+            "description": "Accepts the company's report, or records the commission directly from FULLY_PAID. Writes the commissions ledger row as CONFIRMED. Cashback becomes payable only after this.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/confirm-commission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}",
+                    "confirm-commission"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"COMMISSION_PAID\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": false,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"PAY_CASHBACK\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "7. Pay Cashback (Admin) → CASHBACK_PAID",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/pay-cashback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "leads",
+                "{{leadId}}",
+                "pay-cashback"
+              ]
+            },
+            "description": "Terminal step. Pays the amount fixed at lead creation to the wallet on the customer's profile.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/pay-cashback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}",
+                    "pay-cashback"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"CASHBACK_PAID\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": false,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Commission not confirmed yet",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/pay-cashback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}",
+                    "pay-cashback"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"note\": \"Transferred via InstaPay, ref 88213.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"PAY_CASHBACK is not available while the lead is FULLY_PAID\",\n  \"instance\": \"\"\n}"
             }
           ]
         },
@@ -4280,7 +5031,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/leads?page=0&size=20&status=ADMIN_REVIEW",
+              "raw": "{{baseUrl}}/api/v1/admin/leads",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -4289,23 +5040,9 @@
                 "v1",
                 "admin",
                 "leads"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                },
-                {
-                  "key": "status",
-                  "value": "ADMIN_REVIEW"
-                }
               ]
             },
-            "description": "",
+            "description": "Optional ?status= filter accepts any lifecycle status.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4329,7 +5066,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/admin/leads?page=0&size=20&status=ADMIN_REVIEW",
+                  "raw": "{{baseUrl}}/api/v1/admin/leads",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -4338,20 +5075,6 @@
                     "v1",
                     "admin",
                     "leads"
-                  ],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "0"
-                    },
-                    {
-                      "key": "size",
-                      "value": "20"
-                    },
-                    {
-                      "key": "status",
-                      "value": "ADMIN_REVIEW"
-                    }
                   ]
                 }
               },
@@ -4365,14 +5088,14 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{leadId}}\",\n        \"customerId\": \"{{customerProfileId}}\",\n        \"tripId\": \"{{tripId}}\",\n        \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n        \"companyId\": \"{{companyId}}\",\n        \"companyName\": \"Al Noor Travel & Tourism\",\n        \"status\": \"ADMIN_REVIEW\",\n        \"confirmedRoomType\": null,\n        \"confirmedPrice\": null,\n        \"createdAt\": \"2026-07-20T08:00:00Z\",\n        \"updatedAt\": \"2026-07-20T08:00:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"FULLY_PAID\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": false,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": 4000.00,\n    \"commissionPerTraveler\": 2000.00,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"CONFIRM_COMMISSION_PAID\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },
         {
-          "name": "5. Admin: Release Commission",
+          "name": "Get Lead By Id",
           "request": {
-            "method": "PATCH",
+            "method": "GET",
             "header": [
               {
                 "key": "Content-Type",
@@ -4380,35 +5103,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/release-commission",
+              "raw": "{{baseUrl}}/api/v1/leads/{{leadId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "admin",
                 "leads",
-                "{{leadId}}",
-                "release-commission"
+                "{{leadId}}"
               ]
             },
-            "description": "Only legal when the lead is in ADMIN_REVIEW. Amount is admin-supplied \u2014 there is no automatic commission-rate calculation.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 350.0\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
+            "description": "Visible to the lead's own customer, its own company, or any admin. The response is projected for whichever role is calling — including availableActions, which lists exactly the steps that caller may take next.",
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminAccessToken}}",
+                  "value": "{{customerAccessToken}}",
                   "type": "string"
                 }
               ]
@@ -4418,7 +5130,7 @@
             {
               "name": "200 OK",
               "originalRequest": {
-                "method": "PATCH",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Content-Type",
@@ -4426,27 +5138,16 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/release-commission",
+                  "raw": "{{baseUrl}}/api/v1/leads/{{leadId}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "api",
                     "v1",
-                    "admin",
                     "leads",
-                    "{{leadId}}",
-                    "release-commission"
+                    "{{leadId}}"
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"amount\": 350.0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               },
               "status": "OK",
@@ -4459,12 +5160,12 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"c3d4e5f6-1111-4d56-8abc-1234567890ab\",\n    \"leadId\": \"{{leadId}}\",\n    \"companyId\": \"{{companyId}}\",\n    \"amount\": 350.0,\n    \"status\": \"RELEASED\",\n    \"releasedAt\": \"2026-08-05T09:00:00Z\"\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{leadId}}\",\n    \"customerId\": \"{{customerProfileId}}\",\n    \"tripId\": \"{{tripId}}\",\n    \"tripTitle\": \"Ramadan Umrah Package - 10 Nights\",\n    \"companyId\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"customer\": {\n      \"id\": \"{{customerProfileId}}\",\n      \"fullName\": \"Ahmed Hassan\",\n      \"phone\": \"+201234567890\"\n    },\n    \"status\": \"DEPOSIT_PAID\",\n    \"adultCount\": 2,\n    \"childCount\": 1,\n    \"infantCount\": 0,\n    \"travelerCount\": 2,\n    \"travelersEditable\": true,\n    \"cashbackAmount\": 1000.00,\n    \"commissionAmount\": null,\n    \"commissionPerTraveler\": null,\n    \"confirmedRoomType\": null,\n    \"confirmedPrice\": null,\n    \"availableActions\": [\"REPORT_FULL_PAYMENT\"],\n    \"createdAt\": \"2026-07-20T08:00:00Z\",\n    \"updatedAt\": \"2026-07-20T08:30:00Z\"\n  }\n}"
             },
             {
-              "name": "409 Wrong state",
+              "name": "403 Not your lead",
               "originalRequest": {
-                "method": "PATCH",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Content-Type",
@@ -4472,31 +5173,20 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/release-commission",
+                  "raw": "{{baseUrl}}/api/v1/leads/{{leadId}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "api",
                     "v1",
-                    "admin",
                     "leads",
-                    "{{leadId}}",
-                    "release-commission"
+                    "{{leadId}}"
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"amount\": 350.0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               },
-              "status": "Conflict",
-              "code": 409,
+              "status": "Forbidden",
+              "code": 403,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -4505,147 +5195,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Conflict\",\n  \"status\": 409,\n  \"detail\": \"Commission can only be released for a lead in ADMIN_REVIEW\",\n  \"instance\": \"\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "6. Admin: Send Cashback",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/send-cashback",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "admin",
-                "leads",
-                "{{leadId}}",
-                "send-cashback"
-              ]
-            },
-            "description": "Only legal once commission has been released. Requires the customer to have wallet details on file.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 50.0\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminAccessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 OK",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/send-cashback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "admin",
-                    "leads",
-                    "{{leadId}}",
-                    "send-cashback"
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"amount\": 50.0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"d4e5f6a7-1111-4d56-8abc-1234567890ab\",\n    \"leadId\": \"{{leadId}}\",\n    \"walletType\": \"VODAFONE_CASH\",\n    \"walletNumber\": \"01112223344\",\n    \"amount\": 50.0,\n    \"status\": \"SENT\",\n    \"sentAt\": \"2026-08-06T09:00:00Z\"\n  }\n}"
-            },
-            {
-              "name": "422 No wallet on file",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/send-cashback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "admin",
-                    "leads",
-                    "{{leadId}}",
-                    "send-cashback"
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"amount\": 50.0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Unprocessable Content",
-              "code": 422,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unprocessable Entity\",\n  \"status\": 422,\n  \"detail\": \"Customer has no cashback wallet on file\",\n  \"instance\": \"\"\n}"
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Forbidden\",\n  \"status\": 403,\n  \"detail\": \"This lead does not belong to the caller\",\n  \"instance\": \"\"\n}"
             }
           ]
         },
@@ -4672,7 +5222,7 @@
                 "history"
               ]
             },
-            "description": "Callable by the customer, the company, or an admin \u2014 anyone else gets 403.",
+            "description": "Append-only transition log for the lead.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4719,7 +5269,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    {\n      \"fromStatus\": null,\n      \"toStatus\": \"INTERESTED\",\n      \"changedBy\": \"{{customerUserId}}\",\n      \"changedAt\": \"2026-07-20T08:00:00Z\",\n      \"note\": null\n    },\n    {\n      \"fromStatus\": \"INTERESTED\",\n      \"toStatus\": \"COMPANY_CONTACTED\",\n      \"changedBy\": \"{{companyUserId}}\",\n      \"changedAt\": \"2026-07-20T14:30:00Z\",\n      \"note\": null\n    }\n  ]\n}"
+              "body": "{\n  \"data\": [\n    {\n      \"fromStatus\": null,\n      \"toStatus\": \"INTERESTED\",\n      \"changedBy\": \"{{customerUserId}}\",\n      \"changedAt\": \"2026-07-20T08:00:00Z\",\n      \"note\": null\n    },\n    {\n      \"fromStatus\": \"INTERESTED\",\n      \"toStatus\": \"PENDING_DEPOSIT_CONFIRMATION\",\n      \"changedBy\": \"{{customerUserId}}\",\n      \"changedAt\": \"2026-07-20T08:30:00Z\",\n      \"note\": \"Transferred via InstaPay, ref 88213.\"\n    }\n  ]\n}"
             }
           ]
         }
@@ -4730,7 +5280,7 @@
       "description": "Post-completion ratings, public listings.",
       "item": [
         {
-          "name": "7. Submit Rating",
+          "name": "Submit Review",
           "request": {
             "method": "POST",
             "header": [
@@ -4752,7 +5302,7 @@
                 "rating"
               ]
             },
-            "description": "Only legal once the lead has reached CASHBACK_SENT, and only once per lead.",
+            "description": "A customer may review a company once the deposit is confirmed — allowed from DEPOSIT_PAID onwards, so there is no need to wait for full payment, commission or cashback. One review per lead, immutable once posted. Recomputes the company's ratingAvg/ratingCount.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"stars\": 5,\n  \"comment\": \"Excellent service, hotel exactly as described, highly recommend!\"\n}",
@@ -4820,7 +5370,7 @@
               "body": "{\n  \"data\": {\n    \"id\": \"e5f6a7b8-1111-4d56-8abc-1234567890ab\",\n    \"stars\": 5,\n    \"comment\": \"Excellent service, hotel exactly as described, highly recommend!\",\n    \"createdAt\": \"2026-08-10T10:00:00Z\"\n  }\n}"
             },
             {
-              "name": "422 Trip not complete",
+              "name": "422 Deposit not confirmed yet",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -4862,7 +5412,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unprocessable Entity\",\n  \"status\": 422,\n  \"detail\": \"Rating is only available once the trip is complete\",\n  \"instance\": \"\"\n}"
+              "body": "{\n  \"type\": \"about:blank\",\n  \"title\": \"Unprocessable Entity\",\n  \"status\": 422,\n  \"detail\": \"A review can only be submitted once the deposit is confirmed\",\n  \"instance\": \"\"\n}"
             },
             {
               "name": "409 Already rated",
@@ -5409,7 +5959,7 @@
                 "register-token"
               ]
             },
-            "description": "Upserts by fcmToken \u2014 re-registering the same token (e.g. app reinstall under a different login) reassigns it to the new caller.",
+            "description": "Upserts by fcmToken — re-registering the same token (e.g. app reinstall under a different login) reassigns it to the new caller.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fcmToken\": \"fLrE9x2ZQe6b3sample-fcm-registration-token-abcdef123456\",\n  \"platform\": \"ANDROID\"\n}",
@@ -5523,7 +6073,7 @@
                 }
               ]
             },
-            "description": "entityType and entityId are both required \u2014 this browses the audit trail for one specific record (e.g. one Lead, one CompanyProfile), not the whole table.",
+            "description": "entityType and entityId are both required — this browses the audit trail for one specific record (e.g. one Lead, one CompanyProfile), not the whole table.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5587,7 +6137,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"f6a7b8c9-1111-4d56-8abc-1234567890ab\",\n        \"actorUserId\": \"{{companyUserId}}\",\n        \"action\": \"LEAD_STATUS_CHANGED\",\n        \"entityType\": \"Lead\",\n        \"entityId\": \"{{leadId}}\",\n        \"oldValue\": \"\\\"INTERESTED\\\"\",\n        \"newValue\": \"\\\"COMPANY_CONTACTED\\\"\",\n        \"createdAt\": \"2026-07-20T14:30:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"f6a7b8c9-1111-4d56-8abc-1234567890ab\",\n        \"actorUserId\": \"{{companyUserId}}\",\n        \"action\": \"LEAD_MARK_DEPOSIT_PAID\",\n        \"entityType\": \"Lead\",\n        \"entityId\": \"{{leadId}}\",\n        \"oldValue\": \"\\\"INTERESTED\\\"\",\n        \"newValue\": \"\\\"DEPOSIT_PAID\\\"\",\n        \"createdAt\": \"2026-07-20T14:30:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
             }
           ]
         }
@@ -5619,7 +6169,7 @@
                 "events"
               ]
             },
-            "description": "Fire-and-forget behavioral tracking (view/search/compare/contact). Requires authentication \u2014 there is no anonymous-event path.",
+            "description": "Fire-and-forget behavioral tracking (view/search/compare/contact). Requires authentication — there is no anonymous-event path.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"eventType\": \"TRIP_VIEWED\",\n  \"entityType\": \"Trip\",\n  \"entityId\": \"{{tripId}}\",\n  \"metadata\": {\n    \"source\": \"search_results\",\n    \"position\": 2\n  }\n}",

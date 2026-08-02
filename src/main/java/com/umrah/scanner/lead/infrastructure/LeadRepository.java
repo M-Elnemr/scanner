@@ -15,6 +15,12 @@ public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificat
     @EntityGraph(attributePaths = {"trip", "company", "customer"})
     Optional<Lead> findByCustomerIdAndTripId(UUID customerId, UUID tripId);
 
+    /**
+     * "Has this customer engaged this company at all?" — the gate for revealing a company's full
+     * profile, mirroring the same rule that reveals its identity on a trip.
+     */
+    boolean existsByCustomerIdAndCompanyId(UUID customerId, UUID companyId);
+
     Optional<Lead> findByIdAndCustomerId(UUID id, UUID customerId);
 
     Optional<Lead> findByIdAndCompanyId(UUID id, UUID companyId);

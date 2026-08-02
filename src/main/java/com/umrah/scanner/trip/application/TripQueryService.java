@@ -2,6 +2,7 @@ package com.umrah.scanner.trip.application;
 
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
+import com.umrah.scanner.pricing.application.LeadPricingService;
 import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
@@ -29,11 +30,17 @@ public class TripQueryService {
     private final TripRepository tripRepository;
     private final LeadRepository leadRepository;
     private final RoomPriceRepository roomPriceRepository;
+    private final LeadPricingService leadPricingService;
 
-    public TripQueryService(TripRepository tripRepository, LeadRepository leadRepository, RoomPriceRepository roomPriceRepository) {
+    public TripQueryService(
+            TripRepository tripRepository,
+            LeadRepository leadRepository,
+            RoomPriceRepository roomPriceRepository,
+            LeadPricingService leadPricingService) {
         this.tripRepository = tripRepository;
         this.leadRepository = leadRepository;
         this.roomPriceRepository = roomPriceRepository;
+        this.leadPricingService = leadPricingService;
     }
 
     /** "Price starts from" — the QUAD (4-bed) room price is the cheapest per-person rate we sell. */
@@ -79,15 +86,41 @@ public class TripQueryService {
         boolean companyVisible = viewingCustomerId
                 .map(customerId -> leadRepository.findByCustomerIdAndTripId(customerId, tripId).isPresent())
                 .orElse(false);
-        return new TripDetailResult(trip, companyVisible);
+        return new TripDetailResult(trip, companyVisible, cashbackPerTraveler(trip));
     }
 
     @Transactional(readOnly = true)
-    public Trip getOwnedDetail(UUID companyId, UUID tripId) {
+    public TripDetailResult getOwnedDetail(UUID companyId, UUID tripId) {
         Trip trip = tripRepository.findWithDetailsByIdAndCompanyId(tripId, companyId)
                 .orElseThrow(() -> NotFoundException.of("Trip", tripId));
         initializeCollections(trip);
-        return trip;
+        return new TripDetailResult(trip, true, cashbackPerTraveler(trip));
+    }
+
+    /**
+     * The detail view for a trip the caller just created or edited.
+     *
+     * <p>Re-reads by id rather than taking the returned entity: the write use cases resolve their
+     * trip through {@code TripOwnershipGuard}, which does not fetch {@code company}, so that entity
+     * comes back with an uninitialized proxy and a detached session. Reading the company off it in
+     * the response mapper is what made these endpoints 500. Loading it here, with the company
+     * fetch-joined and both collections initialized, keeps the mapping safe after the transaction
+     * closes.
+     */
+    @Transactional(readOnly = true)
+    public TripDetailResult ownedDetail(UUID tripId) {
+        Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
+        initializeCollections(trip);
+        return new TripDetailResult(trip, true, cashbackPerTraveler(trip));
+    }
+
+    /**
+     * Runs through the real cashback policies with a party of one, so the figure advertised on the
+     * details page can never drift from what a lead created against this trip actually pays out.
+     */
+    private BigDecimal cashbackPerTraveler(Trip trip) {
+        return leadPricingService.cashbackPerTraveler(
+                trip.getCompany().getId(), trip.getId(), trip.getCompany().getCommissionPerTraveler());
     }
 
     /**

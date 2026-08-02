@@ -1,0 +1,45 @@
+package com.umrah.scanner.lead.domain;
+
+import com.umrah.scanner.user.domain.Role;
+
+/**
+ * What an actor asks to do to a lead, rather than which status they want it to end up in.
+ *
+ * <p>Clients name the intent and the server derives the target status from the lead's current
+ * state (see {@link LeadTransitionPolicy}). That is what makes "company confirms the customer's
+ * report" and "company reports the payment itself" a single action with two starting points, and
+ * it removes any way for a client to request an illegal status directly.
+ */
+public enum LeadAction {
+
+    /** Customer says they paid the deposit; the company still has to confirm. */
+    REPORT_DEPOSIT(Role.CUSTOMER),
+
+    /** Company confirms the customer's deposit report, or records a deposit itself. */
+    MARK_DEPOSIT_PAID(Role.COMPANY),
+
+    /** Customer says they paid in full; the company still has to confirm. */
+    REPORT_FULL_PAYMENT(Role.CUSTOMER),
+
+    /** Company confirms the customer's full-payment report, or records full payment itself. */
+    MARK_FULLY_PAID(Role.COMPANY),
+
+    /** Company states it has settled the platform's commission; awaits admin confirmation. */
+    REPORT_COMMISSION_PAID(Role.COMPANY),
+
+    /** Admin confirms the company's commission payment, or records it directly from FULLY_PAID. */
+    CONFIRM_COMMISSION_PAID(Role.ADMIN),
+
+    /** Admin transfers the cashback to the customer's wallet. */
+    PAY_CASHBACK(Role.ADMIN);
+
+    private final Role actor;
+
+    LeadAction(Role actor) {
+        this.actor = actor;
+    }
+
+    public Role actor() {
+        return actor;
+    }
+}

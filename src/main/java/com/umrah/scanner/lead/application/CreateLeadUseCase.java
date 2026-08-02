@@ -8,20 +8,26 @@ import com.umrah.scanner.customer.infrastructure.CustomerProfileRepository;
 import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadStatus;
 import com.umrah.scanner.lead.domain.LeadStatusHistory;
+import com.umrah.scanner.lead.domain.TravelerParty;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
 import com.umrah.scanner.lead.infrastructure.LeadStatusHistoryRepository;
-import com.umrah.scanner.notification.application.NotificationDispatcher;
+import com.umrah.scanner.pricing.application.LeadPricingService;
+import com.umrah.scanner.pricing.domain.PricingRequest;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
-import java.util.Map;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * "Contact company." Idempotent by design — re-contacting a trip returns the existing
- * lead instead of erroring, matching a mobile client that may retry the request.
+ * "Contact company." The single point at which a lead's commission and cashback are ever computed —
+ * both are snapshotted here and are read-only for the rest of the lead's life.
+ *
+ * <p>Idempotent by design: re-contacting a trip returns the existing lead instead of erroring,
+ * matching a mobile client that may retry. If the traveller counts differ and the lead has not been
+ * locked yet, the counts are updated — but the original pricing stands, exactly as the rules require.
  */
 @Service
 public class CreateLeadUseCase {
@@ -30,7 +36,8 @@ public class CreateLeadUseCase {
     private final LeadStatusHistoryRepository leadStatusHistoryRepository;
     private final CustomerProfileRepository customerProfileRepository;
     private final TripRepository tripRepository;
-    private final NotificationDispatcher notificationDispatcher;
+    private final LeadPricingService leadPricingService;
+    private final LeadNotifier leadNotifier;
     private final AnalyticsEventService analyticsEventService;
 
     public CreateLeadUseCase(
@@ -38,39 +45,64 @@ public class CreateLeadUseCase {
             LeadStatusHistoryRepository leadStatusHistoryRepository,
             CustomerProfileRepository customerProfileRepository,
             TripRepository tripRepository,
-            NotificationDispatcher notificationDispatcher,
+            LeadPricingService leadPricingService,
+            LeadNotifier leadNotifier,
             AnalyticsEventService analyticsEventService) {
         this.leadRepository = leadRepository;
         this.leadStatusHistoryRepository = leadStatusHistoryRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.tripRepository = tripRepository;
-        this.notificationDispatcher = notificationDispatcher;
+        this.leadPricingService = leadPricingService;
+        this.leadNotifier = leadNotifier;
         this.analyticsEventService = analyticsEventService;
     }
 
     @Transactional
-    public Lead execute(UUID customerUserId, UUID tripId) {
+    public Lead execute(UUID customerUserId, CreateLeadCommand command) {
         CustomerProfile customer = customerProfileRepository.findByUserId(customerUserId)
                 .orElseThrow(() -> new ValidationException("Complete your profile before contacting a company"));
         if (!customer.isProfileCompleted()) {
             throw new ValidationException("Complete your profile before contacting a company");
         }
 
-        Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
+        Trip trip = tripRepository.findWithDetailsById(command.tripId())
+                .orElseThrow(() -> NotFoundException.of("Trip", command.tripId()));
         if (trip.getStatus() != TripStatus.PUBLISHED) {
             throw new ValidationException("This trip is not available");
         }
 
-        return leadRepository.findByCustomerIdAndTripId(customer.getId(), tripId)
-                .orElseGet(() -> createLead(customer, trip, customerUserId));
+        TravelerParty travelers = TravelerParty.of(command.adultCount(), command.childCount(), command.infantCount());
+
+        return leadRepository.findByCustomerIdAndTripId(customer.getId(), command.tripId())
+                .map(existing -> resumeExisting(existing, travelers))
+                .orElseGet(() -> createLead(customer, trip, travelers, customerUserId));
     }
 
-    private Lead createLead(CustomerProfile customer, Trip trip, UUID actingUserId) {
+    /** A retry, or a customer re-opening the same trip: same lead, same price, counts refreshed if still open. */
+    private Lead resumeExisting(Lead lead, TravelerParty travelers) {
+        if (lead.areTravelersEditable()) {
+            lead.changeTravelers(travelers);
+        }
+        return lead;
+    }
+
+    private Lead createLead(CustomerProfile customer, Trip trip, TravelerParty travelers, UUID actingUserId) {
         Lead lead = new Lead();
         lead.setCustomer(customer);
         lead.setTrip(trip);
         lead.setCompany(trip.getCompany());
         lead.setStatus(LeadStatus.INTERESTED);
+        lead.changeTravelers(travelers);
+        lead.applyPricing(leadPricingService.price(new PricingRequest(
+                trip.getCompany().getId(),
+                trip.getId(),
+                customer.getId(),
+                trip.getCompany().getCommissionPerTraveler(),
+                travelers.getAdultCount(),
+                travelers.getChildCount(),
+                travelers.getInfantCount(),
+                travelers.getTravelerCount(),
+                Instant.now())));
         lead = leadRepository.save(lead);
 
         LeadStatusHistory history = new LeadStatusHistory();
@@ -79,13 +111,7 @@ public class CreateLeadUseCase {
         history.setChangedBy(actingUserId);
         leadStatusHistoryRepository.save(history);
 
-        notificationDispatcher.dispatch(
-                trip.getCompany().getUser().getId(),
-                "NEW_LEAD",
-                "New interested customer",
-                "A customer is interested in " + trip.getTitle(),
-                Map.of("leadId", lead.getId().toString(), "tripId", trip.getId().toString()));
-
+        leadNotifier.leadCreated(lead);
         analyticsEventService.record(actingUserId, "CONTACT_COMPANY", "Trip", trip.getId(), null);
 
         return lead;
