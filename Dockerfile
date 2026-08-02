@@ -15,7 +15,9 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-RUN useradd --system --create-home --shell /usr/sbin/nologin appuser
+RUN useradd --system --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/uploads \
+    && chown -R appuser:appuser /app
 USER appuser
 
 COPY --from=build /app/build/libs/*.jar app.jar

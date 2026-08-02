@@ -9,6 +9,7 @@ import com.umrah.scanner.company.application.SuspendCompanyUseCase;
 import com.umrah.scanner.company.application.UpdateCompanyProfileCommand;
 import com.umrah.scanner.company.application.UpdateCompanyProfileUseCase;
 import com.umrah.scanner.company.application.UploadCompanyDocumentUseCase;
+import com.umrah.scanner.company.application.UploadCompanyLogoUseCase;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.common.response.ApiResponse;
 import com.umrah.scanner.common.response.PageResponse;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 public class CompanyController {
@@ -38,6 +41,7 @@ public class CompanyController {
     private final RejectCompanyUseCase rejectCompanyUseCase;
     private final SuspendCompanyUseCase suspendCompanyUseCase;
     private final UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase;
+    private final UploadCompanyLogoUseCase uploadCompanyLogoUseCase;
     private final CompanyQueryService companyQueryService;
 
     public CompanyController(
@@ -47,6 +51,7 @@ public class CompanyController {
             RejectCompanyUseCase rejectCompanyUseCase,
             SuspendCompanyUseCase suspendCompanyUseCase,
             UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase,
+            UploadCompanyLogoUseCase uploadCompanyLogoUseCase,
             CompanyQueryService companyQueryService) {
         this.registerCompanyUseCase = registerCompanyUseCase;
         this.updateCompanyProfileUseCase = updateCompanyProfileUseCase;
@@ -54,6 +59,7 @@ public class CompanyController {
         this.rejectCompanyUseCase = rejectCompanyUseCase;
         this.suspendCompanyUseCase = suspendCompanyUseCase;
         this.uploadCompanyDocumentUseCase = uploadCompanyDocumentUseCase;
+        this.uploadCompanyLogoUseCase = uploadCompanyLogoUseCase;
         this.companyQueryService = companyQueryService;
     }
 
@@ -84,6 +90,14 @@ public class CompanyController {
         var command = new UpdateCompanyProfileCommand(
                 request.companyName(), request.city(), request.address(), request.logoUrl(), request.whatsapp(), request.description());
         var company = updateCompanyProfileUseCase.execute(currentUser.userId(), command);
+        return ApiResponse.of(CompanyResponse.from(company));
+    }
+
+    @PreAuthorize("hasRole('COMPANY')")
+    @PostMapping(value = "/api/v1/companies/me/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<CompanyResponse> uploadLogo(
+            @AuthenticationPrincipal AuthenticatedUser currentUser, @RequestParam("file") MultipartFile file) {
+        var company = uploadCompanyLogoUseCase.execute(currentUser.userId(), file);
         return ApiResponse.of(CompanyResponse.from(company));
     }
 

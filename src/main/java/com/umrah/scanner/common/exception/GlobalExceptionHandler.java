@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /** Every error response on the API is an RFC 7807 problem+json body — no exception stack trace ever reaches the client. */
 @RestControllerAdvice
@@ -57,6 +58,11 @@ public class GlobalExceptionHandler {
         }
         problem.setProperty("fieldErrors", fieldErrors);
         return problem;
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Logo must be 5MB or smaller");
     }
 
     @ExceptionHandler(Exception.class)

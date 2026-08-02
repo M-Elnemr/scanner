@@ -48,6 +48,8 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.GET, API_V1 + "/trips/**", API_V1 + "/companies/*/ratings")
                             .permitAll()
                             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health")
+                            .permitAll()
+                            .requestMatchers(HttpMethod.GET, "/uploads/**")
                             .permitAll();
                     // Independent of DevAuthController's own @Profile("dev") + flag check — this
                     // path is only ever open here too when the exact same flag is explicitly set.
