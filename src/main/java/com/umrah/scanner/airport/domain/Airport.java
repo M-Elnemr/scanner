@@ -21,11 +21,12 @@ import lombok.Setter;
 public class Airport extends BaseEntity {
 
     /**
-     * EAGER by deliberate exception to the codebase default. Airports are immutable reference data —
-     * six rows across two countries — and every read of one renders its country, so a lazy proxy
-     * buys nothing here and only creates a chance of a LazyInitializationException at mapping time.
+     * LAZY like everything else in this codebase. Every query whose result is mapped to a response
+     * names this association in its entity graph — see {@code AirportRepository} and
+     * {@code Trip.GRAPH_WITH_REFERENCES}. Declaring it EAGER here would not have been enough on its
+     * own: a FETCH-type entity graph overrides the mapping and makes anything it omits lazy anyway.
      */
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "country_id", nullable = false)
     private Country country;
 

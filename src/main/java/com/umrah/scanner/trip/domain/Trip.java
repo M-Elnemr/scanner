@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedAttributeNode;
 import jakarta.persistence.NamedEntityGraph;
+import jakarta.persistence.NamedSubgraph;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -36,13 +37,21 @@ import org.hibernate.annotations.SQLRestriction;
 // Every to-one association a trip response renders, in one query. Responses are mapped after the
 // transaction closes (open-in-view is off), so anything omitted here fails at mapping time rather
 // than at query time. Safe to combine with paging — none of these are collections.
-@NamedEntityGraph(name = Trip.GRAPH_WITH_REFERENCES, attributeNodes = {
-        @NamedAttributeNode("company"),
-        @NamedAttributeNode("currency"),
-        @NamedAttributeNode("outboundDepartureAirport"),
-        @NamedAttributeNode("outboundArrivalAirport"),
-        @NamedAttributeNode("returnDepartureAirport"),
-        @NamedAttributeNode("returnArrivalAirport")})
+//
+// Each airport names its country through a subgraph. That is not optional: Spring Data's
+// @EntityGraph defaults to FETCH semantics, which forces every attribute NOT listed here to be
+// lazy — overriding the mapping's own fetch type. Leaving country implicit yields a proxy that
+// blows up in AirportResponse the moment the session closes.
+@NamedEntityGraph(
+        name = Trip.GRAPH_WITH_REFERENCES,
+        attributeNodes = {
+                @NamedAttributeNode("company"),
+                @NamedAttributeNode("currency"),
+                @NamedAttributeNode(value = "outboundDepartureAirport", subgraph = "airportWithCountry"),
+                @NamedAttributeNode(value = "outboundArrivalAirport", subgraph = "airportWithCountry"),
+                @NamedAttributeNode(value = "returnDepartureAirport", subgraph = "airportWithCountry"),
+                @NamedAttributeNode(value = "returnArrivalAirport", subgraph = "airportWithCountry")},
+        subgraphs = @NamedSubgraph(name = "airportWithCountry", attributeNodes = @NamedAttributeNode("country")))
 public class Trip extends SoftDeletableEntity {
 
     public static final String GRAPH_WITH_REFERENCES = "Trip.withReferences";
