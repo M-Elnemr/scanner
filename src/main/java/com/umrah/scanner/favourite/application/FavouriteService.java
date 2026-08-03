@@ -6,7 +6,6 @@ import com.umrah.scanner.favourite.domain.Favourite;
 import com.umrah.scanner.favourite.infrastructure.FavouriteRepository;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
 import java.util.UUID;
-import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -42,9 +41,12 @@ public class FavouriteService {
             newFavourite.setTrip(tripRepository.getReferenceById(tripId));
             return favouriteRepository.save(newFavourite);
         });
-        // The controller maps the response after this transaction/session closes (open-in-view is
-        // off), so the lazy trip association it reads must be force-initialized here first.
-        Hibernate.initialize(favourite.getTrip());
+        // The controller maps TripSummaryResponse after this transaction/session closes
+        // (open-in-view is off). Initializing the trip proxy alone is not enough — the response
+        // also walks the trip's currency, its airports and each airport's country. Re-read through
+        // the graph that already fetches all of them instead of hand-initializing each one.
+        favourite.setTrip(tripRepository.findWithDetailsById(tripId)
+                .orElseThrow(() -> NotFoundException.of("Trip", tripId)));
         return favourite;
     }
 

@@ -14,7 +14,19 @@ public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
 
     Optional<Favourite> findByCustomerIdAndTripId(UUID customerId, UUID tripId);
 
-    @EntityGraph(attributePaths = "trip")
+    /**
+     * Fetches everything {@code TripSummaryResponse} walks, not just the trip: the response is
+     * mapped after the session closes, and it reads the trip's currency, its two outbound airports
+     * and each airport's country. Naming only "trip" leaves those as proxies that blow up at
+     * mapping time.
+     */
+    @EntityGraph(attributePaths = {
+            "trip",
+            "trip.currency",
+            "trip.outboundDepartureAirport",
+            "trip.outboundDepartureAirport.country",
+            "trip.outboundArrivalAirport",
+            "trip.outboundArrivalAirport.country"})
     Page<Favourite> findAllByCustomerId(UUID customerId, Pageable pageable);
 
     void deleteByCustomerIdAndTripId(UUID customerId, UUID tripId);
