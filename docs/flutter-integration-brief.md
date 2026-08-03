@@ -159,25 +159,36 @@ chip, not a disabled button.
 
 ## 5. Endpoint reference
 
-### 5.1 Trip details — now returns cashback, gates the company block
+### 5.1 Trip details — cashback, four airports, currency object, company gate
 
 `GET /api/v1/trips/{id}` — public; send the token if the user is logged in.
 
 New field `cashbackPerTraveler`. The `company` object is **`null` until this customer has a lead on
 this trip**; that is the reveal gate described in §6.
 
+**Breaking:** `departureAirport`/`arrivalAirport` (strings) are replaced by **four airport objects**
+covering both legs, and `currency` is now an object rather than a 3-letter string. There is also a
+new `fastTrainIncluded` flag for the include list. See §12.
+
 ```json
 {
   "data": {
     "id": "…", "tripCode": "UMR-001", "title": "Ramadan Umrah Package - 10 Nights",
     "departureDate": "2026-03-01", "returnDate": "2026-03-11",
-    "departureAirport": "CAI", "arrivalAirport": "JED",
-    "airline": "EgyptAir", "flightNumber": "MS655",
+    "outboundDepartureAirport": { "id": "…", "iataCode": "CAI", "name": "Cairo International Airport",
+                                  "city": "Cairo", "countryId": "…", "countryName": "Egypt", "countryIso2": "EG" },
+    "outboundArrivalAirport":   { "id": "…", "iataCode": "JED", "name": "King Abdulaziz International Airport",
+                                  "city": "Jeddah", "countryId": "…", "countryName": "Saudi Arabia", "countryIso2": "SA" },
+    "returnDepartureAirport":   { "id": "…", "iataCode": "MED", "city": "Madinah", "countryIso2": "SA", "…": "…" },
+    "returnArrivalAirport":     { "id": "…", "iataCode": "CAI", "city": "Cairo",   "countryIso2": "EG", "…": "…" },
+    "airline": "EgyptAir",
     "transitCount": 0, "transitCity": null, "transitDuration": null,
     "daysInMakkah": 6, "daysInMadinah": 4,
     "visaIncluded": true, "transportationIncluded": true, "mealsIncluded": true,
-    "guideIncluded": true, "zamzamIncluded": true,
-    "description": "…", "currency": "EGP", "availableSeats": 20,
+    "guideIncluded": true, "zamzamIncluded": true, "fastTrainIncluded": true,
+    "description": "…",
+    "currency": { "id": "…", "code": "EGP", "name": "Egyptian Pound", "symbol": "E£" },
+    "availableSeats": 20,
     "status": "PUBLISHED", "tier": "PREMIUM",
 
     "cashbackPerTraveler": 500.00,
@@ -491,6 +502,10 @@ release when it does.
       `cashbackAmount`, nullable `commissionAmount`/`commissionPerTraveler`, `availableActions`, `audit`.
 - [ ] Make `commissionAmount` nullable in the Dart model — it is `null` on every customer response.
 - [ ] Add `cashbackPerTraveler` to the trip detail model.
+- [ ] Replace the two airport strings with four `Airport` objects; render both legs (§12.2).
+- [ ] Replace the `currency` string with a `Currency` object; format prices from its symbol (§12.4).
+- [ ] Add `fastTrainIncluded` to the include list (§12.5).
+- [ ] Scope the trip-form airport pickers with `GET /api/v1/airports?countryId=` (§12.2).
 - [ ] Add `commissionPerTraveler` (read-only) to the company profile model.
 - [ ] Add a `PublicCompany` model + `GET /api/v1/companies/{id}` client call (§7).
 - [ ] Add the `customer { id, fullName, phone }` block to the lead model; use it on company screens (§8).
@@ -526,7 +541,99 @@ Old types `LEAD_ADMIN_REVIEW`, `COMMISSION_RELEASED` and `CASHBACK_SENT` no long
 
 ---
 
-## 12. Reference
+## 12. Airports, currencies and the fast train
+
+Three pieces of free text on a trip became reference data. This is **breaking** for any screen that
+reads a trip.
+
+### 12.1 New public lookup endpoints
+
+| Method | Path | Returns |
+|---|---|---|
+| `GET` | `/api/v1/countries` | `[{ id, name, iso2 }]` — Egypt and Saudi Arabia |
+| `GET` | `/api/v1/airports?countryId=` | `[{ id, iataCode, name, city, countryId, countryName, countryIso2 }]` |
+| `GET` | `/api/v1/currencies` | `[{ id, code, name, symbol }]` — EGP, SAR, USD |
+
+All three are public (no token) and are fixed lists — fetch once and cache for the session.
+
+Airports currently seeded: **Egypt** — Cairo (CAI), Borg El Arab (HBE), Assiut (ATZ), Luxor (LXR).
+**Saudi Arabia** — Jeddah (JED), Madinah (MED).
+
+### 12.2 A trip now has four airports, not two
+
+A round trip has two legs, so it has four airports. The return leg is stored explicitly rather than
+assumed to mirror the outbound, which means a company can sell *out to Jeddah, home from Madinah*:
+
+| Field | Country | Meaning |
+|---|---|---|
+| `outboundDepartureAirport` | Egypt | leg 1 origin |
+| `outboundArrivalAirport` | Saudi Arabia | leg 1 destination |
+| `returnDepartureAirport` | Saudi Arabia | leg 2 origin — **not necessarily** where they landed |
+| `returnArrivalAirport` | Egypt | leg 2 destination |
+
+**Company trip form — this is the filtering rule you asked for.** Load countries once, then scope each
+picker with `?countryId=`:
+
+- outbound **departure** → Egyptian airports
+- outbound **arrival** → Saudi airports
+- return **departure** → Saudi airports
+- return **arrival** → Egyptian airports
+
+The server enforces the same shape and returns `422` with a readable `detail` if it is violated
+(e.g. *"The return flight must depart from Saudi Arabia, the country the outbound flight arrives in"*).
+Do not hardcode the country names client-side — read `countryIso2` off the airport objects, so adding
+a third country later needs no app change.
+
+**Customer trip screen:** render the itinerary as two legs. Showing only the outbound pair hides the
+open-jaw case, which is exactly the information a pilgrim needs.
+
+### 12.3 Create / update trip — request changes
+
+Replace in `POST /api/v1/companies/me/trips` and `PUT /api/v1/companies/me/trips/{id}`:
+
+```jsonc
+// removed
+"departureAirport": "CAI",
+"arrivalAirport": "JED",
+"currency": "EGP",
+
+// added — all five are required (UUIDs from the lookup endpoints)
+"outboundDepartureAirportId": "…",
+"outboundArrivalAirportId":   "…",
+"returnDepartureAirportId":   "…",
+"returnArrivalAirportId":     "…",
+"currencyId":                 "…",
+"fastTrainIncluded":          true
+```
+
+`currencyId` is now **required** — there is no server-side default to EGP any more. The company picks
+the currency per trip.
+
+### 12.4 Currency is an object
+
+`trip.currency` is `{ id, code, name, symbol }` instead of `"EGP"`. Format prices with `symbol` (or
+`code`) from the trip itself — never a hardcoded `E£`, since the same list can now hold SAR and USD
+trips side by side. Room prices carry no currency of their own; they inherit the trip's.
+
+There are no exchange rates and nothing converts between currencies: a price is quoted and paid in
+the trip's own currency.
+
+### 12.5 `flightNumber` is removed
+
+A trip describes two legs but only ever held one flight number, so it could be right for at most
+one of them. It is gone from every trip payload and from the create/update requests — delete the
+field from your models and any UI that renders it. The airline, the four airports and the transit
+details still describe the journey.
+
+### 12.6 Fast train
+
+`fastTrainIncluded` (boolean) joins `visaIncluded`, `transportationIncluded`, `mealsIncluded`,
+`guideIncluded` and `zamzamIncluded` in the include list. It means the **Haramain high-speed rail
+between Makkah and Madinah** is in the package price — worth its own icon, travellers care about it.
+
+---
+
+## 13. Reference
 
 - Swagger UI: `/swagger-ui.html` (bearer auth configured; the lead lifecycle is described on the
   landing page).

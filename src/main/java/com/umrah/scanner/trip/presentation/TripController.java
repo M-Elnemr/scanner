@@ -47,8 +47,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TripController {
 
-    private static final String DEFAULT_CURRENCY = "EGP";
-
     private final CreateTripUseCase createTripUseCase;
     private final UpdateTripUseCase updateTripUseCase;
     private final UpsertRoomPricesUseCase upsertRoomPricesUseCase;
@@ -205,24 +203,24 @@ public class TripController {
 
     private CreateTripCommand toCreateCommand(CreateTripRequest r) {
         return new CreateTripCommand(
-                r.tripCode(), r.title(), r.departureDate(), r.returnDate(), r.departureAirport(), r.arrivalAirport(),
-                r.airline(), r.flightNumber(), r.transitCount(), r.transitCity(), r.transitDuration(),
+                r.tripCode(), r.title(), r.departureDate(), r.returnDate(),
+                r.outboundDepartureAirportId(), r.outboundArrivalAirportId(),
+                r.returnDepartureAirportId(), r.returnArrivalAirportId(),
+                r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
                 r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
-                r.guideIncluded(), r.zamzamIncluded(), r.description(), currencyOrDefault(r.currency()), r.availableSeats(),
-                toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
+                r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
+                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
     }
 
     private UpdateTripCommand toUpdateCommand(UpdateTripRequest r) {
         return new UpdateTripCommand(
-                r.title(), r.departureDate(), r.returnDate(), r.departureAirport(), r.arrivalAirport(),
-                r.airline(), r.flightNumber(), r.transitCount(), r.transitCity(), r.transitDuration(),
+                r.title(), r.departureDate(), r.returnDate(),
+                r.outboundDepartureAirportId(), r.outboundArrivalAirportId(),
+                r.returnDepartureAirportId(), r.returnArrivalAirportId(),
+                r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
                 r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
-                r.guideIncluded(), r.zamzamIncluded(), r.description(), currencyOrDefault(r.currency()), r.availableSeats(),
-                toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
-    }
-
-    private String currencyOrDefault(String currency) {
-        return (currency == null || currency.isBlank()) ? DEFAULT_CURRENCY : currency;
+                r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
+                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
     }
 
     // null means "omitted" (leave untouched on update); an empty list is an explicit clear.

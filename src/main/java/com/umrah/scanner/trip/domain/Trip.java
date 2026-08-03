@@ -1,7 +1,9 @@
 package com.umrah.scanner.trip.domain;
 
+import com.umrah.scanner.airport.domain.Airport;
 import com.umrah.scanner.common.domain.SoftDeletableEntity;
 import com.umrah.scanner.company.domain.CompanyProfile;
+import com.umrah.scanner.currency.domain.Currency;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +12,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -29,7 +33,19 @@ import org.hibernate.annotations.SQLRestriction;
 @Entity
 @Table(name = "trips")
 @SQLRestriction("deleted_at is null")
+// Every to-one association a trip response renders, in one query. Responses are mapped after the
+// transaction closes (open-in-view is off), so anything omitted here fails at mapping time rather
+// than at query time. Safe to combine with paging — none of these are collections.
+@NamedEntityGraph(name = Trip.GRAPH_WITH_REFERENCES, attributeNodes = {
+        @NamedAttributeNode("company"),
+        @NamedAttributeNode("currency"),
+        @NamedAttributeNode("outboundDepartureAirport"),
+        @NamedAttributeNode("outboundArrivalAirport"),
+        @NamedAttributeNode("returnDepartureAirport"),
+        @NamedAttributeNode("returnArrivalAirport")})
 public class Trip extends SoftDeletableEntity {
+
+    public static final String GRAPH_WITH_REFERENCES = "Trip.withReferences";
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "company_id", nullable = false)
@@ -47,17 +63,28 @@ public class Trip extends SoftDeletableEntity {
     @Column(name = "return_date", nullable = false)
     private LocalDate returnDate;
 
-    @Column(name = "departure_airport", nullable = false, length = 10)
-    private String departureAirport;
+    // A round trip has two legs and therefore four airports. The return leg is stated explicitly
+    // rather than assumed to mirror the outbound, so a company can fly travellers out to Jeddah and
+    // bring them home from Madinah.
 
-    @Column(name = "arrival_airport", nullable = false, length = 10)
-    private String arrivalAirport;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "outbound_departure_airport_id", nullable = false)
+    private Airport outboundDepartureAirport;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "outbound_arrival_airport_id", nullable = false)
+    private Airport outboundArrivalAirport;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "return_departure_airport_id", nullable = false)
+    private Airport returnDepartureAirport;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "return_arrival_airport_id", nullable = false)
+    private Airport returnArrivalAirport;
 
     @Column(name = "airline", nullable = false, length = 100)
     private String airline;
-
-    @Column(name = "flight_number", length = 20)
-    private String flightNumber;
 
     @Column(name = "transit_count", nullable = false)
     private short transitCount;
@@ -89,11 +116,16 @@ public class Trip extends SoftDeletableEntity {
     @Column(name = "zamzam_included", nullable = false)
     private boolean zamzamIncluded;
 
+    /** Haramain high-speed rail between Makkah and Madinah. */
+    @Column(name = "fast_train_included", nullable = false)
+    private boolean fastTrainIncluded;
+
     @Column(name = "description", columnDefinition = "text")
     private String description;
 
-    @Column(name = "currency", nullable = false, length = 3)
-    private String currency;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "currency_id", nullable = false)
+    private Currency currency;
 
     @Column(name = "available_seats", nullable = false)
     private int availableSeats;

@@ -16,10 +16,15 @@ public class UpdateTripUseCase {
 
     private final TripOwnershipGuard tripOwnershipGuard;
     private final TripRepository tripRepository;
+    private final TripRouteResolver tripRouteResolver;
 
-    public UpdateTripUseCase(TripOwnershipGuard tripOwnershipGuard, TripRepository tripRepository) {
+    public UpdateTripUseCase(
+            TripOwnershipGuard tripOwnershipGuard,
+            TripRepository tripRepository,
+            TripRouteResolver tripRouteResolver) {
         this.tripOwnershipGuard = tripOwnershipGuard;
         this.tripRepository = tripRepository;
+        this.tripRouteResolver = tripRouteResolver;
     }
 
     @Transactional
@@ -36,10 +41,16 @@ public class UpdateTripUseCase {
         trip.setTitle(command.title());
         trip.setDepartureDate(command.departureDate());
         trip.setReturnDate(command.returnDate());
-        trip.setDepartureAirport(command.departureAirport());
-        trip.setArrivalAirport(command.arrivalAirport());
+        TripRoute route = tripRouteResolver.resolveRoute(
+                command.outboundDepartureAirportId(), command.outboundArrivalAirportId(),
+                command.returnDepartureAirportId(), command.returnArrivalAirportId());
+
+        trip.setOutboundDepartureAirport(route.outboundDeparture());
+        trip.setOutboundArrivalAirport(route.outboundArrival());
+        trip.setReturnDepartureAirport(route.returnDeparture());
+        trip.setReturnArrivalAirport(route.returnArrival());
+        trip.setCurrency(tripRouteResolver.resolveCurrency(command.currencyId()));
         trip.setAirline(command.airline());
-        trip.setFlightNumber(command.flightNumber());
         trip.setTransitCount(command.transitCount());
         trip.setTransitCity(command.transitCity());
         trip.setTransitDuration(command.transitDuration());
@@ -50,8 +61,8 @@ public class UpdateTripUseCase {
         trip.setMealsIncluded(command.mealsIncluded());
         trip.setGuideIncluded(command.guideIncluded());
         trip.setZamzamIncluded(command.zamzamIncluded());
+        trip.setFastTrainIncluded(command.fastTrainIncluded());
         trip.setDescription(command.description());
-        trip.setCurrency(command.currency());
         trip.setAvailableSeats(command.availableSeats());
         trip.setTier(command.tier());
         trip.setLastUpdate(Instant.now());

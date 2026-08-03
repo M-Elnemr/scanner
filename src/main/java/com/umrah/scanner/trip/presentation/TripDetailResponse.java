@@ -1,5 +1,7 @@
 package com.umrah.scanner.trip.presentation;
 
+import com.umrah.scanner.airport.presentation.AirportResponse;
+import com.umrah.scanner.currency.presentation.CurrencyResponse;
 import com.umrah.scanner.trip.application.TripDetailResult;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
@@ -18,10 +20,11 @@ public record TripDetailResponse(
         String title,
         LocalDate departureDate,
         LocalDate returnDate,
-        String departureAirport,
-        String arrivalAirport,
+        @Schema(description = "Leg 1 origin, in the traveler's own country") AirportResponse outboundDepartureAirport,
+        @Schema(description = "Leg 1 destination, in Saudi Arabia") AirportResponse outboundArrivalAirport,
+        @Schema(description = "Leg 2 origin — not necessarily the airport they landed at") AirportResponse returnDepartureAirport,
+        @Schema(description = "Leg 2 destination, back home") AirportResponse returnArrivalAirport,
         String airline,
-        String flightNumber,
         short transitCount,
         String transitCity,
         String transitDuration,
@@ -32,8 +35,9 @@ public record TripDetailResponse(
         boolean mealsIncluded,
         boolean guideIncluded,
         boolean zamzamIncluded,
+        @Schema(description = "Haramain high-speed rail between Makkah and Madinah") boolean fastTrainIncluded,
         String description,
-        String currency,
+        CurrencyResponse currency,
         int availableSeats,
         TripStatus status,
         TripTier tier,
@@ -61,12 +65,16 @@ public record TripDetailResponse(
 
         return new TripDetailResponse(
                 trip.getId(), trip.getTripCode(), trip.getTitle(), trip.getDepartureDate(), trip.getReturnDate(),
-                trip.getDepartureAirport(), trip.getArrivalAirport(), trip.getAirline(), trip.getFlightNumber(),
+                AirportResponse.from(trip.getOutboundDepartureAirport()),
+                AirportResponse.from(trip.getOutboundArrivalAirport()),
+                AirportResponse.from(trip.getReturnDepartureAirport()),
+                AirportResponse.from(trip.getReturnArrivalAirport()),
+                trip.getAirline(),
                 trip.getTransitCount(), trip.getTransitCity(), trip.getTransitDuration(),
                 trip.getDaysInMakkah(), trip.getDaysInMadinah(),
                 trip.isVisaIncluded(), trip.isTransportationIncluded(), trip.isMealsIncluded(),
-                trip.isGuideIncluded(), trip.isZamzamIncluded(), trip.getDescription(),
-                trip.getCurrency(), trip.getAvailableSeats(), trip.getStatus(), trip.getTier(),
+                trip.isGuideIncluded(), trip.isZamzamIncluded(), trip.isFastTrainIncluded(), trip.getDescription(),
+                CurrencyResponse.from(trip.getCurrency()), trip.getAvailableSeats(), trip.getStatus(), trip.getTier(),
                 cashbackPerTraveler, trip.getLastUpdate(),
                 trip.getHotels().stream().map(TripHotelResponse::from).toList(),
                 trip.getRoomPrices().stream().map(RoomPriceResponse::from).toList(),

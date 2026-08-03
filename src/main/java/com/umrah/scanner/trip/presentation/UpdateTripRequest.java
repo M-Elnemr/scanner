@@ -8,15 +8,17 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public record UpdateTripRequest(
         @NotBlank @Size(max = 255) String title,
         @NotNull LocalDate departureDate,
         @NotNull LocalDate returnDate,
-        @NotBlank String departureAirport,
-        @NotBlank String arrivalAirport,
+        @NotNull(message = "Outbound departure airport is required") UUID outboundDepartureAirportId,
+        @NotNull(message = "Outbound arrival airport is required") UUID outboundArrivalAirportId,
+        @NotNull(message = "Return departure airport is required") UUID returnDepartureAirportId,
+        @NotNull(message = "Return arrival airport is required") UUID returnArrivalAirportId,
         @NotBlank String airline,
-        String flightNumber,
         short transitCount,
         String transitCity,
         String transitDuration,
@@ -27,8 +29,9 @@ public record UpdateTripRequest(
         boolean mealsIncluded,
         boolean guideIncluded,
         boolean zamzamIncluded,
+        boolean fastTrainIncluded,
         String description,
-        @Size(min = 3, max = 3) String currency,
+        @NotNull(message = "Currency is required") UUID currencyId,
         @PositiveOrZero int availableSeats,
         @Valid List<TripHotelRequest> hotels,
         @Valid List<RoomPriceRequest> prices,

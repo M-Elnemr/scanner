@@ -100,6 +100,51 @@
       "key": "notificationId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "egyptCountryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "saudiCountryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cairoAirportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jeddahAirportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "madinahAirportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "luxorAirportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "egpCurrencyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sarCurrencyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "usdCurrencyId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -2340,6 +2385,251 @@
       ]
     },
     {
+      "name": "Reference Data",
+      "description": "Fixed public lookup lists. Fetch once and cache. Countries and airports drive the trip form's airport pickers; currencies drive the per-trip currency choice.",
+      "item": [
+        {
+          "name": "List Countries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/countries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "countries"
+              ]
+            },
+            "description": "Public. Fixed list. Use the returned id to scope the airport picker."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/countries",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "countries"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": [\n    { \"id\": \"{{egyptCountryId}}\", \"name\": \"Egypt\", \"iso2\": \"EG\" },\n    { \"id\": \"{{saudiCountryId}}\", \"name\": \"Saudi Arabia\", \"iso2\": \"SA\" }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data || [];",
+                  "const by = c => (d.find(x => x.iso2 === c) || {}).id;",
+                  "pm.collectionVariables.set('egyptCountryId', by('EG'));",
+                  "pm.collectionVariables.set('saudiCountryId', by('SA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Airports (scoped by country)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/airports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "airports"
+              ],
+              "query": [
+                {
+                  "key": "countryId",
+                  "value": "{{egyptCountryId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Public. Omit countryId for all airports. Pass it to scope the list — that is how the trip form offers Egyptian airports where the itinerary needs one and Saudi airports where it needs the other.\n\nEgypt: Cairo (CAI), Borg El Arab (HBE), Assiut (ATZ), Luxor (LXR).\nSaudi Arabia: Jeddah (JED), Madinah (MED)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/airports?countryId={{egyptCountryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "airports"
+                  ],
+                  "query": [
+                    {
+                      "key": "countryId",
+                      "value": "{{egyptCountryId}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": [\n    { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\",\n      \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    { \"id\": \"{{luxorAirportId}}\", \"iataCode\": \"LXR\", \"name\": \"Luxor International Airport\",\n      \"city\": \"Luxor\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data || [];",
+                  "const by = c => (d.find(x => x.iataCode === c) || {}).id;",
+                  "['CAI','HBE','ATZ','LXR','JED','MED'].forEach(code => {",
+                  "    const names = { CAI: 'cairo', HBE: 'borgElArab', ATZ: 'assiut',",
+                  "                    LXR: 'luxor', JED: 'jeddah', MED: 'madinah' };",
+                  "    if (by(code)) pm.collectionVariables.set(names[code] + 'AirportId', by(code));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Currencies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/currencies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "currencies"
+              ]
+            },
+            "description": "Public. Fixed list. A company picks one of these per trip; there is no server-side default."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/currencies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "currencies"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": [\n    { \"id\": \"{{egpCurrencyId}}\", \"code\": \"EGP\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    { \"id\": \"{{sarCurrencyId}}\", \"code\": \"SAR\", \"name\": \"Saudi Riyal\", \"symbol\": \"SR\" },\n    { \"id\": \"{{usdCurrencyId}}\", \"code\": \"USD\", \"name\": \"US Dollar\", \"symbol\": \"$\" }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data || [];",
+                  "const by = c => (d.find(x => x.code === c) || {}).id;",
+                  "['EGP','SAR','USD'].forEach(c => {",
+                  "    if (by(c)) pm.collectionVariables.set(c.toLowerCase() + 'CurrencyId', by(c));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Trip",
       "description": "Company-owned trip CRUD/publish lifecycle plus public browse/detail/compare.",
       "item": [
@@ -2369,7 +2659,7 @@
             "description": "COMPANY must be APPROVED. Starts in DRAFT — use Publish Trip below once room prices are set.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
+              "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n  \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n  \"returnDepartureAirportId\": \"{{madinahAirportId}}\",\n  \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n  \"airline\": \"Saudia\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"fastTrainIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currencyId\": \"{{egpCurrencyId}}\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2413,7 +2703,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n  \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n  \"returnDepartureAirportId\": \"{{madinahAirportId}}\",\n  \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n  \"airline\": \"Saudia\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"fastTrainIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currencyId\": \"{{egpCurrencyId}}\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2431,7 +2721,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"DRAFT\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"DRAFT\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
             },
             {
               "name": "422 Company not approved",
@@ -2458,7 +2748,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n  \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n  \"returnDepartureAirportId\": \"{{madinahAirportId}}\",\n  \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n  \"airline\": \"Saudia\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"fastTrainIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currencyId\": \"{{egpCurrencyId}}\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2503,7 +2793,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"tripCode\": \"UMR-2027-RAMADAN-01\",\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n  \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n  \"returnDepartureAirportId\": \"{{madinahAirportId}}\",\n  \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n  \"airline\": \"Saudia\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"fastTrainIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currencyId\": \"{{egpCurrencyId}}\",\n  \"availableSeats\": 40,\n  \"hotels\": [\n    {\n      \"city\": \"MAKKAH\",\n      \"hotelName\": \"Swissotel Al Maqam Makkah\",\n      \"stars\": 5,\n      \"distanceToHaramM\": 350,\n      \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n    },\n    {\n      \"city\": \"MADINAH\",\n      \"hotelName\": \"Dar Al Taqwa Hotel\",\n      \"stars\": 4,\n      \"distanceToHaramM\": 200,\n      \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2566,7 +2856,7 @@
             "description": "⚠️ Currently broken in the live API regardless of what you send for `hotels` — see the collection-level description for the confirmed root cause. The body/example here document the intended contract, not what you'll actually get back today.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": null\n}",
+              "raw": "{\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n  \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n  \"returnDepartureAirportId\": \"{{madinahAirportId}}\",\n  \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n  \"airline\": \"Saudia\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"fastTrainIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currencyId\": \"{{egpCurrencyId}}\",\n  \"availableSeats\": 40,\n  \"hotels\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2611,7 +2901,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"departureAirport\": \"CAI\",\n  \"arrivalAirport\": \"JED\",\n  \"airline\": \"Saudia\",\n  \"flightNumber\": \"SV310\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currency\": \"SAR\",\n  \"availableSeats\": 40,\n  \"hotels\": null\n}",
+                  "raw": "{\n  \"title\": \"Ramadan Umrah Package - 10 Nights\",\n  \"departureDate\": \"2027-03-10\",\n  \"returnDate\": \"2027-03-20\",\n  \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n  \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n  \"returnDepartureAirportId\": \"{{madinahAirportId}}\",\n  \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n  \"airline\": \"Saudia\",\n  \"transitCount\": 0,\n  \"transitCity\": null,\n  \"transitDuration\": null,\n  \"daysInMakkah\": 6,\n  \"daysInMadinah\": 4,\n  \"visaIncluded\": true,\n  \"transportationIncluded\": true,\n  \"mealsIncluded\": true,\n  \"guideIncluded\": true,\n  \"zamzamIncluded\": true,\n  \"fastTrainIncluded\": true,\n  \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n  \"currencyId\": \"{{egpCurrencyId}}\",\n  \"availableSeats\": 40,\n  \"hotels\": null\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2629,7 +2919,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"DRAFT\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"DRAFT\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
             }
           ]
         },
@@ -2725,7 +3015,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"DRAFT\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"DRAFT\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
             }
           ]
         },
@@ -2821,7 +3111,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
             },
             {
               "name": "422 Not ready to publish",
@@ -2962,7 +3252,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{tripId}}\",\n        \"tripCode\": \"UMR-2027-RAMADAN-01\",\n        \"title\": \"Ramadan Umrah Package - 10 Nights\",\n        \"departureDate\": \"2027-03-10\",\n        \"returnDate\": \"2027-03-20\",\n        \"airline\": \"Saudia\",\n        \"daysInMakkah\": 6,\n        \"daysInMadinah\": 4,\n        \"availableSeats\": 40,\n        \"currency\": \"SAR\",\n        \"status\": \"PUBLISHED\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{tripId}}\",\n        \"tripCode\": \"UMR-2027-RAMADAN-01\",\n        \"title\": \"Ramadan Umrah Package - 10 Nights\",\n        \"departureDate\": \"2027-03-10\",\n        \"returnDate\": \"2027-03-20\",\n        \"airline\": \"Saudia\",\n        \"daysInMakkah\": 6,\n        \"daysInMadinah\": 4,\n        \"availableSeats\": 40,\n        \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n        \"status\": \"PUBLISHED\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
             }
           ]
         },
@@ -3038,7 +3328,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
             }
           ]
         },
@@ -3129,7 +3419,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{tripId}}\",\n        \"tripCode\": \"UMR-2027-RAMADAN-01\",\n        \"title\": \"Ramadan Umrah Package - 10 Nights\",\n        \"departureDate\": \"2027-03-10\",\n        \"returnDate\": \"2027-03-20\",\n        \"airline\": \"Saudia\",\n        \"daysInMakkah\": 6,\n        \"daysInMadinah\": 4,\n        \"availableSeats\": 40,\n        \"currency\": \"SAR\",\n        \"status\": \"PUBLISHED\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"{{tripId}}\",\n        \"tripCode\": \"UMR-2027-RAMADAN-01\",\n        \"title\": \"Ramadan Umrah Package - 10 Nights\",\n        \"departureDate\": \"2027-03-10\",\n        \"returnDate\": \"2027-03-20\",\n        \"airline\": \"Saudia\",\n        \"daysInMakkah\": 6,\n        \"daysInMadinah\": 4,\n        \"availableSeats\": 40,\n        \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n        \"status\": \"PUBLISHED\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
             }
           ]
         },
@@ -3194,7 +3484,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": null\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": null\n  }\n}"
             },
             {
               "name": "200 OK (caller has a lead — company shown)",
@@ -3229,7 +3519,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"departureAirport\": \"CAI\",\n    \"arrivalAirport\": \"JED\",\n    \"airline\": \"Saudia\",\n    \"flightNumber\": \"SV310\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": \"SAR\",\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{tripId}}\",\n    \"tripCode\": \"UMR-2027-RAMADAN-01\",\n    \"title\": \"Ramadan Umrah Package - 10 Nights\",\n    \"departureDate\": \"2027-03-10\",\n    \"returnDate\": \"2027-03-20\",\n    \"outboundDepartureAirport\": { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    \"outboundArrivalAirport\": { \"iataCode\": \"JED\", \"city\": \"Jeddah\", \"countryIso2\": \"SA\" },\n    \"returnDepartureAirport\": { \"iataCode\": \"MED\", \"city\": \"Madinah\", \"countryIso2\": \"SA\" },\n    \"returnArrivalAirport\": { \"iataCode\": \"CAI\", \"city\": \"Cairo\", \"countryIso2\": \"EG\" },\n    \"airline\": \"Saudia\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 6,\n    \"daysInMadinah\": 4,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"10-night Ramadan Umrah package including flights, visa, 5-star Makkah hotel, and guided ziyarah tours.\",\n    \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    \"availableSeats\": 40,\n    \"status\": \"PUBLISHED\",\n    \"lastUpdate\": \"2026-07-15T10:30:00Z\",\n    \"hotels\": [\n      {\n        \"city\": \"MAKKAH\",\n        \"hotelName\": \"Swissotel Al Maqam Makkah\",\n        \"stars\": 5,\n        \"distanceToHaramM\": 350,\n        \"locationUrl\": \"https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah\"\n      },\n      {\n        \"city\": \"MADINAH\",\n        \"hotelName\": \"Dar Al Taqwa Hotel\",\n        \"stars\": 4,\n        \"distanceToHaramM\": 200,\n        \"locationUrl\": \"https://maps.google.com/?q=Dar+Al+Taqwa+Hotel\"\n      }\n    ],\n    \"roomPrices\": [\n      {\n        \"roomType\": \"SINGLE\",\n        \"price\": 5200.0\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 3800.0\n      },\n      {\n        \"roomType\": \"TRIPLE\",\n        \"price\": 3200.0\n      },\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 2900.0\n      },\n      {\n        \"roomType\": \"CHILD\",\n        \"price\": 2000.0\n      },\n      {\n        \"roomType\": \"INFANT\",\n        \"price\": 500.0\n      }\n    ],\n    \"company\": {\n      \"companyId\": \"{{companyId}}\",\n      \"companyName\": \"Al Noor Travel & Tourism\",\n      \"whatsapp\": \"+201001234567\",\n      \"logoUrl\": \"https://cdn.umrahscanner.dev/logos/al-noor.png\"\n    }\n  }\n}"
             },
             {
               "name": "404 Not found",
@@ -3348,7 +3638,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    {\n      \"id\": \"{{tripId}}\",\n      \"tripCode\": \"UMR-2027-RAMADAN-01\",\n      \"title\": \"Ramadan Umrah Package - 10 Nights\",\n      \"departureDate\": \"2027-03-10\",\n      \"returnDate\": \"2027-03-20\",\n      \"airline\": \"Saudia\",\n      \"daysInMakkah\": 6,\n      \"daysInMadinah\": 4,\n      \"availableSeats\": 40,\n      \"currency\": \"SAR\",\n      \"status\": \"PUBLISHED\"\n    }\n  ]\n}"
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"{{tripId}}\",\n      \"tripCode\": \"UMR-2027-RAMADAN-01\",\n      \"title\": \"Ramadan Umrah Package - 10 Nights\",\n      \"departureDate\": \"2027-03-10\",\n      \"returnDate\": \"2027-03-20\",\n      \"airline\": \"Saudia\",\n      \"daysInMakkah\": 6,\n      \"daysInMadinah\": 4,\n      \"availableSeats\": 40,\n      \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n      \"status\": \"PUBLISHED\"\n    }\n  ]\n}"
             },
             {
               "name": "422 Too many ids",
@@ -3547,7 +3837,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"b2f1c9a0-1111-4d56-8abc-1234567890ab\",\n    \"trip\": {\n      \"id\": \"{{tripId}}\",\n      \"tripCode\": \"UMR-2027-RAMADAN-01\",\n      \"title\": \"Ramadan Umrah Package - 10 Nights\",\n      \"departureDate\": \"2027-03-10\",\n      \"returnDate\": \"2027-03-20\",\n      \"airline\": \"Saudia\",\n      \"daysInMakkah\": 6,\n      \"daysInMadinah\": 4,\n      \"availableSeats\": 40,\n      \"currency\": \"SAR\",\n      \"status\": \"PUBLISHED\"\n    },\n    \"createdAt\": \"2026-07-18T12:00:00Z\"\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"b2f1c9a0-1111-4d56-8abc-1234567890ab\",\n    \"trip\": {\n      \"id\": \"{{tripId}}\",\n      \"tripCode\": \"UMR-2027-RAMADAN-01\",\n      \"title\": \"Ramadan Umrah Package - 10 Nights\",\n      \"departureDate\": \"2027-03-10\",\n      \"returnDate\": \"2027-03-20\",\n      \"airline\": \"Saudia\",\n      \"daysInMakkah\": 6,\n      \"daysInMadinah\": 4,\n      \"availableSeats\": 40,\n      \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n      \"status\": \"PUBLISHED\"\n    },\n    \"createdAt\": \"2026-07-18T12:00:00Z\"\n  }\n}"
             }
           ]
         },
@@ -3641,7 +3931,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"b2f1c9a0-1111-4d56-8abc-1234567890ab\",\n        \"trip\": {\n          \"id\": \"{{tripId}}\",\n          \"tripCode\": \"UMR-2027-RAMADAN-01\",\n          \"title\": \"Ramadan Umrah Package - 10 Nights\",\n          \"departureDate\": \"2027-03-10\",\n          \"returnDate\": \"2027-03-20\",\n          \"airline\": \"Saudia\",\n          \"daysInMakkah\": 6,\n          \"daysInMadinah\": 4,\n          \"availableSeats\": 40,\n          \"currency\": \"SAR\",\n          \"status\": \"PUBLISHED\"\n        },\n        \"createdAt\": \"2026-07-18T12:00:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"content\": [\n      {\n        \"id\": \"b2f1c9a0-1111-4d56-8abc-1234567890ab\",\n        \"trip\": {\n          \"id\": \"{{tripId}}\",\n          \"tripCode\": \"UMR-2027-RAMADAN-01\",\n          \"title\": \"Ramadan Umrah Package - 10 Nights\",\n          \"departureDate\": \"2027-03-10\",\n          \"returnDate\": \"2027-03-20\",\n          \"airline\": \"Saudia\",\n          \"daysInMakkah\": 6,\n          \"daysInMadinah\": 4,\n          \"availableSeats\": 40,\n          \"currency\": { \"code\": \"SAR\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n          \"status\": \"PUBLISHED\"\n        },\n        \"createdAt\": \"2026-07-18T12:00:00Z\"\n      }\n    ],\n    \"page\": 0,\n    \"size\": 20,\n    \"totalElements\": 1,\n    \"totalPages\": 1,\n    \"last\": true\n  }\n}"
             }
           ]
         },

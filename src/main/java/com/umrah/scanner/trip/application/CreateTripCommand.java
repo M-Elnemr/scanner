@@ -3,16 +3,18 @@ package com.umrah.scanner.trip.application;
 import com.umrah.scanner.trip.domain.TripTier;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public record CreateTripCommand(
         String tripCode,
         String title,
         LocalDate departureDate,
         LocalDate returnDate,
-        String departureAirport,
-        String arrivalAirport,
+        UUID outboundDepartureAirportId,
+        UUID outboundArrivalAirportId,
+        UUID returnDepartureAirportId,
+        UUID returnArrivalAirportId,
         String airline,
-        String flightNumber,
         short transitCount,
         String transitCity,
         String transitDuration,
@@ -23,8 +25,9 @@ public record CreateTripCommand(
         boolean mealsIncluded,
         boolean guideIncluded,
         boolean zamzamIncluded,
+        boolean fastTrainIncluded,
         String description,
-        String currency,
+        UUID currencyId,
         int availableSeats,
         List<TripHotelInput> hotels,
         List<RoomPriceInput> roomPrices,

@@ -21,14 +21,17 @@ public class CreateTripUseCase {
 
     private final TripRepository tripRepository;
     private final CompanyProfileRepository companyProfileRepository;
+    private final TripRouteResolver tripRouteResolver;
     private final AuditLogService auditLogService;
 
     public CreateTripUseCase(
             TripRepository tripRepository,
             CompanyProfileRepository companyProfileRepository,
+            TripRouteResolver tripRouteResolver,
             AuditLogService auditLogService) {
         this.tripRepository = tripRepository;
         this.companyProfileRepository = companyProfileRepository;
+        this.tripRouteResolver = tripRouteResolver;
         this.auditLogService = auditLogService;
     }
 
@@ -50,10 +53,16 @@ public class CreateTripUseCase {
         trip.setTitle(command.title());
         trip.setDepartureDate(command.departureDate());
         trip.setReturnDate(command.returnDate());
-        trip.setDepartureAirport(command.departureAirport());
-        trip.setArrivalAirport(command.arrivalAirport());
+        TripRoute route = tripRouteResolver.resolveRoute(
+                command.outboundDepartureAirportId(), command.outboundArrivalAirportId(),
+                command.returnDepartureAirportId(), command.returnArrivalAirportId());
+
+        trip.setOutboundDepartureAirport(route.outboundDeparture());
+        trip.setOutboundArrivalAirport(route.outboundArrival());
+        trip.setReturnDepartureAirport(route.returnDeparture());
+        trip.setReturnArrivalAirport(route.returnArrival());
+        trip.setCurrency(tripRouteResolver.resolveCurrency(command.currencyId()));
         trip.setAirline(command.airline());
-        trip.setFlightNumber(command.flightNumber());
         trip.setTransitCount(command.transitCount());
         trip.setTransitCity(command.transitCity());
         trip.setTransitDuration(command.transitDuration());
@@ -64,8 +73,8 @@ public class CreateTripUseCase {
         trip.setMealsIncluded(command.mealsIncluded());
         trip.setGuideIncluded(command.guideIncluded());
         trip.setZamzamIncluded(command.zamzamIncluded());
+        trip.setFastTrainIncluded(command.fastTrainIncluded());
         trip.setDescription(command.description());
-        trip.setCurrency(command.currency());
         trip.setAvailableSeats(command.availableSeats());
         trip.setStatus(TripStatus.PUBLISHED);
         trip.setTier(command.tier());

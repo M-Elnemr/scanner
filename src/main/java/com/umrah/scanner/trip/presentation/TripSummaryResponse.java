@@ -1,5 +1,7 @@
 package com.umrah.scanner.trip.presentation;
 
+import com.umrah.scanner.airport.presentation.AirportResponse;
+import com.umrah.scanner.currency.presentation.CurrencyResponse;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.domain.TripTier;
@@ -15,10 +17,12 @@ public record TripSummaryResponse(
         LocalDate departureDate,
         LocalDate returnDate,
         String airline,
+        AirportResponse outboundDepartureAirport,
+        AirportResponse outboundArrivalAirport,
         short daysInMakkah,
         short daysInMadinah,
         int availableSeats,
-        String currency,
+        CurrencyResponse currency,
         TripStatus status,
         TripTier tier,
         BigDecimal priceStartsFrom) {
@@ -27,7 +31,10 @@ public record TripSummaryResponse(
     public static TripSummaryResponse from(Trip trip, BigDecimal priceStartsFrom) {
         return new TripSummaryResponse(
                 trip.getId(), trip.getTripCode(), trip.getTitle(), trip.getDepartureDate(), trip.getReturnDate(),
-                trip.getAirline(), trip.getDaysInMakkah(), trip.getDaysInMadinah(), trip.getAvailableSeats(),
-                trip.getCurrency(), trip.getStatus(), trip.getTier(), priceStartsFrom);
+                trip.getAirline(),
+                AirportResponse.from(trip.getOutboundDepartureAirport()),
+                AirportResponse.from(trip.getOutboundArrivalAirport()),
+                trip.getDaysInMakkah(), trip.getDaysInMadinah(), trip.getAvailableSeats(),
+                CurrencyResponse.from(trip.getCurrency()), trip.getStatus(), trip.getTier(), priceStartsFrom);
     }
 }
