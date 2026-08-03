@@ -61,6 +61,11 @@ public class UploadCompanyLogoUseCase {
         }
 
         company.setLogoUrl("/uploads/company-logos/" + filename);
+
+        // The controller maps CompanyResponse after this transaction closes (open-in-view is off),
+        // and that response walks the lazy address list. Without this the upload succeeds and then
+        // dies at mapping time with a LazyInitializationException.
+        CompanyProfileInitializer.initializeAddresses(company);
         return company;
     }
 
