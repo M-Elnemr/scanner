@@ -229,7 +229,9 @@ public class TripController {
             return null;
         }
         return hotels.stream()
-                .map(h -> new TripHotelInput(h.city(), h.hotelName(), h.stars(), h.distanceToHaramM(), h.locationUrl()))
+                .map(h -> new TripHotelInput(
+                        h.city(), h.hotelName(), h.stars(), h.distanceToHaramM(),
+                        h.canWalk(), h.freeBusIncluded(), h.locationUrl()))
                 .toList();
     }
 

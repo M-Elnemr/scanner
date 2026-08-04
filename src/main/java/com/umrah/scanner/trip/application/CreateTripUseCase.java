@@ -87,6 +87,8 @@ public class CreateTripUseCase {
                 hotel.setHotelName(input.hotelName());
                 hotel.setStars(input.stars());
                 hotel.setDistanceToHaramM(input.distanceToHaramM());
+                hotel.setCanWalk(input.canWalk());
+                hotel.setFreeBusIncluded(input.freeBusIncluded());
                 hotel.setLocationUrl(input.locationUrl());
                 trip.addHotel(hotel);
             }

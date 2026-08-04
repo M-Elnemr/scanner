@@ -7,5 +7,7 @@ public record TripHotelInput(
         String hotelName,
         short stars,
         Integer distanceToHaramM,
+        boolean canWalk,
+        boolean freeBusIncluded,
         String locationUrl) {
 }

@@ -24,12 +24,42 @@
 BEGIN;
 
 -- --- Teardown (safe to run on a database with no seed data) --------------------
--- ratings.trip_id and leads.trip_id have no ON DELETE CASCADE, so anything attached
--- to a seed trip goes first. Deleting the seed users then cascades through
--- company_profiles -> trips -> trip_hotels / room_prices / favourites.
-DELETE FROM ratings WHERE trip_id IN (SELECT id FROM trips WHERE trip_code LIKE 'SEED-%');
-DELETE FROM leads   WHERE trip_id IN (SELECT id FROM trips WHERE trip_code LIKE 'SEED-%');
-DELETE FROM users   WHERE email LIKE '%@seed.test';
+-- Deliberately more thorough than "delete the seed trips": these accounts are meant to be
+-- logged into and tested against (see the dev-google-test note above), so by the time this
+-- is re-run they may have real leads, ratings, extra trips and audit-trail rows attached —
+-- not just the rows this script itself inserted. Every one of leads.customer_id/company_id/
+-- trip_id, and every *_by / *_user_id audit column across the schema, is a plain foreign key
+-- with no ON DELETE action, so any of them can block "DELETE FROM users" if left alone.
+CREATE TEMP TABLE _seed_user_ids AS SELECT id FROM users WHERE email LIKE '%@seed.test';
+CREATE TEMP TABLE _seed_customer_ids AS SELECT id FROM customer_profiles WHERE user_id IN (SELECT id FROM _seed_user_ids);
+CREATE TEMP TABLE _seed_company_ids AS SELECT id FROM company_profiles WHERE user_id IN (SELECT id FROM _seed_user_ids);
+CREATE TEMP TABLE _seed_trip_ids AS SELECT id FROM trips
+    WHERE company_id IN (SELECT id FROM _seed_company_ids) OR trip_code LIKE 'SEED-%';
+
+-- Cascades to ratings, commissions, cashback_transactions and lead_status_history for free.
+DELETE FROM leads WHERE
+    customer_id IN (SELECT id FROM _seed_customer_ids)
+    OR company_id  IN (SELECT id FROM _seed_company_ids)
+    OR trip_id     IN (SELECT id FROM _seed_trip_ids);
+
+-- Audit columns: nulled rather than deleted, since the rows themselves (a real trip, a real
+-- company profile) are not seed data and must survive even when their author was.
+UPDATE trips            SET created_by = NULL WHERE created_by IN (SELECT id FROM _seed_user_ids);
+UPDATE trips            SET updated_by = NULL WHERE updated_by IN (SELECT id FROM _seed_user_ids);
+UPDATE company_profiles SET approved_by = NULL WHERE approved_by IN (SELECT id FROM _seed_user_ids);
+UPDATE company_profiles SET created_by  = NULL WHERE created_by  IN (SELECT id FROM _seed_user_ids);
+UPDATE company_profiles SET updated_by  = NULL WHERE updated_by  IN (SELECT id FROM _seed_user_ids);
+UPDATE customer_profiles SET created_by = NULL WHERE created_by IN (SELECT id FROM _seed_user_ids);
+UPDATE customer_profiles SET updated_by = NULL WHERE updated_by IN (SELECT id FROM _seed_user_ids);
+UPDATE company_documents SET reviewed_by = NULL WHERE reviewed_by IN (SELECT id FROM _seed_user_ids);
+UPDATE audit_logs       SET actor_user_id = NULL WHERE actor_user_id IN (SELECT id FROM _seed_user_ids);
+UPDATE analytics_events SET user_id       = NULL WHERE user_id       IN (SELECT id FROM _seed_user_ids);
+
+-- Cascades to company_profiles/customer_profiles/device_tokens/notifications/refresh_tokens,
+-- and from there to every trip (and its hotels/room_prices/favourites) the seed companies own.
+DELETE FROM users WHERE id IN (SELECT id FROM _seed_user_ids);
+
+DROP TABLE _seed_user_ids, _seed_customer_ids, _seed_company_ids, _seed_trip_ids;
 
 
 -- =============================================================================
@@ -79,9 +109,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 21, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'MAKKAH', 'Jabal Omar Marriott Hotel Makkah', 5, 450, 'https://maps.google.com/?q=Jabal%20Omar%20Marriott%20Hotel%20Makkah'),
-    ('8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'MAKKAH', 'Jabal Omar Marriott Hotel Makkah', 5, 450, true, false, 'https://maps.google.com/?q=Jabal%20Omar%20Marriott%20Hotel%20Makkah'),
+    ('8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, true, false, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'SINGLE', 293000.00),
@@ -112,9 +142,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 58, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('d069050e-671b-530f-829d-cd5e888f455f', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
-    ('d069050e-671b-530f-829d-cd5e888f455f', 'MADINAH', 'The Oberoi Madina', 5, 200, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('d069050e-671b-530f-829d-cd5e888f455f', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, true, false, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
+    ('d069050e-671b-530f-829d-cd5e888f455f', 'MADINAH', 'The Oberoi Madina', 5, 200, true, false, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('d069050e-671b-530f-829d-cd5e888f455f', 'SINGLE', 200000.00),
@@ -145,9 +175,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 40, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('52892f2b-6f2a-5c44-81a8-0bf302cf046a', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
-    ('52892f2b-6f2a-5c44-81a8-0bf302cf046a', 'MADINAH', 'Millennium Al Aqeeq Hotel', 4, 400, 'https://maps.google.com/?q=Millennium%20Al%20Aqeeq%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('52892f2b-6f2a-5c44-81a8-0bf302cf046a', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, false, true, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
+    ('52892f2b-6f2a-5c44-81a8-0bf302cf046a', 'MADINAH', 'Millennium Al Aqeeq Hotel', 4, 400, true, false, 'https://maps.google.com/?q=Millennium%20Al%20Aqeeq%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('52892f2b-6f2a-5c44-81a8-0bf302cf046a', 'SINGLE', 185500.00),
@@ -178,9 +208,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 27, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('301ece4e-ac67-5aae-969c-6e8e2cac22e8', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
-    ('301ece4e-ac67-5aae-969c-6e8e2cac22e8', 'MADINAH', 'Nozol Royal Inn', 3, 1100, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('301ece4e-ac67-5aae-969c-6e8e2cac22e8', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, true, false, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
+    ('301ece4e-ac67-5aae-969c-6e8e2cac22e8', 'MADINAH', 'Nozol Royal Inn', 3, 1100, false, true, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('301ece4e-ac67-5aae-969c-6e8e2cac22e8', 'SINGLE', 293500.00),
@@ -211,9 +241,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 53, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('671b6f1d-d5a0-5bca-94a3-20adcbde2789', 'MAKKAH', 'Rayyana Ajyad Hotel', 3, 700, 'https://maps.google.com/?q=Rayyana%20Ajyad%20Hotel'),
-    ('671b6f1d-d5a0-5bca-94a3-20adcbde2789', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('671b6f1d-d5a0-5bca-94a3-20adcbde2789', 'MAKKAH', 'Rayyana Ajyad Hotel', 3, 700, true, false, 'https://maps.google.com/?q=Rayyana%20Ajyad%20Hotel'),
+    ('671b6f1d-d5a0-5bca-94a3-20adcbde2789', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, false, true, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('671b6f1d-d5a0-5bca-94a3-20adcbde2789', 'SINGLE', 163500.00),
@@ -244,9 +274,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 20, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('76e82682-157f-50f2-bb32-46cde2778b9c', 'MAKKAH', 'Hilton Makkah Convention Hotel', 5, 350, 'https://maps.google.com/?q=Hilton%20Makkah%20Convention%20Hotel'),
-    ('76e82682-157f-50f2-bb32-46cde2778b9c', 'MADINAH', 'Odst Al Madinah Hotel', 4, 450, 'https://maps.google.com/?q=Odst%20Al%20Madinah%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('76e82682-157f-50f2-bb32-46cde2778b9c', 'MAKKAH', 'Hilton Makkah Convention Hotel', 5, 350, true, false, 'https://maps.google.com/?q=Hilton%20Makkah%20Convention%20Hotel'),
+    ('76e82682-157f-50f2-bb32-46cde2778b9c', 'MADINAH', 'Odst Al Madinah Hotel', 4, 450, true, false, 'https://maps.google.com/?q=Odst%20Al%20Madinah%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('76e82682-157f-50f2-bb32-46cde2778b9c', 'SINGLE', 364500.00),
@@ -277,9 +307,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 36, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('55cf667c-9299-58b8-9c3c-881aa14bc8f8', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
-    ('55cf667c-9299-58b8-9c3c-881aa14bc8f8', 'MADINAH', 'Saja Al Madinah Hotel', 4, 600, 'https://maps.google.com/?q=Saja%20Al%20Madinah%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('55cf667c-9299-58b8-9c3c-881aa14bc8f8', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, true, false, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
+    ('55cf667c-9299-58b8-9c3c-881aa14bc8f8', 'MADINAH', 'Saja Al Madinah Hotel', 4, 600, true, false, 'https://maps.google.com/?q=Saja%20Al%20Madinah%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('55cf667c-9299-58b8-9c3c-881aa14bc8f8', 'SINGLE', 207500.00),
@@ -310,9 +340,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 27, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('b2c10b06-9b1d-5b48-8d21-67765ada8a4e', 'MAKKAH', 'Al Shohada Hotel', 4, 350, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
-    ('b2c10b06-9b1d-5b48-8d21-67765ada8a4e', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('b2c10b06-9b1d-5b48-8d21-67765ada8a4e', 'MAKKAH', 'Al Shohada Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
+    ('b2c10b06-9b1d-5b48-8d21-67765ada8a4e', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, true, false, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('b2c10b06-9b1d-5b48-8d21-67765ada8a4e', 'SINGLE', 255000.00),
@@ -343,9 +373,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 57, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('c1374cc4-a322-5181-8a7a-b3b307fb4eb9', 'MAKKAH', 'Makkah Towers', 4, 250, 'https://maps.google.com/?q=Makkah%20Towers'),
-    ('c1374cc4-a322-5181-8a7a-b3b307fb4eb9', 'MADINAH', 'Shaza Al Madina', 5, 300, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('c1374cc4-a322-5181-8a7a-b3b307fb4eb9', 'MAKKAH', 'Makkah Towers', 4, 250, true, false, 'https://maps.google.com/?q=Makkah%20Towers'),
+    ('c1374cc4-a322-5181-8a7a-b3b307fb4eb9', 'MADINAH', 'Shaza Al Madina', 5, 300, true, false, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('c1374cc4-a322-5181-8a7a-b3b307fb4eb9', 'SINGLE', 508000.00),
@@ -376,9 +406,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 33, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('831c9dd7-33a5-5bf9-aa68-ac2ceef1370c', 'MAKKAH', 'Emaar Grand Hotel', 4, 550, 'https://maps.google.com/?q=Emaar%20Grand%20Hotel'),
-    ('831c9dd7-33a5-5bf9-aa68-ac2ceef1370c', 'MADINAH', 'Pullman Zamzam Madina', 5, 150, 'https://maps.google.com/?q=Pullman%20Zamzam%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('831c9dd7-33a5-5bf9-aa68-ac2ceef1370c', 'MAKKAH', 'Emaar Grand Hotel', 4, 550, true, false, 'https://maps.google.com/?q=Emaar%20Grand%20Hotel'),
+    ('831c9dd7-33a5-5bf9-aa68-ac2ceef1370c', 'MADINAH', 'Pullman Zamzam Madina', 5, 150, true, false, 'https://maps.google.com/?q=Pullman%20Zamzam%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('831c9dd7-33a5-5bf9-aa68-ac2ceef1370c', 'SINGLE', 176000.00),
@@ -436,9 +466,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 50, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('112a50d6-7f1d-5c37-9327-966884ef4b1b', 'MAKKAH', 'Hilton Makkah Convention Hotel', 5, 350, 'https://maps.google.com/?q=Hilton%20Makkah%20Convention%20Hotel'),
-    ('112a50d6-7f1d-5c37-9327-966884ef4b1b', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('112a50d6-7f1d-5c37-9327-966884ef4b1b', 'MAKKAH', 'Hilton Makkah Convention Hotel', 5, 350, true, false, 'https://maps.google.com/?q=Hilton%20Makkah%20Convention%20Hotel'),
+    ('112a50d6-7f1d-5c37-9327-966884ef4b1b', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('112a50d6-7f1d-5c37-9327-966884ef4b1b', 'SINGLE', 211500.00),
@@ -469,9 +499,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 59, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'MAKKAH', 'Makkah Towers', 4, 250, 'https://maps.google.com/?q=Makkah%20Towers'),
-    ('221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'MADINAH', 'The Oberoi Madina', 5, 200, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'MAKKAH', 'Makkah Towers', 4, 250, true, false, 'https://maps.google.com/?q=Makkah%20Towers'),
+    ('221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'MADINAH', 'The Oberoi Madina', 5, 200, true, false, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'SINGLE', 105500.00),
@@ -502,9 +532,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 22, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('23fbb84c-0e1e-5c5e-beb0-d491fecfc661', 'MAKKAH', 'Pullman ZamZam Makkah', 5, 220, 'https://maps.google.com/?q=Pullman%20ZamZam%20Makkah'),
-    ('23fbb84c-0e1e-5c5e-beb0-d491fecfc661', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('23fbb84c-0e1e-5c5e-beb0-d491fecfc661', 'MAKKAH', 'Pullman ZamZam Makkah', 5, 220, true, false, 'https://maps.google.com/?q=Pullman%20ZamZam%20Makkah'),
+    ('23fbb84c-0e1e-5c5e-beb0-d491fecfc661', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, true, false, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('23fbb84c-0e1e-5c5e-beb0-d491fecfc661', 'SINGLE', 160000.00),
@@ -535,9 +565,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 53, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('2504afbe-b402-5e29-8f78-0f87c757b67f', 'MAKKAH', 'Dar Al Tawhid InterContinental Makkah', 5, 100, 'https://maps.google.com/?q=Dar%20Al%20Tawhid%20InterContinental%20Makkah'),
-    ('2504afbe-b402-5e29-8f78-0f87c757b67f', 'MADINAH', 'Anwar Al Madinah Movenpick', 5, 100, 'https://maps.google.com/?q=Anwar%20Al%20Madinah%20Movenpick');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('2504afbe-b402-5e29-8f78-0f87c757b67f', 'MAKKAH', 'Dar Al Tawhid InterContinental Makkah', 5, 100, true, false, 'https://maps.google.com/?q=Dar%20Al%20Tawhid%20InterContinental%20Makkah'),
+    ('2504afbe-b402-5e29-8f78-0f87c757b67f', 'MADINAH', 'Anwar Al Madinah Movenpick', 5, 100, true, false, 'https://maps.google.com/?q=Anwar%20Al%20Madinah%20Movenpick');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('2504afbe-b402-5e29-8f78-0f87c757b67f', 'SINGLE', 139000.00),
@@ -568,9 +598,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 40, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('a37d2dc4-dae2-5a9e-96e4-390eef2a4bfe', 'MAKKAH', 'Al Shohada Hotel', 4, 350, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
-    ('a37d2dc4-dae2-5a9e-96e4-390eef2a4bfe', 'MADINAH', 'Saja Al Madinah Hotel', 4, 600, 'https://maps.google.com/?q=Saja%20Al%20Madinah%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('a37d2dc4-dae2-5a9e-96e4-390eef2a4bfe', 'MAKKAH', 'Al Shohada Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
+    ('a37d2dc4-dae2-5a9e-96e4-390eef2a4bfe', 'MADINAH', 'Saja Al Madinah Hotel', 4, 600, true, false, 'https://maps.google.com/?q=Saja%20Al%20Madinah%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('a37d2dc4-dae2-5a9e-96e4-390eef2a4bfe', 'SINGLE', 268000.00),
@@ -601,9 +631,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 50, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('3bb8c748-cf8b-585d-b77c-5447162d5ebc', 'MAKKAH', 'Anjum Hotel Makkah', 4, 900, 'https://maps.google.com/?q=Anjum%20Hotel%20Makkah'),
-    ('3bb8c748-cf8b-585d-b77c-5447162d5ebc', 'MADINAH', 'Pullman Zamzam Madina', 5, 150, 'https://maps.google.com/?q=Pullman%20Zamzam%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('3bb8c748-cf8b-585d-b77c-5447162d5ebc', 'MAKKAH', 'Anjum Hotel Makkah', 4, 900, false, true, 'https://maps.google.com/?q=Anjum%20Hotel%20Makkah'),
+    ('3bb8c748-cf8b-585d-b77c-5447162d5ebc', 'MADINAH', 'Pullman Zamzam Madina', 5, 150, true, false, 'https://maps.google.com/?q=Pullman%20Zamzam%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('3bb8c748-cf8b-585d-b77c-5447162d5ebc', 'SINGLE', 199500.00),
@@ -634,9 +664,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 42, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('128c5fc6-d142-5421-8144-381a8cac30e2', 'MAKKAH', 'Conrad Makkah', 5, 400, 'https://maps.google.com/?q=Conrad%20Makkah'),
-    ('128c5fc6-d142-5421-8144-381a8cac30e2', 'MADINAH', 'Shaza Al Madina', 5, 300, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('128c5fc6-d142-5421-8144-381a8cac30e2', 'MAKKAH', 'Conrad Makkah', 5, 400, true, false, 'https://maps.google.com/?q=Conrad%20Makkah'),
+    ('128c5fc6-d142-5421-8144-381a8cac30e2', 'MADINAH', 'Shaza Al Madina', 5, 300, true, false, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('128c5fc6-d142-5421-8144-381a8cac30e2', 'SINGLE', 146500.00),
@@ -667,9 +697,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 35, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('30b45ec6-e8dc-5b66-ac50-a1d8fe5aed87', 'MAKKAH', 'Le Meridien Makkah', 4, 800, 'https://maps.google.com/?q=Le%20Meridien%20Makkah'),
-    ('30b45ec6-e8dc-5b66-ac50-a1d8fe5aed87', 'MADINAH', 'Dar Al Iman InterContinental Madinah', 5, 180, 'https://maps.google.com/?q=Dar%20Al%20Iman%20InterContinental%20Madinah');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('30b45ec6-e8dc-5b66-ac50-a1d8fe5aed87', 'MAKKAH', 'Le Meridien Makkah', 4, 800, false, true, 'https://maps.google.com/?q=Le%20Meridien%20Makkah'),
+    ('30b45ec6-e8dc-5b66-ac50-a1d8fe5aed87', 'MADINAH', 'Dar Al Iman InterContinental Madinah', 5, 180, true, false, 'https://maps.google.com/?q=Dar%20Al%20Iman%20InterContinental%20Madinah');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('30b45ec6-e8dc-5b66-ac50-a1d8fe5aed87', 'SINGLE', 301500.00),
@@ -700,9 +730,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 37, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('8ecac468-3050-51c5-b627-43f3d78418dc', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
-    ('8ecac468-3050-51c5-b627-43f3d78418dc', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('8ecac468-3050-51c5-b627-43f3d78418dc', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, true, false, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
+    ('8ecac468-3050-51c5-b627-43f3d78418dc', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, true, false, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('8ecac468-3050-51c5-b627-43f3d78418dc', 'SINGLE', 186500.00),
@@ -733,9 +763,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 26, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('26d1a497-1b59-555b-bb11-aed272894cec', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
-    ('26d1a497-1b59-555b-bb11-aed272894cec', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('26d1a497-1b59-555b-bb11-aed272894cec', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, false, true, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
+    ('26d1a497-1b59-555b-bb11-aed272894cec', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, false, true, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('26d1a497-1b59-555b-bb11-aed272894cec', 'SINGLE', 317500.00),
@@ -794,9 +824,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 39, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('ad603b65-f5b6-502b-b29b-73a9361f79bc', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
-    ('ad603b65-f5b6-502b-b29b-73a9361f79bc', 'MADINAH', 'The Oberoi Madina', 5, 200, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('ad603b65-f5b6-502b-b29b-73a9361f79bc', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, true, false, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
+    ('ad603b65-f5b6-502b-b29b-73a9361f79bc', 'MADINAH', 'The Oberoi Madina', 5, 200, true, false, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('ad603b65-f5b6-502b-b29b-73a9361f79bc', 'SINGLE', 129500.00),
@@ -827,9 +857,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 59, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('01791c3d-3d4e-5509-907e-922f91963cca', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
-    ('01791c3d-3d4e-5509-907e-922f91963cca', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('01791c3d-3d4e-5509-907e-922f91963cca', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, true, false, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
+    ('01791c3d-3d4e-5509-907e-922f91963cca', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, true, false, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('01791c3d-3d4e-5509-907e-922f91963cca', 'SINGLE', 121000.00),
@@ -860,9 +890,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 23, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('bd83afca-f45f-5f0d-9257-0ec388c52576', 'MAKKAH', 'Rayyana Ajyad Hotel', 3, 700, 'https://maps.google.com/?q=Rayyana%20Ajyad%20Hotel'),
-    ('bd83afca-f45f-5f0d-9257-0ec388c52576', 'MADINAH', 'Odst Al Madinah Hotel', 4, 450, 'https://maps.google.com/?q=Odst%20Al%20Madinah%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('bd83afca-f45f-5f0d-9257-0ec388c52576', 'MAKKAH', 'Rayyana Ajyad Hotel', 3, 700, true, false, 'https://maps.google.com/?q=Rayyana%20Ajyad%20Hotel'),
+    ('bd83afca-f45f-5f0d-9257-0ec388c52576', 'MADINAH', 'Odst Al Madinah Hotel', 4, 450, true, false, 'https://maps.google.com/?q=Odst%20Al%20Madinah%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('bd83afca-f45f-5f0d-9257-0ec388c52576', 'SINGLE', 193000.00),
@@ -893,9 +923,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 59, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('3a5dabc5-85a0-58ce-8465-d6650a3d3d17', 'MAKKAH', 'Al Shohada Hotel', 4, 350, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
-    ('3a5dabc5-85a0-58ce-8465-d6650a3d3d17', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('3a5dabc5-85a0-58ce-8465-d6650a3d3d17', 'MAKKAH', 'Al Shohada Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
+    ('3a5dabc5-85a0-58ce-8465-d6650a3d3d17', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, true, false, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('3a5dabc5-85a0-58ce-8465-d6650a3d3d17', 'SINGLE', 113000.00),
@@ -926,9 +956,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 56, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('bf13fbba-5c9c-5052-8507-3fd9625629d6', 'MAKKAH', 'Conrad Makkah', 5, 400, 'https://maps.google.com/?q=Conrad%20Makkah'),
-    ('bf13fbba-5c9c-5052-8507-3fd9625629d6', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('bf13fbba-5c9c-5052-8507-3fd9625629d6', 'MAKKAH', 'Conrad Makkah', 5, 400, true, false, 'https://maps.google.com/?q=Conrad%20Makkah'),
+    ('bf13fbba-5c9c-5052-8507-3fd9625629d6', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, false, true, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('bf13fbba-5c9c-5052-8507-3fd9625629d6', 'SINGLE', 190000.00),
@@ -959,9 +989,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 36, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('7eac1632-4d8a-512d-bd49-160795ecce86', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
-    ('7eac1632-4d8a-512d-bd49-160795ecce86', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('7eac1632-4d8a-512d-bd49-160795ecce86', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, false, true, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
+    ('7eac1632-4d8a-512d-bd49-160795ecce86', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, true, false, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('7eac1632-4d8a-512d-bd49-160795ecce86', 'SINGLE', 130000.00),
@@ -992,9 +1022,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 40, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('e3a8dbc0-e720-5133-b79d-459285eb894c', 'MAKKAH', 'Le Meridien Makkah', 4, 800, 'https://maps.google.com/?q=Le%20Meridien%20Makkah'),
-    ('e3a8dbc0-e720-5133-b79d-459285eb894c', 'MADINAH', 'Nozol Royal Inn', 3, 1100, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('e3a8dbc0-e720-5133-b79d-459285eb894c', 'MAKKAH', 'Le Meridien Makkah', 4, 800, false, true, 'https://maps.google.com/?q=Le%20Meridien%20Makkah'),
+    ('e3a8dbc0-e720-5133-b79d-459285eb894c', 'MADINAH', 'Nozol Royal Inn', 3, 1100, false, true, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('e3a8dbc0-e720-5133-b79d-459285eb894c', 'SINGLE', 148000.00),
@@ -1025,9 +1055,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 39, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('3cba5827-bafe-543b-9a56-1bfa3a472797', 'MAKKAH', 'Emaar Grand Hotel', 4, 550, 'https://maps.google.com/?q=Emaar%20Grand%20Hotel'),
-    ('3cba5827-bafe-543b-9a56-1bfa3a472797', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('3cba5827-bafe-543b-9a56-1bfa3a472797', 'MAKKAH', 'Emaar Grand Hotel', 4, 550, true, false, 'https://maps.google.com/?q=Emaar%20Grand%20Hotel'),
+    ('3cba5827-bafe-543b-9a56-1bfa3a472797', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('3cba5827-bafe-543b-9a56-1bfa3a472797', 'SINGLE', 247000.00),
@@ -1058,9 +1088,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 35, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('123a23ea-66f2-5207-8c5a-426627dd9462', 'MAKKAH', 'Pullman ZamZam Makkah', 5, 220, 'https://maps.google.com/?q=Pullman%20ZamZam%20Makkah'),
-    ('123a23ea-66f2-5207-8c5a-426627dd9462', 'MADINAH', 'Shaza Al Madina', 5, 300, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('123a23ea-66f2-5207-8c5a-426627dd9462', 'MAKKAH', 'Pullman ZamZam Makkah', 5, 220, true, false, 'https://maps.google.com/?q=Pullman%20ZamZam%20Makkah'),
+    ('123a23ea-66f2-5207-8c5a-426627dd9462', 'MADINAH', 'Shaza Al Madina', 5, 300, true, false, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('123a23ea-66f2-5207-8c5a-426627dd9462', 'SINGLE', 189500.00),
@@ -1091,9 +1121,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'EGP'), 24, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('b2b3503d-81ae-5a9e-ab25-f3c069017c99', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
-    ('b2b3503d-81ae-5a9e-ab25-f3c069017c99', 'MADINAH', 'Pullman Zamzam Madina', 5, 150, 'https://maps.google.com/?q=Pullman%20Zamzam%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('b2b3503d-81ae-5a9e-ab25-f3c069017c99', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, true, false, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
+    ('b2b3503d-81ae-5a9e-ab25-f3c069017c99', 'MADINAH', 'Pullman Zamzam Madina', 5, 150, true, false, 'https://maps.google.com/?q=Pullman%20Zamzam%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('b2b3503d-81ae-5a9e-ab25-f3c069017c99', 'SINGLE', 202500.00),
@@ -1151,9 +1181,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 39, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('c4229bec-f3c9-56de-8804-2502e6a0c892', 'MAKKAH', 'Makkah Towers', 4, 250, 'https://maps.google.com/?q=Makkah%20Towers'),
-    ('c4229bec-f3c9-56de-8804-2502e6a0c892', 'MADINAH', 'Millennium Al Aqeeq Hotel', 4, 400, 'https://maps.google.com/?q=Millennium%20Al%20Aqeeq%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('c4229bec-f3c9-56de-8804-2502e6a0c892', 'MAKKAH', 'Makkah Towers', 4, 250, true, false, 'https://maps.google.com/?q=Makkah%20Towers'),
+    ('c4229bec-f3c9-56de-8804-2502e6a0c892', 'MADINAH', 'Millennium Al Aqeeq Hotel', 4, 400, true, false, 'https://maps.google.com/?q=Millennium%20Al%20Aqeeq%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('c4229bec-f3c9-56de-8804-2502e6a0c892', 'SINGLE', 172000.00),
@@ -1184,9 +1214,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 40, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('b055074c-1edf-53a9-8ba0-3a08e24f7554', 'MAKKAH', 'Le Meridien Makkah', 4, 800, 'https://maps.google.com/?q=Le%20Meridien%20Makkah'),
-    ('b055074c-1edf-53a9-8ba0-3a08e24f7554', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('b055074c-1edf-53a9-8ba0-3a08e24f7554', 'MAKKAH', 'Le Meridien Makkah', 4, 800, false, true, 'https://maps.google.com/?q=Le%20Meridien%20Makkah'),
+    ('b055074c-1edf-53a9-8ba0-3a08e24f7554', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('b055074c-1edf-53a9-8ba0-3a08e24f7554', 'SINGLE', 278500.00),
@@ -1217,9 +1247,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 58, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('27dd5ad4-3cc5-5a72-9688-de3e9b788c56', 'MAKKAH', 'Anjum Hotel Makkah', 4, 900, 'https://maps.google.com/?q=Anjum%20Hotel%20Makkah'),
-    ('27dd5ad4-3cc5-5a72-9688-de3e9b788c56', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('27dd5ad4-3cc5-5a72-9688-de3e9b788c56', 'MAKKAH', 'Anjum Hotel Makkah', 4, 900, false, true, 'https://maps.google.com/?q=Anjum%20Hotel%20Makkah'),
+    ('27dd5ad4-3cc5-5a72-9688-de3e9b788c56', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, true, false, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('27dd5ad4-3cc5-5a72-9688-de3e9b788c56', 'SINGLE', 157000.00),
@@ -1250,9 +1280,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 38, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('2230c276-5330-5986-a5cb-70a7fe30a719', 'MAKKAH', 'Jabal Omar Marriott Hotel Makkah', 5, 450, 'https://maps.google.com/?q=Jabal%20Omar%20Marriott%20Hotel%20Makkah'),
-    ('2230c276-5330-5986-a5cb-70a7fe30a719', 'MADINAH', 'Shaza Al Madina', 5, 300, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('2230c276-5330-5986-a5cb-70a7fe30a719', 'MAKKAH', 'Jabal Omar Marriott Hotel Makkah', 5, 450, true, false, 'https://maps.google.com/?q=Jabal%20Omar%20Marriott%20Hotel%20Makkah'),
+    ('2230c276-5330-5986-a5cb-70a7fe30a719', 'MADINAH', 'Shaza Al Madina', 5, 300, true, false, 'https://maps.google.com/?q=Shaza%20Al%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('2230c276-5330-5986-a5cb-70a7fe30a719', 'SINGLE', 202500.00),
@@ -1283,9 +1313,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 43, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('35472b50-9297-57bc-9d76-cb941e961af5', 'MAKKAH', 'Pullman ZamZam Makkah', 5, 220, 'https://maps.google.com/?q=Pullman%20ZamZam%20Makkah'),
-    ('35472b50-9297-57bc-9d76-cb941e961af5', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('35472b50-9297-57bc-9d76-cb941e961af5', 'MAKKAH', 'Pullman ZamZam Makkah', 5, 220, true, false, 'https://maps.google.com/?q=Pullman%20ZamZam%20Makkah'),
+    ('35472b50-9297-57bc-9d76-cb941e961af5', 'MADINAH', 'Golden Tulip Al Mektan', 4, 500, true, false, 'https://maps.google.com/?q=Golden%20Tulip%20Al%20Mektan');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('35472b50-9297-57bc-9d76-cb941e961af5', 'SINGLE', 122500.00),
@@ -1316,9 +1346,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 38, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('588c09c7-d1f0-5bea-b5eb-0be97e79e087', 'MAKKAH', 'Hilton Makkah Convention Hotel', 5, 350, 'https://maps.google.com/?q=Hilton%20Makkah%20Convention%20Hotel'),
-    ('588c09c7-d1f0-5bea-b5eb-0be97e79e087', 'MADINAH', 'Anwar Al Madinah Movenpick', 5, 100, 'https://maps.google.com/?q=Anwar%20Al%20Madinah%20Movenpick');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('588c09c7-d1f0-5bea-b5eb-0be97e79e087', 'MAKKAH', 'Hilton Makkah Convention Hotel', 5, 350, true, false, 'https://maps.google.com/?q=Hilton%20Makkah%20Convention%20Hotel'),
+    ('588c09c7-d1f0-5bea-b5eb-0be97e79e087', 'MADINAH', 'Anwar Al Madinah Movenpick', 5, 100, true, false, 'https://maps.google.com/?q=Anwar%20Al%20Madinah%20Movenpick');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('588c09c7-d1f0-5bea-b5eb-0be97e79e087', 'SINGLE', 242000.00),
@@ -1349,9 +1379,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 32, 'PUBLISHED', 'VIP'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('cf9fa25c-6980-5f71-a0e0-79fb9824cca2', 'MAKKAH', 'Conrad Makkah', 5, 400, 'https://maps.google.com/?q=Conrad%20Makkah'),
-    ('cf9fa25c-6980-5f71-a0e0-79fb9824cca2', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('cf9fa25c-6980-5f71-a0e0-79fb9824cca2', 'MAKKAH', 'Conrad Makkah', 5, 400, true, false, 'https://maps.google.com/?q=Conrad%20Makkah'),
+    ('cf9fa25c-6980-5f71-a0e0-79fb9824cca2', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, true, false, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('cf9fa25c-6980-5f71-a0e0-79fb9824cca2', 'SINGLE', 346500.00),
@@ -1382,9 +1412,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 50, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('9f46f443-fa6f-579b-bc98-38a214365201', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
-    ('9f46f443-fa6f-579b-bc98-38a214365201', 'MADINAH', 'Nozol Royal Inn', 3, 1100, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('9f46f443-fa6f-579b-bc98-38a214365201', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, true, false, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
+    ('9f46f443-fa6f-579b-bc98-38a214365201', 'MADINAH', 'Nozol Royal Inn', 3, 1100, false, true, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('9f46f443-fa6f-579b-bc98-38a214365201', 'SINGLE', 241000.00),
@@ -1415,9 +1445,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 31, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('54d161b5-b060-5d40-96e6-306db3eaa11e', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
-    ('54d161b5-b060-5d40-96e6-306db3eaa11e', 'MADINAH', 'Odst Al Madinah Hotel', 4, 450, 'https://maps.google.com/?q=Odst%20Al%20Madinah%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('54d161b5-b060-5d40-96e6-306db3eaa11e', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, true, false, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
+    ('54d161b5-b060-5d40-96e6-306db3eaa11e', 'MADINAH', 'Odst Al Madinah Hotel', 4, 450, true, false, 'https://maps.google.com/?q=Odst%20Al%20Madinah%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('54d161b5-b060-5d40-96e6-306db3eaa11e', 'SINGLE', 292500.00),
@@ -1448,9 +1478,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'USD'), 29, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('6989c1ce-5fa7-5591-a2e6-726b733a2474', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
-    ('6989c1ce-5fa7-5591-a2e6-726b733a2474', 'MADINAH', 'Elaf Taiba Hotel', 4, 250, 'https://maps.google.com/?q=Elaf%20Taiba%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('6989c1ce-5fa7-5591-a2e6-726b733a2474', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, true, false, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
+    ('6989c1ce-5fa7-5591-a2e6-726b733a2474', 'MADINAH', 'Elaf Taiba Hotel', 4, 250, true, false, 'https://maps.google.com/?q=Elaf%20Taiba%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('6989c1ce-5fa7-5591-a2e6-726b733a2474', 'SINGLE', 130000.00),
@@ -1509,9 +1539,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 53, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('585246c2-f936-5abe-8232-9bd7131ce518', 'MAKKAH', 'Al Shohada Hotel', 4, 350, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
-    ('585246c2-f936-5abe-8232-9bd7131ce518', 'MADINAH', 'Dar Al Iman InterContinental Madinah', 5, 180, 'https://maps.google.com/?q=Dar%20Al%20Iman%20InterContinental%20Madinah');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('585246c2-f936-5abe-8232-9bd7131ce518', 'MAKKAH', 'Al Shohada Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Al%20Shohada%20Hotel'),
+    ('585246c2-f936-5abe-8232-9bd7131ce518', 'MADINAH', 'Dar Al Iman InterContinental Madinah', 5, 180, true, false, 'https://maps.google.com/?q=Dar%20Al%20Iman%20InterContinental%20Madinah');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('585246c2-f936-5abe-8232-9bd7131ce518', 'SINGLE', 134500.00),
@@ -1542,9 +1572,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 59, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('9e2ea781-005f-52a4-9ce3-af372e471fde', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
-    ('9e2ea781-005f-52a4-9ce3-af372e471fde', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('9e2ea781-005f-52a4-9ce3-af372e471fde', 'MAKKAH', 'Elaf Kinda Hotel', 4, 300, true, false, 'https://maps.google.com/?q=Elaf%20Kinda%20Hotel'),
+    ('9e2ea781-005f-52a4-9ce3-af372e471fde', 'MADINAH', 'Al Ansar Golden Hotel', 3, 900, false, true, 'https://maps.google.com/?q=Al%20Ansar%20Golden%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('9e2ea781-005f-52a4-9ce3-af372e471fde', 'SINGLE', 121000.00),
@@ -1575,9 +1605,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 48, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('02c6971c-bc4a-52f6-bfa5-e472e0429054', 'MAKKAH', 'Anjum Hotel Makkah', 4, 900, 'https://maps.google.com/?q=Anjum%20Hotel%20Makkah'),
-    ('02c6971c-bc4a-52f6-bfa5-e472e0429054', 'MADINAH', 'The Oberoi Madina', 5, 200, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('02c6971c-bc4a-52f6-bfa5-e472e0429054', 'MAKKAH', 'Anjum Hotel Makkah', 4, 900, false, true, 'https://maps.google.com/?q=Anjum%20Hotel%20Makkah'),
+    ('02c6971c-bc4a-52f6-bfa5-e472e0429054', 'MADINAH', 'The Oberoi Madina', 5, 200, true, false, 'https://maps.google.com/?q=The%20Oberoi%20Madina');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('02c6971c-bc4a-52f6-bfa5-e472e0429054', 'SINGLE', 118500.00),
@@ -1608,9 +1638,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 52, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('c9d16fd9-bc66-57e6-934d-be23696d3595', 'MAKKAH', 'Dar Al Tawhid InterContinental Makkah', 5, 100, 'https://maps.google.com/?q=Dar%20Al%20Tawhid%20InterContinental%20Makkah'),
-    ('c9d16fd9-bc66-57e6-934d-be23696d3595', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('c9d16fd9-bc66-57e6-934d-be23696d3595', 'MAKKAH', 'Dar Al Tawhid InterContinental Makkah', 5, 100, true, false, 'https://maps.google.com/?q=Dar%20Al%20Tawhid%20InterContinental%20Makkah'),
+    ('c9d16fd9-bc66-57e6-934d-be23696d3595', 'MADINAH', 'Dar Al Taqwa Hotel', 5, 120, true, false, 'https://maps.google.com/?q=Dar%20Al%20Taqwa%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('c9d16fd9-bc66-57e6-934d-be23696d3595', 'SINGLE', 186000.00),
@@ -1641,9 +1671,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 41, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('32be2121-93f2-5411-8f94-7aa6f785a2a0', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
-    ('32be2121-93f2-5411-8f94-7aa6f785a2a0', 'MADINAH', 'Elaf Taiba Hotel', 4, 250, 'https://maps.google.com/?q=Elaf%20Taiba%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('32be2121-93f2-5411-8f94-7aa6f785a2a0', 'MAKKAH', 'Al Kiswah Towers Hotel', 3, 1800, false, true, 'https://maps.google.com/?q=Al%20Kiswah%20Towers%20Hotel'),
+    ('32be2121-93f2-5411-8f94-7aa6f785a2a0', 'MADINAH', 'Elaf Taiba Hotel', 4, 250, true, false, 'https://maps.google.com/?q=Elaf%20Taiba%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('32be2121-93f2-5411-8f94-7aa6f785a2a0', 'SINGLE', 120500.00),
@@ -1674,9 +1704,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 53, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('bbde726c-6971-5ac4-837b-1504b7aa5733', 'MAKKAH', 'Emaar Grand Hotel', 4, 550, 'https://maps.google.com/?q=Emaar%20Grand%20Hotel'),
-    ('bbde726c-6971-5ac4-837b-1504b7aa5733', 'MADINAH', 'Saja Al Madinah Hotel', 4, 600, 'https://maps.google.com/?q=Saja%20Al%20Madinah%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('bbde726c-6971-5ac4-837b-1504b7aa5733', 'MAKKAH', 'Emaar Grand Hotel', 4, 550, true, false, 'https://maps.google.com/?q=Emaar%20Grand%20Hotel'),
+    ('bbde726c-6971-5ac4-837b-1504b7aa5733', 'MADINAH', 'Saja Al Madinah Hotel', 4, 600, true, false, 'https://maps.google.com/?q=Saja%20Al%20Madinah%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('bbde726c-6971-5ac4-837b-1504b7aa5733', 'SINGLE', 141500.00),
@@ -1707,9 +1737,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 48, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('f9e1e65c-7f74-51d1-9b30-cb8166dbbedf', 'MAKKAH', 'Makkah Towers', 4, 250, 'https://maps.google.com/?q=Makkah%20Towers'),
-    ('f9e1e65c-7f74-51d1-9b30-cb8166dbbedf', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('f9e1e65c-7f74-51d1-9b30-cb8166dbbedf', 'MAKKAH', 'Makkah Towers', 4, 250, true, false, 'https://maps.google.com/?q=Makkah%20Towers'),
+    ('f9e1e65c-7f74-51d1-9b30-cb8166dbbedf', 'MADINAH', 'Frontel Al Harithia Hotel', 4, 350, true, false, 'https://maps.google.com/?q=Frontel%20Al%20Harithia%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('f9e1e65c-7f74-51d1-9b30-cb8166dbbedf', 'SINGLE', 134000.00),
@@ -1740,9 +1770,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 41, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('fd3427da-dd5f-5a25-a4a8-9908c9d4dc57', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
-    ('fd3427da-dd5f-5a25-a4a8-9908c9d4dc57', 'MADINAH', 'Anwar Al Madinah Movenpick', 5, 100, 'https://maps.google.com/?q=Anwar%20Al%20Madinah%20Movenpick');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('fd3427da-dd5f-5a25-a4a8-9908c9d4dc57', 'MAKKAH', 'Fairmont Makkah Clock Royal Tower', 5, 150, true, false, 'https://maps.google.com/?q=Fairmont%20Makkah%20Clock%20Royal%20Tower'),
+    ('fd3427da-dd5f-5a25-a4a8-9908c9d4dc57', 'MADINAH', 'Anwar Al Madinah Movenpick', 5, 100, true, false, 'https://maps.google.com/?q=Anwar%20Al%20Madinah%20Movenpick');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('fd3427da-dd5f-5a25-a4a8-9908c9d4dc57', 'SINGLE', 162000.00),
@@ -1773,9 +1803,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 29, 'PUBLISHED', 'PREMIUM'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('8b4eef5d-e56f-5767-aae5-e0833d91b227', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
-    ('8b4eef5d-e56f-5767-aae5-e0833d91b227', 'MADINAH', 'Nozol Royal Inn', 3, 1100, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('8b4eef5d-e56f-5767-aae5-e0833d91b227', 'MAKKAH', 'Swissotel Al Maqam Makkah', 5, 200, true, false, 'https://maps.google.com/?q=Swissotel%20Al%20Maqam%20Makkah'),
+    ('8b4eef5d-e56f-5767-aae5-e0833d91b227', 'MADINAH', 'Nozol Royal Inn', 3, 1100, false, true, 'https://maps.google.com/?q=Nozol%20Royal%20Inn');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('8b4eef5d-e56f-5767-aae5-e0833d91b227', 'SINGLE', 327000.00),
@@ -1806,9 +1836,9 @@ INSERT INTO trips (
     (SELECT id FROM currencies WHERE code = 'SAR'), 56, 'PUBLISHED', 'ECONOMIC'
 );
 
-INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, location_url) VALUES
-    ('fdc42d64-37cd-5fae-867b-a74a81453bb5', 'MAKKAH', 'Jabal Omar Marriott Hotel Makkah', 5, 450, 'https://maps.google.com/?q=Jabal%20Omar%20Marriott%20Hotel%20Makkah'),
-    ('fdc42d64-37cd-5fae-867b-a74a81453bb5', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
+INSERT INTO trip_hotels (trip_id, city, hotel_name, stars, distance_to_haram_m, can_walk, free_bus_included, location_url) VALUES
+    ('fdc42d64-37cd-5fae-867b-a74a81453bb5', 'MAKKAH', 'Jabal Omar Marriott Hotel Makkah', 5, 450, true, false, 'https://maps.google.com/?q=Jabal%20Omar%20Marriott%20Hotel%20Makkah'),
+    ('fdc42d64-37cd-5fae-867b-a74a81453bb5', 'MADINAH', 'Al Eiman Royal Hotel', 4, 200, true, false, 'https://maps.google.com/?q=Al%20Eiman%20Royal%20Hotel');
 
 INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('fdc42d64-37cd-5fae-867b-a74a81453bb5', 'SINGLE', 124500.00),

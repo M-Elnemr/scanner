@@ -40,8 +40,15 @@ public class TripHotel extends BaseEntity {
     @Column(name = "stars", nullable = false)
     private short stars;
 
+    /** Distance to the Haram (Makkah) or the Prophet's Mosque (Madinah), whichever {@link #city} is. */
     @Column(name = "distance_to_haram_m")
     private Integer distanceToHaramM;
+
+    @Column(name = "can_walk", nullable = false)
+    private boolean canWalk;
+
+    @Column(name = "free_bus_included", nullable = false)
+    private boolean freeBusIncluded;
 
     @Column(name = "location_url", length = 500)
     private String locationUrl;

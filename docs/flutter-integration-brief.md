@@ -633,7 +633,45 @@ between Makkah and Madinah** is in the package price — worth its own icon, tra
 
 ---
 
-## 13. Reference
+## 13. Hotels — walking distance and free shuttle
+
+Each entry in a trip's `hotels` array (one MAKKAH row, one MADINAH row) gains two booleans,
+alongside the `distanceToHaramM` field that was already there:
+
+```jsonc
+{
+  "city": "MAKKAH",
+  "hotelName": "Swissotel Al Maqam Makkah",
+  "stars": 5,
+  "distanceToHaramM": 350,
+  "canWalk": true,
+  "freeBusIncluded": false,
+  "locationUrl": "https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah"
+}
+```
+
+- **`distanceToHaramM`** — unchanged, but note it is genuinely generic: for the `MADINAH` row it is
+  the distance to the **Prophet's Mosque**, not the Haram. Label it accordingly per row rather than
+  reusing a single "distance to Haram" string for both.
+- **`canWalk`** (bool) — whether that distance is realistically walkable. Show a walking-person icon
+  next to the distance when true.
+- **`freeBusIncluded`** (bool) — whether the company runs a free shuttle between this hotel and the
+  Haram/Mosque. Show a bus icon when true. The two are independent fields, not a computed pair — a
+  company can offer both, neither, or just one, so render each on its own rather than assuming they
+  are mutually exclusive.
+
+**Company trip form:** add both as toggles on each hotel row, next to the existing distance field.
+Neither is required — they default to `false` if omitted.
+
+**Checklist addition:**
+- [ ] Add `canWalk` and `freeBusIncluded` to the hotel model, in both the trip detail response and
+      the create/update trip request bodies.
+- [ ] Add the two toggles to the company's hotel-entry form.
+- [ ] Show walking/bus icons on the tour details hotel cards, per city.
+
+---
+
+## 14. Reference
 
 - Swagger UI: `/swagger-ui.html` (bearer auth configured; the lead lifecycle is described on the
   landing page).

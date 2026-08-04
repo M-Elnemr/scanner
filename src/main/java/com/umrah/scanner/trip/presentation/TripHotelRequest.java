@@ -12,5 +12,7 @@ public record TripHotelRequest(
         @NotBlank String hotelName,
         @Min(1) @Max(5) short stars,
         @PositiveOrZero Integer distanceToHaramM,
+        boolean canWalk,
+        boolean freeBusIncluded,
         String locationUrl) {
 }
