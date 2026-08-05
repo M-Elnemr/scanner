@@ -36,11 +36,31 @@ CREATE TEMP TABLE _seed_company_ids AS SELECT id FROM company_profiles WHERE use
 CREATE TEMP TABLE _seed_trip_ids AS SELECT id FROM trips
     WHERE company_id IN (SELECT id FROM _seed_company_ids) OR trip_code LIKE 'SEED-%';
 
--- Cascades to ratings, commissions, cashback_transactions and lead_status_history for free.
-DELETE FROM leads WHERE
+CREATE TEMP TABLE _seed_lead_ids AS SELECT id FROM leads WHERE
     customer_id IN (SELECT id FROM _seed_customer_ids)
     OR company_id  IN (SELECT id FROM _seed_company_ids)
     OR trip_id     IN (SELECT id FROM _seed_trip_ids);
+
+-- audit_logs, analytics_events and notifications rows this script writes below are entirely
+-- owned by it (every one of them is re-created on each run), so they are deleted outright —
+-- not nulled — rather than relying on the generic seed-user cleanup further down, which would
+-- otherwise leave an ever-growing pile of orphaned rows behind on every re-seed.
+-- entity_id has no foreign key (audit_logs is a generic polymorphic log), so a Trip row survives
+-- even after the trip itself is later soft-deleted — e.g. a developer creating and deleting a
+-- trip via the API against a seed company leaves a TRIP_CREATED row nothing else ever cleans up.
+DELETE FROM audit_logs WHERE
+    (entity_type = 'Lead' AND entity_id IN (SELECT id FROM _seed_lead_ids))
+    OR (entity_type = 'CompanyProfile' AND entity_id IN (SELECT id FROM _seed_company_ids))
+    OR (entity_type = 'Trip' AND entity_id IN (SELECT id FROM _seed_trip_ids));
+DELETE FROM analytics_events WHERE
+    (entity_type = 'Trip' AND entity_id IN (SELECT id FROM _seed_trip_ids))
+    OR user_id IN (SELECT id FROM _seed_user_ids);
+-- Covers admin-recipient notifications too, which would not otherwise cascade (the admin
+-- account is real, not seed data, so deleting seed users never touches its inbox directly).
+DELETE FROM notifications WHERE (data->>'leadId')::uuid IN (SELECT id FROM _seed_lead_ids);
+
+-- Cascades to ratings, commissions, cashback_transactions and lead_status_history for free.
+DELETE FROM leads WHERE id IN (SELECT id FROM _seed_lead_ids);
 
 -- Audit columns: nulled rather than deleted, since the rows themselves (a real trip, a real
 -- company profile) are not seed data and must survive even when their author was.
@@ -59,7 +79,7 @@ UPDATE analytics_events SET user_id       = NULL WHERE user_id       IN (SELECT 
 -- and from there to every trip (and its hotels/room_prices/favourites) the seed companies own.
 DELETE FROM users WHERE id IN (SELECT id FROM _seed_user_ids);
 
-DROP TABLE _seed_user_ids, _seed_customer_ids, _seed_company_ids, _seed_trip_ids;
+DROP TABLE _seed_user_ids, _seed_customer_ids, _seed_company_ids, _seed_trip_ids, _seed_lead_ids;
 
 
 -- =============================================================================
@@ -1849,9 +1869,430 @@ INSERT INTO room_prices (trip_id, room_type, price) VALUES
     ('fdc42d64-37cd-5fae-867b-a74a81453bb5', 'INFANT', 10000.00);
 
 
+-- =============================================================================
+-- Customers
+-- =============================================================================
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'ahmed.fathy@seed.test', 'dev-test:ahmed.fathy@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('47358fb8-40f9-52f6-ae6e-b9c13eec4f17', '6e1e51ec-b1e8-54d2-9791-428092682942', 'Ahmed Fathy', '+201012345601', '+201012345601', 'VODAFONE_CASH', true);
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'mona.said@seed.test', 'dev-test:mona.said@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('33540d94-d926-5230-8bfd-86aa0efe51c5', 'eab8c72c-4e45-5c80-a39d-805d80339de0', 'Mona Said', '+201123456702', '+201123456702', 'ETISALAT_CASH', true);
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'youssef.ibrahim@seed.test', 'dev-test:youssef.ibrahim@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('7f458b6a-69bb-5967-b8b2-594769aba39e', '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'Youssef Ibrahim', '+201234567803', '+201234567803', 'INSTA_PAY', true);
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'salma.adel@seed.test', 'dev-test:salma.adel@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('de7f6de7-d84f-556b-9121-e0d990034537', 'e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'Salma Adel', '+201598765404', '+201598765404', 'VODAFONE_CASH', true);
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('777e69a0-1778-5ece-8cea-080522881f82', 'karim.reda@seed.test', 'dev-test:karim.reda@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('36a30181-98ce-5388-8788-7774660c8412', '777e69a0-1778-5ece-8cea-080522881f82', 'Karim Reda', '+201187654305', '+201187654305', 'ETISALAT_CASH', true);
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('2fe2fa07-0cf2-551a-b504-aad6edb4d637', 'nourhan.tarek@seed.test', 'dev-test:nourhan.tarek@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('09a57c84-05c9-5e89-a03b-c05c7694ff3c', '2fe2fa07-0cf2-551a-b504-aad6edb4d637', 'Nourhan Tarek', NULL, NULL, NULL, false);
+
+-- =============================================================================
+-- Favourites
+-- =============================================================================
+
+INSERT INTO favourites (customer_id, trip_id) VALUES
+    ('47358fb8-40f9-52f6-ae6e-b9c13eec4f17', '52892f2b-6f2a-5c44-81a8-0bf302cf046a'),
+    ('47358fb8-40f9-52f6-ae6e-b9c13eec4f17', 'b055074c-1edf-53a9-8ba0-3a08e24f7554'),
+    ('33540d94-d926-5230-8bfd-86aa0efe51c5', 'a37d2dc4-dae2-5a9e-96e4-390eef2a4bfe'),
+    ('33540d94-d926-5230-8bfd-86aa0efe51c5', '585246c2-f936-5abe-8232-9bd7131ce518'),
+    ('7f458b6a-69bb-5967-b8b2-594769aba39e', '3a5dabc5-85a0-58ce-8465-d6650a3d3d17'),
+    ('36a30181-98ce-5388-8788-7774660c8412', '30b45ec6-e8dc-5b66-ac50-a1d8fe5aed87'),
+    ('36a30181-98ce-5388-8788-7774660c8412', 'd069050e-671b-530f-829d-cd5e888f455f');
+
+-- =============================================================================
+-- Leads — one per lifecycle stage, with the history/ledger/notification trail a real
+-- booking moving through that many steps would actually leave behind.
+-- =============================================================================
+
+-- Lead 1/8: ahmed-fathy -> INTERESTED (NAH, 2 adult/1 child/0 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    'a4c81670-926d-5ecd-be2d-0f0d15fe44e9', '47358fb8-40f9-52f6-ae6e-b9c13eec4f17', '8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', 'INTERESTED', 2, 1, 0,
+    2500.00, 5000.00, 1250.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, now() - INTERVAL '31 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('a4c81670-926d-5ecd-be2d-0f0d15fe44e9', NULL, 'INTERESTED', '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '31 days', NULL);
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 2 traveler(s).', '{"leadId": "a4c81670-926d-5ecd-be2d-0f0d15fe44e9", "tripId": "8ce534bd-a036-5a7a-b9d7-7ed5defedcc8"}'::jsonb, now() - INTERVAL '31 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'CONTACT_COMPANY', 'Trip', '8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', now() - INTERVAL '31 days');
+
+-- Lead 2/8: mona-said -> PENDING_DEPOSIT_CONFIRMATION (SUS, 3 adult/0 child/1 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    '3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', '33540d94-d926-5230-8bfd-86aa0efe51c5', '221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', 'PENDING_DEPOSIT_CONFIRMATION', 3, 0, 1,
+    1800.00, 5400.00, 1350.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '25 days', NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, now() - INTERVAL '27 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', NULL, 'INTERESTED', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '27 days', NULL),
+    ('3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '25 days', 'Transferred via InstaPay.');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 3 traveler(s).', '{"leadId": "3fa3b225-d1f7-5e6c-b5ce-447e223aa12b", "tripId": "221d7dea-a52c-5eab-93e5-cb35e31b2cde"}'::jsonb, now() - INTERVAL '27 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for September Umrah - 12 Nights. Please confirm.', '{"leadId": "3fa3b225-d1f7-5e6c-b5ce-447e223aa12b", "tripId": "221d7dea-a52c-5eab-93e5-cb35e31b2cde"}'::jsonb, now() - INTERVAL '25 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'CONTACT_COMPANY', 'Trip', '221d7dea-a52c-5eab-93e5-cb35e31b2cde', now() - INTERVAL '27 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'LEAD_REPORT_DEPOSIT', 'Lead', '3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '25 days');
+
+-- Lead 3/8: youssef-ibrahim -> DEPOSIT_PAID (BAR, 2 adult/2 child/0 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    'b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', '7f458b6a-69bb-5967-b8b2-594769aba39e', 'bd83afca-f45f-5f0d-9257-0ec388c52576', '8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', 'DEPOSIT_PAID', 2, 2, 0,
+    1500.00, 3000.00, 750.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '21 days', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '19 days',
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, now() - INTERVAL '23 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', NULL, 'INTERESTED', '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '23 days', NULL),
+    ('b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '21 days', 'Transferred via InstaPay.'),
+    ('b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', 'PENDING_DEPOSIT_CONFIRMATION', 'DEPOSIT_PAID', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '19 days', NULL);
+
+INSERT INTO ratings (lead_id, trip_id, company_id, customer_id, stars, comment, created_at) VALUES
+    ('b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', 'bd83afca-f45f-5f0d-9257-0ec388c52576', '8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', '7f458b6a-69bb-5967-b8b2-594769aba39e', 4, 'Good so far, deposit was confirmed quickly.', now() - INTERVAL '19 days');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 2 traveler(s).', '{"leadId": "b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b", "tripId": "bd83afca-f45f-5f0d-9257-0ec388c52576"}'::jsonb, now() - INTERVAL '23 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for Autumn Umrah - 15 Nights. Please confirm.', '{"leadId": "b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b", "tripId": "bd83afca-f45f-5f0d-9257-0ec388c52576"}'::jsonb, now() - INTERVAL '21 days'),
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'DEPOSIT_CONFIRMED', 'Deposit confirmed', 'Your deposit for Autumn Umrah - 15 Nights has been confirmed by the company.', '{"leadId": "b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b", "tripId": "bd83afca-f45f-5f0d-9257-0ec388c52576"}'::jsonb, now() - INTERVAL '19 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'CONTACT_COMPANY', 'Trip', 'bd83afca-f45f-5f0d-9257-0ec388c52576', now() - INTERVAL '23 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'LEAD_REPORT_DEPOSIT', 'Lead', 'b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '21 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'LEAD_MARK_DEPOSIT_PAID', 'Lead', 'b4cc7b38-6cd9-5c84-8d9c-d0b38fc7ba7b', '"PENDING_DEPOSIT_CONFIRMATION"', '"DEPOSIT_PAID"', now() - INTERVAL '19 days');
+
+-- Lead 4/8: ahmed-fathy -> PENDING_FULL_PAYMENT_CONFIRMATION (DST, 4 adult/0 child/0 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    '3fb7fb3e-8b24-594e-bc74-213db703a9a4', '47358fb8-40f9-52f6-ae6e-b9c13eec4f17', '2230c276-5330-5986-a5cb-70a7fe30a719', 'df9a8a62-e2bb-5a27-a7ab-629cf5006ba2', 'PENDING_FULL_PAYMENT_CONFIRMATION', 4, 0, 0,
+    2000.00, 8000.00, 2000.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '17 days', 'b16dc04d-f9c8-5072-b9bc-ab1470a8cbc6', now() - INTERVAL '15 days',
+    '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '13 days', NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, now() - INTERVAL '19 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('3fb7fb3e-8b24-594e-bc74-213db703a9a4', NULL, 'INTERESTED', '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '19 days', NULL),
+    ('3fb7fb3e-8b24-594e-bc74-213db703a9a4', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '17 days', 'Transferred via InstaPay.'),
+    ('3fb7fb3e-8b24-594e-bc74-213db703a9a4', 'PENDING_DEPOSIT_CONFIRMATION', 'DEPOSIT_PAID', 'b16dc04d-f9c8-5072-b9bc-ab1470a8cbc6', now() - INTERVAL '15 days', NULL),
+    ('3fb7fb3e-8b24-594e-bc74-213db703a9a4', 'DEPOSIT_PAID', 'PENDING_FULL_PAYMENT_CONFIRMATION', '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '13 days', 'Bank transfer completed.');
+
+INSERT INTO ratings (lead_id, trip_id, company_id, customer_id, stars, comment, created_at) VALUES
+    ('3fb7fb3e-8b24-594e-bc74-213db703a9a4', '2230c276-5330-5986-a5cb-70a7fe30a719', 'df9a8a62-e2bb-5a27-a7ab-629cf5006ba2', '47358fb8-40f9-52f6-ae6e-b9c13eec4f17', 4, 'Good so far, deposit was confirmed quickly.', now() - INTERVAL '13 days');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('b16dc04d-f9c8-5072-b9bc-ab1470a8cbc6', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 4 traveler(s).', '{"leadId": "3fb7fb3e-8b24-594e-bc74-213db703a9a4", "tripId": "2230c276-5330-5986-a5cb-70a7fe30a719"}'::jsonb, now() - INTERVAL '19 days'),
+    ('b16dc04d-f9c8-5072-b9bc-ab1470a8cbc6', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for Mid-Term Break Umrah - 8 Nights. Please confirm.', '{"leadId": "3fb7fb3e-8b24-594e-bc74-213db703a9a4", "tripId": "2230c276-5330-5986-a5cb-70a7fe30a719"}'::jsonb, now() - INTERVAL '17 days'),
+    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'DEPOSIT_CONFIRMED', 'Deposit confirmed', 'Your deposit for Mid-Term Break Umrah - 8 Nights has been confirmed by the company.', '{"leadId": "3fb7fb3e-8b24-594e-bc74-213db703a9a4", "tripId": "2230c276-5330-5986-a5cb-70a7fe30a719"}'::jsonb, now() - INTERVAL '15 days'),
+    ('b16dc04d-f9c8-5072-b9bc-ab1470a8cbc6', 'FULL_PAYMENT_CONFIRMATION_REQUIRED', 'Confirm a full payment', 'A customer reported paying in full for Mid-Term Break Umrah - 8 Nights. Please confirm.', '{"leadId": "3fb7fb3e-8b24-594e-bc74-213db703a9a4", "tripId": "2230c276-5330-5986-a5cb-70a7fe30a719"}'::jsonb, now() - INTERVAL '13 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'CONTACT_COMPANY', 'Trip', '2230c276-5330-5986-a5cb-70a7fe30a719', now() - INTERVAL '19 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'LEAD_REPORT_DEPOSIT', 'Lead', '3fb7fb3e-8b24-594e-bc74-213db703a9a4', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '17 days'),
+    ('b16dc04d-f9c8-5072-b9bc-ab1470a8cbc6', 'LEAD_MARK_DEPOSIT_PAID', 'Lead', '3fb7fb3e-8b24-594e-bc74-213db703a9a4', '"PENDING_DEPOSIT_CONFIRMATION"', '"DEPOSIT_PAID"', now() - INTERVAL '15 days'),
+    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'LEAD_REPORT_FULL_PAYMENT', 'Lead', '3fb7fb3e-8b24-594e-bc74-213db703a9a4', '"DEPOSIT_PAID"', '"PENDING_FULL_PAYMENT_CONFIRMATION"', now() - INTERVAL '13 days');
+
+-- Lead 5/8: salma-adel -> FULLY_PAID (MAA, 2 adult/1 child/1 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    '6d2f6081-995f-5947-a640-f0f98c5ba75a', 'de7f6de7-d84f-556b-9121-e0d990034537', '32be2121-93f2-5411-8f94-7aa6f785a2a0', 'd73d9c94-0da0-5540-a193-46fe2658392a', 'FULLY_PAID', 2, 1, 1,
+    1200.00, 2400.00, 600.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    'e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', now() - INTERVAL '13 days', '2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', now() - INTERVAL '11 days',
+    'e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', now() - INTERVAL '9 days', '2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', now() - INTERVAL '7 days',
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, now() - INTERVAL '15 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('6d2f6081-995f-5947-a640-f0f98c5ba75a', NULL, 'INTERESTED', 'e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', now() - INTERVAL '15 days', NULL),
+    ('6d2f6081-995f-5947-a640-f0f98c5ba75a', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', 'e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', now() - INTERVAL '13 days', 'Transferred via InstaPay.'),
+    ('6d2f6081-995f-5947-a640-f0f98c5ba75a', 'PENDING_DEPOSIT_CONFIRMATION', 'DEPOSIT_PAID', '2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', now() - INTERVAL '11 days', NULL),
+    ('6d2f6081-995f-5947-a640-f0f98c5ba75a', 'DEPOSIT_PAID', 'PENDING_FULL_PAYMENT_CONFIRMATION', 'e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', now() - INTERVAL '9 days', 'Bank transfer completed.'),
+    ('6d2f6081-995f-5947-a640-f0f98c5ba75a', 'PENDING_FULL_PAYMENT_CONFIRMATION', 'FULLY_PAID', '2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', now() - INTERVAL '7 days', NULL);
+
+INSERT INTO ratings (lead_id, trip_id, company_id, customer_id, stars, comment, created_at) VALUES
+    ('6d2f6081-995f-5947-a640-f0f98c5ba75a', '32be2121-93f2-5411-8f94-7aa6f785a2a0', 'd73d9c94-0da0-5540-a193-46fe2658392a', 'de7f6de7-d84f-556b-9121-e0d990034537', 4, 'Good so far, deposit was confirmed quickly.', now() - INTERVAL '7 days');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 2 traveler(s).', '{"leadId": "6d2f6081-995f-5947-a640-f0f98c5ba75a", "tripId": "32be2121-93f2-5411-8f94-7aa6f785a2a0"}'::jsonb, now() - INTERVAL '15 days'),
+    ('2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for November Umrah - 12 Nights. Please confirm.', '{"leadId": "6d2f6081-995f-5947-a640-f0f98c5ba75a", "tripId": "32be2121-93f2-5411-8f94-7aa6f785a2a0"}'::jsonb, now() - INTERVAL '13 days'),
+    ('e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'DEPOSIT_CONFIRMED', 'Deposit confirmed', 'Your deposit for November Umrah - 12 Nights has been confirmed by the company.', '{"leadId": "6d2f6081-995f-5947-a640-f0f98c5ba75a", "tripId": "32be2121-93f2-5411-8f94-7aa6f785a2a0"}'::jsonb, now() - INTERVAL '11 days'),
+    ('2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', 'FULL_PAYMENT_CONFIRMATION_REQUIRED', 'Confirm a full payment', 'A customer reported paying in full for November Umrah - 12 Nights. Please confirm.', '{"leadId": "6d2f6081-995f-5947-a640-f0f98c5ba75a", "tripId": "32be2121-93f2-5411-8f94-7aa6f785a2a0"}'::jsonb, now() - INTERVAL '9 days'),
+    ('e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'FULL_PAYMENT_CONFIRMED', 'Full payment confirmed', 'Your full payment for November Umrah - 12 Nights has been confirmed by the company.', '{"leadId": "6d2f6081-995f-5947-a640-f0f98c5ba75a", "tripId": "32be2121-93f2-5411-8f94-7aa6f785a2a0"}'::jsonb, now() - INTERVAL '7 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'CONTACT_COMPANY', 'Trip', '32be2121-93f2-5411-8f94-7aa6f785a2a0', now() - INTERVAL '15 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'LEAD_REPORT_DEPOSIT', 'Lead', '6d2f6081-995f-5947-a640-f0f98c5ba75a', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '13 days'),
+    ('2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', 'LEAD_MARK_DEPOSIT_PAID', 'Lead', '6d2f6081-995f-5947-a640-f0f98c5ba75a', '"PENDING_DEPOSIT_CONFIRMATION"', '"DEPOSIT_PAID"', now() - INTERVAL '11 days'),
+    ('e8c85ca1-c4ea-5cdf-b700-9a4c340e3e9f', 'LEAD_REPORT_FULL_PAYMENT', 'Lead', '6d2f6081-995f-5947-a640-f0f98c5ba75a', '"DEPOSIT_PAID"', '"PENDING_FULL_PAYMENT_CONFIRMATION"', now() - INTERVAL '9 days'),
+    ('2e4fd770-1d5a-5f8a-8e55-ad0b208f9fc7', 'LEAD_MARK_FULLY_PAID', 'Lead', '6d2f6081-995f-5947-a640-f0f98c5ba75a', '"PENDING_FULL_PAYMENT_CONFIRMATION"', '"FULLY_PAID"', now() - INTERVAL '7 days');
+
+-- Lead 6/8: mona-said -> PENDING_COMMISSION_CONFIRMATION (NAH, 3 adult/0 child/0 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    'fc4ef609-1956-5f86-af71-f57e99181448', '33540d94-d926-5230-8bfd-86aa0efe51c5', '76e82682-157f-50f2-bb32-46cde2778b9c', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', 'PENDING_COMMISSION_CONFIRMATION', 3, 0, 0,
+    2500.00, 7500.00, 1875.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '9 days', '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '7 days',
+    'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '5 days', '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '3 days',
+    '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '1 days', NULL, NULL,
+    NULL, NULL, now() - INTERVAL '11 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('fc4ef609-1956-5f86-af71-f57e99181448', NULL, 'INTERESTED', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '11 days', NULL),
+    ('fc4ef609-1956-5f86-af71-f57e99181448', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '9 days', 'Transferred via InstaPay.'),
+    ('fc4ef609-1956-5f86-af71-f57e99181448', 'PENDING_DEPOSIT_CONFIRMATION', 'DEPOSIT_PAID', '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '7 days', NULL),
+    ('fc4ef609-1956-5f86-af71-f57e99181448', 'DEPOSIT_PAID', 'PENDING_FULL_PAYMENT_CONFIRMATION', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '5 days', 'Bank transfer completed.'),
+    ('fc4ef609-1956-5f86-af71-f57e99181448', 'PENDING_FULL_PAYMENT_CONFIRMATION', 'FULLY_PAID', '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '3 days', NULL),
+    ('fc4ef609-1956-5f86-af71-f57e99181448', 'FULLY_PAID', 'PENDING_COMMISSION_CONFIRMATION', '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '1 days', NULL);
+
+INSERT INTO commissions (lead_id, company_id, amount, status, reported_by, reported_at, confirmed_by, confirmed_at) VALUES
+    ('fc4ef609-1956-5f86-af71-f57e99181448', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', 7500.00, 'REPORTED', '00399ae8-dc8c-5d0c-8905-079fb675aaae', now() - INTERVAL '1 days', NULL, NULL);
+
+INSERT INTO ratings (lead_id, trip_id, company_id, customer_id, stars, comment, created_at) VALUES
+    ('fc4ef609-1956-5f86-af71-f57e99181448', '76e82682-157f-50f2-bb32-46cde2778b9c', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', '33540d94-d926-5230-8bfd-86aa0efe51c5', 4, 'Good so far, deposit was confirmed quickly.', now() - INTERVAL '1 days');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 3 traveler(s).', '{"leadId": "fc4ef609-1956-5f86-af71-f57e99181448", "tripId": "76e82682-157f-50f2-bb32-46cde2778b9c"}'::jsonb, now() - INTERVAL '11 days'),
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for Rajab Umrah - 7 Nights. Please confirm.', '{"leadId": "fc4ef609-1956-5f86-af71-f57e99181448", "tripId": "76e82682-157f-50f2-bb32-46cde2778b9c"}'::jsonb, now() - INTERVAL '9 days'),
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'DEPOSIT_CONFIRMED', 'Deposit confirmed', 'Your deposit for Rajab Umrah - 7 Nights has been confirmed by the company.', '{"leadId": "fc4ef609-1956-5f86-af71-f57e99181448", "tripId": "76e82682-157f-50f2-bb32-46cde2778b9c"}'::jsonb, now() - INTERVAL '7 days'),
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'FULL_PAYMENT_CONFIRMATION_REQUIRED', 'Confirm a full payment', 'A customer reported paying in full for Rajab Umrah - 7 Nights. Please confirm.', '{"leadId": "fc4ef609-1956-5f86-af71-f57e99181448", "tripId": "76e82682-157f-50f2-bb32-46cde2778b9c"}'::jsonb, now() - INTERVAL '5 days'),
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'FULL_PAYMENT_CONFIRMED', 'Full payment confirmed', 'Your full payment for Rajab Umrah - 7 Nights has been confirmed by the company.', '{"leadId": "fc4ef609-1956-5f86-af71-f57e99181448", "tripId": "76e82682-157f-50f2-bb32-46cde2778b9c"}'::jsonb, now() - INTERVAL '3 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMMISSION_CONFIRMATION_REQUIRED', 'Confirm a commission payment', 'A company reported paying its commission. Please confirm so cashback can be released.', '{"leadId": "fc4ef609-1956-5f86-af71-f57e99181448", "tripId": "76e82682-157f-50f2-bb32-46cde2778b9c"}'::jsonb, now() - INTERVAL '1 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'CONTACT_COMPANY', 'Trip', '76e82682-157f-50f2-bb32-46cde2778b9c', now() - INTERVAL '11 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'LEAD_REPORT_DEPOSIT', 'Lead', 'fc4ef609-1956-5f86-af71-f57e99181448', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '9 days'),
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'LEAD_MARK_DEPOSIT_PAID', 'Lead', 'fc4ef609-1956-5f86-af71-f57e99181448', '"PENDING_DEPOSIT_CONFIRMATION"', '"DEPOSIT_PAID"', now() - INTERVAL '7 days'),
+    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'LEAD_REPORT_FULL_PAYMENT', 'Lead', 'fc4ef609-1956-5f86-af71-f57e99181448', '"DEPOSIT_PAID"', '"PENDING_FULL_PAYMENT_CONFIRMATION"', now() - INTERVAL '5 days'),
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'LEAD_MARK_FULLY_PAID', 'Lead', 'fc4ef609-1956-5f86-af71-f57e99181448', '"PENDING_FULL_PAYMENT_CONFIRMATION"', '"FULLY_PAID"', now() - INTERVAL '3 days'),
+    ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'LEAD_REPORT_COMMISSION_PAID', 'Lead', 'fc4ef609-1956-5f86-af71-f57e99181448', '"FULLY_PAID"', '"PENDING_COMMISSION_CONFIRMATION"', now() - INTERVAL '1 days');
+
+-- Lead 7/8: karim-reda -> COMMISSION_PAID (SUS, 2 adult/0 child/0 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    '42c39eff-d715-525a-a79a-b42d802a02e7', '36a30181-98ce-5388-8788-7774660c8412', '128c5fc6-d142-5421-8144-381a8cac30e2', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', 'COMMISSION_PAID', 2, 0, 0,
+    1800.00, 3600.00, 900.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    '777e69a0-1778-5ece-8cea-080522881f82', now() - INTERVAL '5 days', '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '3 days',
+    '777e69a0-1778-5ece-8cea-080522881f82', now() - INTERVAL '1 days', '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '0 days',
+    '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '0 days', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days',
+    NULL, NULL, now() - INTERVAL '7 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', NULL, 'INTERESTED', '777e69a0-1778-5ece-8cea-080522881f82', now() - INTERVAL '7 days', NULL),
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', '777e69a0-1778-5ece-8cea-080522881f82', now() - INTERVAL '5 days', 'Transferred via InstaPay.'),
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'PENDING_DEPOSIT_CONFIRMATION', 'DEPOSIT_PAID', '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '3 days', NULL),
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'DEPOSIT_PAID', 'PENDING_FULL_PAYMENT_CONFIRMATION', '777e69a0-1778-5ece-8cea-080522881f82', now() - INTERVAL '1 days', 'Bank transfer completed.'),
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'PENDING_FULL_PAYMENT_CONFIRMATION', 'FULLY_PAID', '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '0 days', NULL),
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'FULLY_PAID', 'PENDING_COMMISSION_CONFIRMATION', '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '0 days', NULL),
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'PENDING_COMMISSION_CONFIRMATION', 'COMMISSION_PAID', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days', NULL);
+
+INSERT INTO commissions (lead_id, company_id, amount, status, reported_by, reported_at, confirmed_by, confirmed_at) VALUES
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', 3600.00, 'CONFIRMED', '60249520-68d9-5c25-9a6c-39819b72a607', now() - INTERVAL '0 days', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days');
+
+INSERT INTO ratings (lead_id, trip_id, company_id, customer_id, stars, comment, created_at) VALUES
+    ('42c39eff-d715-525a-a79a-b42d802a02e7', '128c5fc6-d142-5421-8144-381a8cac30e2', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', '36a30181-98ce-5388-8788-7774660c8412', 5, 'Excellent service, the company handled everything smoothly.', now() - INTERVAL '0 days');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 2 traveler(s).', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '7 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for Sha''ban Umrah - 10 Nights. Please confirm.', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '5 days'),
+    ('777e69a0-1778-5ece-8cea-080522881f82', 'DEPOSIT_CONFIRMED', 'Deposit confirmed', 'Your deposit for Sha''ban Umrah - 10 Nights has been confirmed by the company.', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '3 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'FULL_PAYMENT_CONFIRMATION_REQUIRED', 'Confirm a full payment', 'A customer reported paying in full for Sha''ban Umrah - 10 Nights. Please confirm.', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '1 days'),
+    ('777e69a0-1778-5ece-8cea-080522881f82', 'FULL_PAYMENT_CONFIRMED', 'Full payment confirmed', 'Your full payment for Sha''ban Umrah - 10 Nights has been confirmed by the company.', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '0 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMMISSION_CONFIRMATION_REQUIRED', 'Confirm a commission payment', 'A company reported paying its commission. Please confirm so cashback can be released.', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '0 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'COMMISSION_PAID', 'Commission confirmed', 'Your commission payment has been confirmed by the platform.', '{"leadId": "42c39eff-d715-525a-a79a-b42d802a02e7", "tripId": "128c5fc6-d142-5421-8144-381a8cac30e2"}'::jsonb, now() - INTERVAL '0 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('777e69a0-1778-5ece-8cea-080522881f82', 'CONTACT_COMPANY', 'Trip', '128c5fc6-d142-5421-8144-381a8cac30e2', now() - INTERVAL '7 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('777e69a0-1778-5ece-8cea-080522881f82', 'LEAD_REPORT_DEPOSIT', 'Lead', '42c39eff-d715-525a-a79a-b42d802a02e7', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '5 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'LEAD_MARK_DEPOSIT_PAID', 'Lead', '42c39eff-d715-525a-a79a-b42d802a02e7', '"PENDING_DEPOSIT_CONFIRMATION"', '"DEPOSIT_PAID"', now() - INTERVAL '3 days'),
+    ('777e69a0-1778-5ece-8cea-080522881f82', 'LEAD_REPORT_FULL_PAYMENT', 'Lead', '42c39eff-d715-525a-a79a-b42d802a02e7', '"DEPOSIT_PAID"', '"PENDING_FULL_PAYMENT_CONFIRMATION"', now() - INTERVAL '1 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'LEAD_MARK_FULLY_PAID', 'Lead', '42c39eff-d715-525a-a79a-b42d802a02e7', '"PENDING_FULL_PAYMENT_CONFIRMATION"', '"FULLY_PAID"', now() - INTERVAL '0 days'),
+    ('60249520-68d9-5c25-9a6c-39819b72a607', 'LEAD_REPORT_COMMISSION_PAID', 'Lead', '42c39eff-d715-525a-a79a-b42d802a02e7', '"FULLY_PAID"', '"PENDING_COMMISSION_CONFIRMATION"', now() - INTERVAL '0 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'LEAD_CONFIRM_COMMISSION_PAID', 'Lead', '42c39eff-d715-525a-a79a-b42d802a02e7', '"PENDING_COMMISSION_CONFIRMATION"', '"COMMISSION_PAID"', now() - INTERVAL '0 days');
+
+-- Lead 8/8: youssef-ibrahim -> CASHBACK_PAID (BAR, 2 adult/1 child/0 infant)
+INSERT INTO leads (
+    id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
+    commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
+    deposit_reported_by, deposit_reported_at, deposit_confirmed_by, deposit_confirmed_at,
+    full_payment_reported_by, full_payment_reported_at, full_payment_confirmed_by, full_payment_confirmed_at,
+    commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
+    cashback_paid_by, cashback_paid_at, created_at, updated_at
+) VALUES (
+    'd8b0c28c-960b-5f2e-9294-b571cad62073', '7f458b6a-69bb-5967-b8b2-594769aba39e', '3cba5827-bafe-543b-9a56-1bfa3a472797', '8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', 'CASHBACK_PAID', 2, 1, 0,
+    1500.00, 3000.00, 750.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
+    '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '1 days', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days',
+    '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '0 days', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days',
+    '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days',
+    (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days', now() - INTERVAL '3 days', now()
+);
+
+INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', NULL, 'INTERESTED', '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '3 days', NULL),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '1 days', 'Transferred via InstaPay.'),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'PENDING_DEPOSIT_CONFIRMATION', 'DEPOSIT_PAID', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days', NULL),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'DEPOSIT_PAID', 'PENDING_FULL_PAYMENT_CONFIRMATION', '17dc5702-d8f6-54d6-8027-5811cdcbd8e9', now() - INTERVAL '0 days', 'Bank transfer completed.'),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'PENDING_FULL_PAYMENT_CONFIRMATION', 'FULLY_PAID', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days', NULL),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'FULLY_PAID', 'PENDING_COMMISSION_CONFIRMATION', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days', NULL),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'PENDING_COMMISSION_CONFIRMATION', 'COMMISSION_PAID', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days', NULL),
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', 'COMMISSION_PAID', 'CASHBACK_PAID', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days', NULL);
+
+INSERT INTO commissions (lead_id, company_id, amount, status, reported_by, reported_at, confirmed_by, confirmed_at) VALUES
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', '8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', 3000.00, 'CONFIRMED', '065dc9bf-f482-5680-83d2-91aaeef1799b', now() - INTERVAL '0 days', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '0 days');
+
+INSERT INTO cashback_transactions (lead_id, customer_id, wallet_type, wallet_number, amount, status, sent_at, paid_by) VALUES
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', '7f458b6a-69bb-5967-b8b2-594769aba39e', 'INSTA_PAY', '+201234567803', 750.00, 'SENT', now() - INTERVAL '0 days', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'));
+
+INSERT INTO ratings (lead_id, trip_id, company_id, customer_id, stars, comment, created_at) VALUES
+    ('d8b0c28c-960b-5f2e-9294-b571cad62073', '3cba5827-bafe-543b-9a56-1bfa3a472797', '8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', '7f458b6a-69bb-5967-b8b2-594769aba39e', 5, 'Excellent service, the company handled everything smoothly.', now() - INTERVAL '0 days');
+
+INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 2 traveler(s).', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '3 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for Ramadan Umrah - First Ten - 14 Nights. Please confirm.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '1 days'),
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'DEPOSIT_CONFIRMED', 'Deposit confirmed', 'Your deposit for Ramadan Umrah - First Ten - 14 Nights has been confirmed by the company.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '0 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'FULL_PAYMENT_CONFIRMATION_REQUIRED', 'Confirm a full payment', 'A customer reported paying in full for Ramadan Umrah - First Ten - 14 Nights. Please confirm.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '0 days'),
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'FULL_PAYMENT_CONFIRMED', 'Full payment confirmed', 'Your full payment for Ramadan Umrah - First Ten - 14 Nights has been confirmed by the company.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '0 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMMISSION_CONFIRMATION_REQUIRED', 'Confirm a commission payment', 'A company reported paying its commission. Please confirm so cashback can be released.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '0 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'COMMISSION_PAID', 'Commission confirmed', 'Your commission payment has been confirmed by the platform.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '0 days'),
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'CASHBACK_PAID', 'Cashback sent', 'Your cashback has been sent to your INSTA_PAY wallet.', '{"leadId": "d8b0c28c-960b-5f2e-9294-b571cad62073", "tripId": "3cba5827-bafe-543b-9a56-1bfa3a472797"}'::jsonb, now() - INTERVAL '0 days');
+
+INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'CONTACT_COMPANY', 'Trip', '3cba5827-bafe-543b-9a56-1bfa3a472797', now() - INTERVAL '3 days');
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'LEAD_REPORT_DEPOSIT', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '1 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'LEAD_MARK_DEPOSIT_PAID', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"PENDING_DEPOSIT_CONFIRMATION"', '"DEPOSIT_PAID"', now() - INTERVAL '0 days'),
+    ('17dc5702-d8f6-54d6-8027-5811cdcbd8e9', 'LEAD_REPORT_FULL_PAYMENT', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"DEPOSIT_PAID"', '"PENDING_FULL_PAYMENT_CONFIRMATION"', now() - INTERVAL '0 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'LEAD_MARK_FULLY_PAID', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"PENDING_FULL_PAYMENT_CONFIRMATION"', '"FULLY_PAID"', now() - INTERVAL '0 days'),
+    ('065dc9bf-f482-5680-83d2-91aaeef1799b', 'LEAD_REPORT_COMMISSION_PAID', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"FULLY_PAID"', '"PENDING_COMMISSION_CONFIRMATION"', now() - INTERVAL '0 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'LEAD_CONFIRM_COMMISSION_PAID', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"PENDING_COMMISSION_CONFIRMATION"', '"COMMISSION_PAID"', now() - INTERVAL '0 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'LEAD_PAY_CASHBACK', 'Lead', 'd8b0c28c-960b-5f2e-9294-b571cad62073', '"COMMISSION_PAID"', '"CASHBACK_PAID"', now() - INTERVAL '0 days');
+
+-- =============================================================================
+-- Company documents
+-- =============================================================================
+
+INSERT INTO company_documents (company_id, doc_type, file_url, status, reviewed_by, reviewed_at) VALUES
+    ('d05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', 'TOURISM_LICENSE', '/uploads/documents/seed-nour-al-haram-license.pdf', 'APPROVED', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '150 days');
+INSERT INTO company_documents (company_id, doc_type, file_url, status, reviewed_by, reviewed_at) VALUES
+    ('d12a303e-1fdf-533c-adf7-dd7537c8f4f3', 'TOURISM_LICENSE', '/uploads/documents/seed-sakina-license.pdf', 'APPROVED', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '150 days');
+INSERT INTO company_documents (company_id, doc_type, file_url, status, reviewed_by, reviewed_at) VALUES
+    ('8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', 'TOURISM_LICENSE', '/uploads/documents/seed-bayt-al-rahma-license.pdf', 'APPROVED', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '150 days');
+INSERT INTO company_documents (company_id, doc_type, file_url, status, reviewed_by, reviewed_at) VALUES
+    ('df9a8a62-e2bb-5a27-a7ab-629cf5006ba2', 'TOURISM_LICENSE', '/uploads/documents/seed-darb-al-safa-license.pdf', 'APPROVED', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '150 days');
+INSERT INTO company_documents (company_id, doc_type, file_url, status, reviewed_by, reviewed_at) VALUES
+    ('d73d9c94-0da0-5540-a193-46fe2658392a', 'TOURISM_LICENSE', '/uploads/documents/seed-manasik-al-anwar-license.pdf', 'APPROVED', (SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), now() - INTERVAL '150 days');
+INSERT INTO company_documents (company_id, doc_type, file_url, status) VALUES
+    ('d73d9c94-0da0-5540-a193-46fe2658392a', 'COMMERCIAL_REGISTER', '/uploads/documents/seed-manasik-al-anwar-register.pdf', 'PENDING');
+
+-- =============================================================================
+-- Audit logs — company approvals and a commission-rate change
+-- =============================================================================
+
+INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMPANY_APPROVED', 'CompanyProfile', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', '"PENDING"', '"APPROVED"', now() - INTERVAL '160 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMPANY_APPROVED', 'CompanyProfile', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', '"PENDING"', '"APPROVED"', now() - INTERVAL '161 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMPANY_APPROVED', 'CompanyProfile', '8d4fa096-7eda-58ba-ad4a-ef690d8ab6dc', '"PENDING"', '"APPROVED"', now() - INTERVAL '162 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMPANY_APPROVED', 'CompanyProfile', 'df9a8a62-e2bb-5a27-a7ab-629cf5006ba2', '"PENDING"', '"APPROVED"', now() - INTERVAL '163 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMPANY_APPROVED', 'CompanyProfile', 'd73d9c94-0da0-5540-a193-46fe2658392a', '"PENDING"', '"APPROVED"', now() - INTERVAL '164 days'),
+    ((SELECT id FROM users WHERE email = 'admin@umrahscanner.dev'), 'COMPANY_COMMISSION_UPDATED', 'CompanyProfile', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', '2000.00', '2500.00', now() - INTERVAL '90 days');
+
+
 COMMIT;
 
 -- Verify:
 --   SELECT c.company_name, c.commission_per_traveler, count(t.id) AS trips
 --   FROM company_profiles c JOIN trips t ON t.company_id = c.id
 --   WHERE c.license_number LIKE 'TRV-%' GROUP BY 1, 2 ORDER BY 1;
+--   SELECT status, count(*) FROM leads WHERE customer_id IN (SELECT id FROM customer_profiles
+--   WHERE full_name IN ('Ahmed Fathy','Mona Said','Youssef Ibrahim','Salma Adel','Karim Reda')) GROUP BY 1;
+--   SELECT type, count(*) FROM notifications GROUP BY 1 ORDER BY 1;
