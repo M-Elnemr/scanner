@@ -25,6 +25,9 @@ public class Country extends BaseEntity {
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
 
+    @Column(name = "name_ar", nullable = false, length = 100)
+    private String nameAr;
+
     /** ISO 3166-1 alpha-2, e.g. EG, SA. */
     @Column(name = "iso2", nullable = false, unique = true, length = 2)
     private String iso2;

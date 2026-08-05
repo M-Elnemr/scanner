@@ -671,7 +671,47 @@ Neither is required — they default to `false` if omitted.
 
 ---
 
-## 14. Reference
+## 14. Arabic — switch language on countries, airports, currencies and cities
+
+Every response from the four fixed reference lists now carries **both** languages in the same
+payload — no `Accept-Language` header, no locale query param, no second request. Pick whichever
+field the app's current language setting calls for at render time, and switching language in the
+app is instant with zero network round-trips for this data.
+
+| Endpoint | New fields |
+|---|---|
+| `GET /api/v1/countries` | `nameAr` alongside `name` |
+| `GET /api/v1/airports` | `nameAr`, `cityAr` alongside `name`, `city` (each airport also nests `countryNameAr`) |
+| `GET /api/v1/currencies` | `nameAr` alongside `name` — `code` and `symbol` are **not** localized, a currency symbol reads the same in either language |
+| `GET /api/v1/cities` | `nameAr` alongside `name` |
+| Company address objects (`addresses[]` wherever they appear — `/companies/me`, `/companies/{id}`, admin company routes) | `cityNameAr` alongside `cityName`, since an address's city comes from the same cities table |
+
+```json
+{
+  "id": "…", "iataCode": "CAI",
+  "name": "Cairo International Airport", "nameAr": "مطار القاهرة الدولي",
+  "city": "Cairo", "cityAr": "القاهرة",
+  "countryId": "…", "countryName": "Egypt", "countryNameAr": "مصر", "countryIso2": "EG"
+}
+```
+
+**What this does *not* cover:** enum values — `TripStatus`, `TripTier`, `RoomType`, `LeadStatus`,
+`LeadAction`, the `MAKKAH`/`MADINAH` hotel `city` enum, and so on — are still plain codes, unchanged.
+Those were already meant to be localized client-side with your own string tables (that's how enums
+work everywhere in this API), so nothing about them changed here. This section is specifically the
+four *fixed lookup tables* — free-text reference data that had no client-side translation to fall
+back on.
+
+**Checklist addition:**
+- [ ] Add `nameAr` to the Country, Airport (plus `cityAr`), Currency and City models.
+- [ ] Add `cityNameAr` to the company-address model.
+- [ ] Wire the language toggle to pick `name`/`nameAr` (and `city`/`cityAr`) instead of hardcoding
+      English everywhere these four lists are rendered: the airport pickers, the currency picker,
+      the company address form, and the tour details itinerary line from §12.3/§13.
+
+---
+
+## 15. Reference
 
 - Swagger UI: `/swagger-ui.html` (bearer auth configured; the lead lifecycle is described on the
   landing page).

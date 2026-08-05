@@ -37,7 +37,13 @@ public class Airport extends BaseEntity {
     @Column(name = "name", nullable = false, length = 150)
     private String name;
 
+    @Column(name = "name_ar", nullable = false, length = 150)
+    private String nameAr;
+
     /** The city served, which is what a traveller actually picks by. */
     @Column(name = "city", nullable = false, length = 100)
     private String city;
+
+    @Column(name = "city_ar", nullable = false, length = 100)
+    private String cityAr;
 }

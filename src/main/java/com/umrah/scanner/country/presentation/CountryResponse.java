@@ -5,9 +5,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
 @Schema(name = "Country", description = "Reference country. Used to scope the airport picker.")
-public record CountryResponse(UUID id, String name, @Schema(example = "EG") String iso2) {
+public record CountryResponse(
+        UUID id,
+        @Schema(example = "Egypt") String name,
+        @Schema(example = "مصر") String nameAr,
+        @Schema(example = "EG") String iso2) {
 
     public static CountryResponse from(Country country) {
-        return new CountryResponse(country.getId(), country.getName(), country.getIso2());
+        return new CountryResponse(country.getId(), country.getName(), country.getNameAr(), country.getIso2());
     }
 }

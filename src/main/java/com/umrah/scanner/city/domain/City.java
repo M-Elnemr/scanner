@@ -18,4 +18,7 @@ public class City extends BaseEntity {
 
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
+
+    @Column(name = "name_ar", nullable = false, length = 100)
+    private String nameAr;
 }

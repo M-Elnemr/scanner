@@ -30,6 +30,10 @@ public class Currency extends BaseEntity {
     @Column(name = "name", nullable = false, length = 60)
     private String name;
 
+    @Column(name = "name_ar", nullable = false, length = 60)
+    private String nameAr;
+
+    /** Language-neutral by convention (E£, SR, $) — not localized. */
     @Column(name = "symbol", nullable = false, length = 8)
     private String symbol;
 }

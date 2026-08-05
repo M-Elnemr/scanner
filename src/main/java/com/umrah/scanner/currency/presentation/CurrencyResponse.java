@@ -10,9 +10,11 @@ public record CurrencyResponse(
         UUID id,
         @Schema(example = "EGP") String code,
         @Schema(example = "Egyptian Pound") String name,
-        @Schema(example = "E£") String symbol) {
+        @Schema(example = "جنيه مصري") String nameAr,
+        @Schema(example = "E£", description = "Not localized — a currency symbol reads the same in either language")
+        String symbol) {
 
     public static CurrencyResponse from(Currency currency) {
-        return new CurrencyResponse(currency.getId(), currency.getCode(), currency.getName(), currency.getSymbol());
+        return new CurrencyResponse(currency.getId(), currency.getCode(), currency.getName(), currency.getNameAr(), currency.getSymbol());
     }
 }

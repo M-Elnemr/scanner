@@ -1288,7 +1288,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"licenseNumber\": \"TRV-2024-8891\",\n    \"logoUrl\": \"http://localhost:8080/uploads/logos/al-noor.png\",\n    \"whatsapp\": \"+201000000000\",\n    \"description\": \"Licensed Umrah operator since 2009.\",\n    \"ratingAvg\": 4.50,\n    \"ratingCount\": 12,\n    \"addresses\": [\n      {\n        \"id\": \"…\",\n        \"cityId\": \"…\",\n        \"cityName\": \"Cairo\",\n        \"addressText\": \"12 Talaat Harb St, Downtown\",\n        \"mobileNumber\": \"+201000000001\"\n      }\n    ]\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"{{companyId}}\",\n    \"companyName\": \"Al Noor Travel & Tourism\",\n    \"licenseNumber\": \"TRV-2024-8891\",\n    \"logoUrl\": \"http://localhost:8080/uploads/logos/al-noor.png\",\n    \"whatsapp\": \"+201000000000\",\n    \"description\": \"Licensed Umrah operator since 2009.\",\n    \"ratingAvg\": 4.50,\n    \"ratingCount\": 12,\n    \"addresses\": [\n      {\n        \"id\": \"…\",\n        \"cityId\": \"…\",\n        \"cityName\": \"Cairo\", \"cityNameAr\": \"القاهرة\",\n        \"addressText\": \"12 Talaat Harb St, Downtown\",\n        \"mobileNumber\": \"+201000000001\"\n      }\n    ]\n  }\n}"
             },
             {
               "name": "403 No lead with this company yet",
@@ -2386,7 +2386,7 @@
     },
     {
       "name": "Reference Data",
-      "description": "Fixed public lookup lists. Fetch once and cache. Countries and airports drive the trip form's airport pickers; currencies drive the per-trip currency choice.",
+      "description": "Fixed public lookup lists. Fetch once and cache. Countries and airports drive the trip form's airport pickers; currencies drive the per-trip currency choice.\n\nEvery reference response now carries an *Ar Arabic sibling field alongside each English name (nameAr on countries/airports/currencies, cityAr on airports, cityNameAr on company addresses). Pick whichever the app's current language calls for at render time — no extra request or header needed to switch.",
       "item": [
         {
           "name": "List Countries",
@@ -2444,7 +2444,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    { \"id\": \"{{egyptCountryId}}\", \"name\": \"Egypt\", \"iso2\": \"EG\" },\n    { \"id\": \"{{saudiCountryId}}\", \"name\": \"Saudi Arabia\", \"iso2\": \"SA\" }\n  ]\n}"
+              "body": "{\n  \"data\": [\n    { \"id\": \"{{egyptCountryId}}\", \"name\": \"Egypt\", \"nameAr\": \"مصر\", \"iso2\": \"EG\" },\n    { \"id\": \"{{saudiCountryId}}\", \"name\": \"Saudi Arabia\", \"nameAr\": \"السعودية\", \"iso2\": \"SA\" }\n  ]\n}"
             }
           ],
           "event": [
@@ -2531,7 +2531,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\",\n      \"city\": \"Cairo\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" },\n    { \"id\": \"{{luxorAirportId}}\", \"iataCode\": \"LXR\", \"name\": \"Luxor International Airport\",\n      \"city\": \"Luxor\", \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryIso2\": \"EG\" }\n  ]\n}"
+              "body": "{\n  \"data\": [\n    { \"id\": \"{{cairoAirportId}}\", \"iataCode\": \"CAI\", \"name\": \"Cairo International Airport\", \"nameAr\": \"مطار القاهرة الدولي\",\n      \"city\": \"Cairo\", \"cityAr\": \"القاهرة\",\n      \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryNameAr\": \"مصر\", \"countryIso2\": \"EG\" },\n    { \"id\": \"{{luxorAirportId}}\", \"iataCode\": \"LXR\", \"name\": \"Luxor International Airport\", \"nameAr\": \"مطار الأقصر الدولي\",\n      \"city\": \"Luxor\", \"cityAr\": \"الأقصر\",\n      \"countryId\": \"{{egyptCountryId}}\", \"countryName\": \"Egypt\", \"countryNameAr\": \"مصر\", \"countryIso2\": \"EG\" }\n  ]\n}"
             }
           ],
           "event": [
@@ -2608,7 +2608,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    { \"id\": \"{{egpCurrencyId}}\", \"code\": \"EGP\", \"name\": \"Egyptian Pound\", \"symbol\": \"E£\" },\n    { \"id\": \"{{sarCurrencyId}}\", \"code\": \"SAR\", \"name\": \"Saudi Riyal\", \"symbol\": \"SR\" },\n    { \"id\": \"{{usdCurrencyId}}\", \"code\": \"USD\", \"name\": \"US Dollar\", \"symbol\": \"$\" }\n  ]\n}"
+              "body": "{\n  \"data\": [\n    { \"id\": \"{{egpCurrencyId}}\", \"code\": \"EGP\", \"name\": \"Egyptian Pound\", \"nameAr\": \"جنيه مصري\", \"symbol\": \"E£\" },\n    { \"id\": \"{{sarCurrencyId}}\", \"code\": \"SAR\", \"name\": \"Saudi Riyal\", \"nameAr\": \"ريال سعودي\", \"symbol\": \"SR\" },\n    { \"id\": \"{{usdCurrencyId}}\", \"code\": \"USD\", \"name\": \"US Dollar\", \"nameAr\": \"دولار أمريكي\", \"symbol\": \"$\" }\n  ]\n}"
             }
           ],
           "event": [
