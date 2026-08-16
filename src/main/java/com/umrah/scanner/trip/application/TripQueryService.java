@@ -78,13 +78,16 @@ public class TripQueryService {
         return tripRepository.findAllByCompanyId(companyId, pageable);
     }
 
-    /** Company identity is only revealed once the viewing customer already has a lead on this trip. */
+    /**
+     * Company identity is only revealed once the viewing customer has preserved this journey — and
+     * it is taken away again if they cancel, which is why a cancelled lead does not count here.
+     */
     @Transactional(readOnly = true)
     public TripDetailResult getPublicDetail(UUID tripId, Optional<UUID> viewingCustomerId) {
         Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
         initializeCollections(trip);
         boolean companyVisible = viewingCustomerId
-                .map(customerId -> leadRepository.findByCustomerIdAndTripId(customerId, tripId).isPresent())
+                .map(customerId -> leadRepository.findNotCancelledByCustomerIdAndTripId(customerId, tripId).isPresent())
                 .orElse(false);
         return new TripDetailResult(trip, companyVisible, cashbackPerTraveler(trip));
     }

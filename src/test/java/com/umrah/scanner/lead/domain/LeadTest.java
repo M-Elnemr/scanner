@@ -74,6 +74,22 @@ class LeadTest {
                     .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("paid in full");
         }
+
+        /**
+         * CANCELLED sits off the status ladder with a negative stage, so a bare "is this lead at
+         * least FULLY_PAID?" comparison would call it editable. This is the regression guard for
+         * that: withdrawing from a journey has to close the traveler dialog, not reopen it.
+         */
+        @Test
+        void frozenOnceCancelled() {
+            Lead lead = leadAt(LeadStatus.INTERESTED);
+            lead.setStatus(LeadStatus.CANCELLED);
+
+            assertThat(lead.areTravelersEditable()).isFalse();
+            assertThatThrownBy(() -> lead.changeTravelers(TravelerParty.of(4, 0, 0)))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("cancelled journey");
+        }
     }
 
     @Nested
@@ -142,6 +158,19 @@ class LeadTest {
             assertThat(lead.getFullPaymentReportedAt()).isNull();
             assertThat(lead.getCommissionPaidAt()).isNull();
             assertThat(lead.getCashbackPaidAt()).isNull();
+            assertThat(lead.getCancelledAt()).isNull();
+        }
+
+        @Test
+        void cancellingStampsWhoWithdrewAndWhen() {
+            Lead lead = leadAt(LeadStatus.DEPOSIT_PAID);
+            var customer = java.util.UUID.randomUUID();
+            var at = java.time.Instant.parse("2026-07-20T08:00:00Z");
+
+            lead.recordAction(LeadAction.CANCEL, customer, at);
+
+            assertThat(lead.getCancelledBy()).isEqualTo(customer);
+            assertThat(lead.getCancelledAt()).isEqualTo(at);
         }
     }
 }

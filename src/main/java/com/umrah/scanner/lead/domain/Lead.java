@@ -17,7 +17,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -34,12 +33,17 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * <p>The commission and cashback figures here are a <em>snapshot</em> taken once at creation. They
  * are never recomputed, so a later change to the company's rate or to the cashback rules leaves
  * every existing lead exactly as it was priced.
+ *
+ * <p>Uniqueness is not declared here: both rules that guard this table are <em>partial</em> indexes
+ * ("one live lead per customer/trip pair", "one live lead per customer"), which JPA cannot express.
+ * They live in {@code V31__lead_cancellation.sql} instead, and a plain {@code @UniqueConstraint}
+ * here would only document a constraint the database no longer has.
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "leads", uniqueConstraints = @UniqueConstraint(columnNames = {"customer_id", "trip_id"}))
+@Table(name = "leads")
 @EntityListeners(AuditingEntityListener.class)
 public class Lead extends BaseEntity {
 
@@ -137,6 +141,12 @@ public class Lead extends BaseEntity {
     @Column(name = "cashback_paid_at")
     private Instant cashbackPaidAt;
 
+    @Column(name = "cancelled_by")
+    private UUID cancelledBy;
+
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -176,13 +186,20 @@ public class Lead extends BaseEntity {
      */
     private static final LeadStatus TRAVELERS_LOCKED_FROM = LeadStatus.FULLY_PAID;
 
+    /**
+     * The terminal check comes first because CANCELLED sits off the status ladder: a stage
+     * comparison alone would read it as "earlier than FULLY_PAID" and hand out an edit affordance
+     * on a lead the customer has already withdrawn from.
+     */
     public boolean areTravelersEditable() {
-        return !status.isAtLeast(TRAVELERS_LOCKED_FROM);
+        return !status.isTerminal() && !status.isAtLeast(TRAVELERS_LOCKED_FROM);
     }
 
     public void changeTravelers(TravelerParty newTravelers) {
         if (!areTravelersEditable()) {
-            throw new ConflictException("Traveler counts cannot be changed once the booking is paid in full");
+            throw new ConflictException(status.isCancelled()
+                    ? "Traveler counts cannot be changed on a cancelled journey"
+                    : "Traveler counts cannot be changed once the booking is paid in full");
         }
         this.travelers = newTravelers;
     }
@@ -220,6 +237,10 @@ public class Lead extends BaseEntity {
             case PAY_CASHBACK -> {
                 cashbackPaidBy = actorUserId;
                 cashbackPaidAt = at;
+            }
+            case CANCEL -> {
+                cancelledBy = actorUserId;
+                cancelledAt = at;
             }
         }
     }

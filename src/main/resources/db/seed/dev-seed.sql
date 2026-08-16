@@ -1903,6 +1903,19 @@ INSERT INTO users (id, email, google_sub, role, status) VALUES
 INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
     ('09a57c84-05c9-5e89-a03b-c05c7694ff3c', '2fe2fa07-0cf2-551a-b504-aad6edb4d637', 'Nourhan Tarek', NULL, NULL, NULL, false);
 
+-- These last two exist because a customer may hold only one preserved journey (uq_leads_customer_active),
+-- and the eight leads below cover eight lifecycle stages. Without them two customers would each need
+-- two live leads, which the database now refuses.
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('4c9f2f56-3a1b-5d47-9e2c-1f7a6b8d0e31', 'hala.mostafa@seed.test', 'dev-test:hala.mostafa@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('c8b21a90-77d4-5f1e-93a6-2b5e0c7f4a68', '4c9f2f56-3a1b-5d47-9e2c-1f7a6b8d0e31', 'Hala Mostafa', '+201012345606', '+201012345606', 'VODAFONE_CASH', true);
+
+INSERT INTO users (id, email, google_sub, role, status) VALUES
+    ('9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', 'tarek.samir@seed.test', 'dev-test:tarek.samir@seed.test', 'CUSTOMER', 'ACTIVE');
+INSERT INTO customer_profiles (id, user_id, full_name, phone, cashback_wallet_number, wallet_type, profile_completed) VALUES
+    ('e5a4c318-6b92-5d70-af23-8c1e9f4b2d06', '9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', 'Tarek Samir', '+201123456707', '+201123456707', 'INSTA_PAY', true);
+
 -- =============================================================================
 -- Favourites
 -- =============================================================================
@@ -1921,7 +1934,7 @@ INSERT INTO favourites (customer_id, trip_id) VALUES
 -- booking moving through that many steps would actually leave behind.
 -- =============================================================================
 
--- Lead 1/8: ahmed-fathy -> INTERESTED (NAH, 2 adult/1 child/0 infant)
+-- Lead 1/8: hala-mostafa -> INTERESTED (NAH, 2 adult/1 child/0 infant)
 INSERT INTO leads (
     id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
     commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
@@ -1930,7 +1943,7 @@ INSERT INTO leads (
     commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
     cashback_paid_by, cashback_paid_at, created_at, updated_at
 ) VALUES (
-    'a4c81670-926d-5ecd-be2d-0f0d15fe44e9', '47358fb8-40f9-52f6-ae6e-b9c13eec4f17', '8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', 'INTERESTED', 2, 1, 0,
+    'a4c81670-926d-5ecd-be2d-0f0d15fe44e9', 'c8b21a90-77d4-5f1e-93a6-2b5e0c7f4a68', '8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', 'd05db3d1-cf0f-53a0-a1b5-3e7c57ac38bd', 'INTERESTED', 2, 1, 0,
     2500.00, 5000.00, 1250.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
     NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
@@ -1939,15 +1952,15 @@ INSERT INTO leads (
 );
 
 INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
-    ('a4c81670-926d-5ecd-be2d-0f0d15fe44e9', NULL, 'INTERESTED', '6e1e51ec-b1e8-54d2-9791-428092682942', now() - INTERVAL '31 days', NULL);
+    ('a4c81670-926d-5ecd-be2d-0f0d15fe44e9', NULL, 'INTERESTED', '4c9f2f56-3a1b-5d47-9e2c-1f7a6b8d0e31', now() - INTERVAL '31 days', NULL);
 
 INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
     ('00399ae8-dc8c-5d0c-8905-079fb675aaae', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 2 traveler(s).', '{"leadId": "a4c81670-926d-5ecd-be2d-0f0d15fe44e9", "tripId": "8ce534bd-a036-5a7a-b9d7-7ed5defedcc8"}'::jsonb, now() - INTERVAL '31 days');
 
 INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
-    ('6e1e51ec-b1e8-54d2-9791-428092682942', 'CONTACT_COMPANY', 'Trip', '8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', now() - INTERVAL '31 days');
+    ('4c9f2f56-3a1b-5d47-9e2c-1f7a6b8d0e31', 'CONTACT_COMPANY', 'Trip', '8ce534bd-a036-5a7a-b9d7-7ed5defedcc8', now() - INTERVAL '31 days');
 
--- Lead 2/8: mona-said -> PENDING_DEPOSIT_CONFIRMATION (SUS, 3 adult/0 child/1 infant)
+-- Lead 2/8: tarek-samir -> PENDING_DEPOSIT_CONFIRMATION (SUS, 3 adult/0 child/1 infant)
 INSERT INTO leads (
     id, customer_id, trip_id, company_id, status, adult_count, child_count, infant_count,
     commission_per_traveler, commission_amount, cashback_amount, commission_policy, cashback_policy,
@@ -1956,27 +1969,27 @@ INSERT INTO leads (
     commission_reported_by, commission_reported_at, commission_paid_by, commission_paid_at,
     cashback_paid_by, cashback_paid_at, created_at, updated_at
 ) VALUES (
-    '3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', '33540d94-d926-5230-8bfd-86aa0efe51c5', '221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', 'PENDING_DEPOSIT_CONFIRMATION', 3, 0, 1,
+    '3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', 'e5a4c318-6b92-5d70-af23-8c1e9f4b2d06', '221d7dea-a52c-5eab-93e5-cb35e31b2cde', 'd12a303e-1fdf-533c-adf7-dd7537c8f4f3', 'PENDING_DEPOSIT_CONFIRMATION', 3, 0, 1,
     1800.00, 5400.00, 1350.00, 'PER_TRAVELER', 'COMMISSION_SHARE',
-    'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '25 days', NULL, NULL,
+    '9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', now() - INTERVAL '25 days', NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL, NULL, now() - INTERVAL '27 days', now()
 );
 
 INSERT INTO lead_status_history (lead_id, from_status, to_status, changed_by, changed_at, note) VALUES
-    ('3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', NULL, 'INTERESTED', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '27 days', NULL),
-    ('3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', 'eab8c72c-4e45-5c80-a39d-805d80339de0', now() - INTERVAL '25 days', 'Transferred via InstaPay.');
+    ('3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', NULL, 'INTERESTED', '9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', now() - INTERVAL '27 days', NULL),
+    ('3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', 'INTERESTED', 'PENDING_DEPOSIT_CONFIRMATION', '9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', now() - INTERVAL '25 days', 'Transferred via InstaPay.');
 
 INSERT INTO notifications (recipient_user_id, type, title, body, data, created_at) VALUES
     ('60249520-68d9-5c25-9a6c-39819b72a607', 'NEW_LEAD', 'New interested customer', 'A customer is interested in this trip for 3 traveler(s).', '{"leadId": "3fa3b225-d1f7-5e6c-b5ce-447e223aa12b", "tripId": "221d7dea-a52c-5eab-93e5-cb35e31b2cde"}'::jsonb, now() - INTERVAL '27 days'),
     ('60249520-68d9-5c25-9a6c-39819b72a607', 'DEPOSIT_CONFIRMATION_REQUIRED', 'Confirm a deposit', 'A customer reported paying the deposit for September Umrah - 12 Nights. Please confirm.', '{"leadId": "3fa3b225-d1f7-5e6c-b5ce-447e223aa12b", "tripId": "221d7dea-a52c-5eab-93e5-cb35e31b2cde"}'::jsonb, now() - INTERVAL '25 days');
 
 INSERT INTO analytics_events (user_id, event_type, entity_type, entity_id, created_at) VALUES
-    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'CONTACT_COMPANY', 'Trip', '221d7dea-a52c-5eab-93e5-cb35e31b2cde', now() - INTERVAL '27 days');
+    ('9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', 'CONTACT_COMPANY', 'Trip', '221d7dea-a52c-5eab-93e5-cb35e31b2cde', now() - INTERVAL '27 days');
 
 INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, old_value, new_value, created_at) VALUES
-    ('eab8c72c-4e45-5c80-a39d-805d80339de0', 'LEAD_REPORT_DEPOSIT', 'Lead', '3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '25 days');
+    ('9d3e7b12-5c48-5a6f-8e91-4d2c7a0f6b53', 'LEAD_REPORT_DEPOSIT', 'Lead', '3fa3b225-d1f7-5e6c-b5ce-447e223aa12b', '"INTERESTED"', '"PENDING_DEPOSIT_CONFIRMATION"', now() - INTERVAL '25 days');
 
 -- Lead 3/8: youssef-ibrahim -> DEPOSIT_PAID (BAR, 2 adult/2 child/0 infant)
 INSERT INTO leads (

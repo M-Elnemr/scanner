@@ -10,6 +10,7 @@ import com.umrah.scanner.lead.domain.LeadStatusHistory;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
 import com.umrah.scanner.lead.infrastructure.LeadStatusHistoryRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +44,19 @@ public class LeadQueryService {
         return status == null
                 ? leadRepository.findAllByCustomerId(customerId, pageable)
                 : leadRepository.findAllByCustomerIdAndStatus(customerId, status, pageable);
+    }
+
+    /**
+     * The journey this customer is currently holding, if any.
+     *
+     * <p>Exists so the trip-details screen can render its button from one call — no lead means
+     * "preserve", a lead on this trip means "preserved", a lead on a different trip means tapping
+     * has to warn them first — instead of discovering the third case only by getting a 409 back.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Lead> findActiveForCustomer(UUID customerUserId) {
+        return customerProfileRepository.findByUserId(customerUserId)
+                .flatMap(customer -> leadRepository.findActiveByCustomerId(customer.getId()));
     }
 
     @Transactional(readOnly = true)

@@ -73,9 +73,28 @@ public class CreateLeadUseCase {
 
         TravelerParty travelers = TravelerParty.of(command.adultCount(), command.childCount(), command.infantCount());
 
-        return leadRepository.findByCustomerIdAndTripId(customer.getId(), command.tripId())
+        requireNoOtherActiveLead(customer.getId(), command.tripId());
+
+        return leadRepository.findNotCancelledByCustomerIdAndTripId(customer.getId(), command.tripId())
                 .map(existing -> resumeExisting(existing, travelers))
                 .orElseGet(() -> createLead(customer, trip, travelers, customerUserId));
+    }
+
+    /**
+     * A customer preserves one journey at a time: to take up a different trip they must cancel the
+     * one they are holding. Their own trip is exempt, which is what keeps re-submitting the same
+     * trip idempotent rather than turning a retry into a conflict.
+     *
+     * <p>The database enforces the same rule through the {@code uq_leads_customer_active} partial
+     * index; this check exists so the client gets a 409 naming the trip in the way, instead of an
+     * opaque constraint violation.
+     */
+    private void requireNoOtherActiveLead(UUID customerId, UUID tripId) {
+        leadRepository.findActiveByCustomerId(customerId)
+                .filter(active -> !active.getTrip().getId().equals(tripId))
+                .ifPresent(active -> {
+                    throw new ActiveLeadExistsException(active);
+                });
     }
 
     /** A retry, or a customer re-opening the same trip: same lead, same price, counts refreshed if still open. */

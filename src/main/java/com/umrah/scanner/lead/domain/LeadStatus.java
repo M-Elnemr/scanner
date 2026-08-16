@@ -9,6 +9,11 @@ package com.umrah.scanner.lead.domain;
  * reports, the lead parks in a PENDING state until the other party confirms; when the company (or,
  * for commission, the admin) records the payment itself, it goes straight to the settled state with
  * no confirmation needed.
+ *
+ * <p>{@link #CANCELLED} is deliberately <em>off</em> the ladder: the customer abandoned the journey
+ * rather than progressing through it. Its stage is negative so that no accidental
+ * {@code isAtLeast(...)} comparison ever reads it as progress, but reasoning about a cancelled lead
+ * should go through {@link #isCancelled()} or {@link #isTerminal()}, never through the ordering.
  */
 public enum LeadStatus {
 
@@ -19,7 +24,10 @@ public enum LeadStatus {
     FULLY_PAID(4),
     PENDING_COMMISSION_CONFIRMATION(5),
     COMMISSION_PAID(6),
-    CASHBACK_PAID(7);
+    CASHBACK_PAID(7),
+
+    /** The customer withdrew. Off the ladder — see the class comment before comparing stages. */
+    CANCELLED(-1);
 
     private final int stage;
 
@@ -36,8 +44,21 @@ public enum LeadStatus {
         return stage >= other.stage;
     }
 
-    /** Nothing further can happen to the lead. */
+    public boolean isCancelled() {
+        return this == CANCELLED;
+    }
+
+    /** Nothing further can happen to the lead — it either ran to completion or was cancelled. */
     public boolean isTerminal() {
-        return this == CASHBACK_PAID;
+        return this == CASHBACK_PAID || this == CANCELLED;
+    }
+
+    /**
+     * True while the lead still occupies the customer's single "preserved journey" slot. The
+     * counterpart of this rule lives in the {@code uq_leads_customer_active} partial index, so the
+     * two must be changed together.
+     */
+    public boolean isActive() {
+        return !isTerminal();
     }
 }

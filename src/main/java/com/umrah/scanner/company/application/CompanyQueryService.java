@@ -55,6 +55,9 @@ public class CompanyQueryService {
      * <p>Status is deliberately not checked. A customer with a booking in flight keeps access to the
      * branch phone numbers even if the company is later suspended, which is precisely when they are
      * most likely to need them.
+     *
+     * <p>A cancelled lead does not count: withdrawing from a journey takes the company's details
+     * away again, exactly as if the customer had never preserved it.
      */
     @Transactional(readOnly = true)
     public CompanyProfile getVisibleTo(UUID companyId, UUID callerUserId, Role callerRole) {
@@ -65,7 +68,7 @@ public class CompanyQueryService {
             case ADMIN -> true;
             case COMPANY -> company.getUser().getId().equals(callerUserId);
             case CUSTOMER -> customerProfileRepository.findByUserId(callerUserId)
-                    .map(customer -> leadRepository.existsByCustomerIdAndCompanyId(customer.getId(), companyId))
+                    .map(customer -> leadRepository.existsNotCancelledByCustomerIdAndCompanyId(customer.getId(), companyId))
                     .orElse(false);
         };
         if (!visible) {

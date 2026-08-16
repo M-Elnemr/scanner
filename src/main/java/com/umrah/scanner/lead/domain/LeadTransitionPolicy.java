@@ -53,6 +53,22 @@ public final class LeadTransitionPolicy {
         // Cashback is unreachable until the company's commission has actually been confirmed.
         rule(LeadAction.PAY_CASHBACK, Map.of(
                 LeadStatus.COMMISSION_PAID, LeadStatus.CASHBACK_PAID));
+
+        // Withdrawal. Legal from every status except CASHBACK_PAID — once the customer has been paid
+        // out there is nothing left to withdraw from. CANCELLED is absent as a source, so a second
+        // cancel is a conflict by construction rather than by a hand-written guard.
+        //
+        // Note what this does *not* do: cancelling after a deposit or a full payment voids the
+        // platform's commission record, but no money moves back to the customer. Refunds stay a
+        // matter between them and the company.
+        rule(LeadAction.CANCEL, Map.of(
+                LeadStatus.INTERESTED, LeadStatus.CANCELLED,
+                LeadStatus.PENDING_DEPOSIT_CONFIRMATION, LeadStatus.CANCELLED,
+                LeadStatus.DEPOSIT_PAID, LeadStatus.CANCELLED,
+                LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION, LeadStatus.CANCELLED,
+                LeadStatus.FULLY_PAID, LeadStatus.CANCELLED,
+                LeadStatus.PENDING_COMMISSION_CONFIRMATION, LeadStatus.CANCELLED,
+                LeadStatus.COMMISSION_PAID, LeadStatus.CANCELLED));
     }
 
     private LeadTransitionPolicy() {

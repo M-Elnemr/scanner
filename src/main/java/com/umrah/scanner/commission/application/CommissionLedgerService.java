@@ -47,6 +47,22 @@ public class CommissionLedgerService {
         return commissionRepository.save(commission);
     }
 
+    /**
+     * The lead was cancelled, so nothing is owed on it any more.
+     *
+     * <p>Unlike its two siblings this does <em>not</em> upsert: a commission row only comes into
+     * existence once a payment is reported or confirmed, so a customer withdrawing before that
+     * point should leave the ledger untouched rather than gain a cancelled debt they never had.
+     * The row is kept when it does exist — a payment that really was made stays on the record.
+     */
+    @Transactional
+    public Optional<Commission> recordCancelled(Lead lead) {
+        return commissionRepository.findByLeadId(lead.getId()).map(commission -> {
+            commission.setStatus(CommissionStatus.CANCELLED);
+            return commissionRepository.save(commission);
+        });
+    }
+
     @Transactional(readOnly = true)
     public Optional<Commission> findByLead(UUID leadId) {
         return commissionRepository.findByLeadId(leadId);

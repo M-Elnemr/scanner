@@ -31,7 +31,16 @@ public enum LeadAction {
     CONFIRM_COMMISSION_PAID(Role.ADMIN),
 
     /** Admin transfers the cashback to the customer's wallet. */
-    PAY_CASHBACK(Role.ADMIN);
+    PAY_CASHBACK(Role.ADMIN),
+
+    /**
+     * Customer withdraws from the journey, freeing their single preserved-trip slot.
+     *
+     * <p>Customer-only by design: this enum binds exactly one actor per action, so a company- or
+     * admin-initiated cancellation would be its own action with its own transition rules rather
+     * than a second actor on this one.
+     */
+    CANCEL(Role.CUSTOMER);
 
     private final Role actor;
 

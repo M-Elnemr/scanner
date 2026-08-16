@@ -7,14 +7,23 @@ Every endpoint and field below is live on the backend — nothing here is aspira
 
 ## 0. TL;DR for the app
 
-1. Tapping **"Show company details"** on a trip no longer reveals anything on its own. The user must
-   first pick **adults / children / infants**. Submitting that creates the *lead*, and only from then
-   on does the trip endpoint return the company block **and** `GET /api/v1/companies/{id}` return the
-   full profile (§7).
-2. A lead permanently stores its **commission** and **cashback** at the moment it is created. Nothing
+1. The trip's primary CTA is **"Preserve the journey"** — client service reaches out to the customer,
+   rather than the customer being handed a phone number. Tapping it reveals nothing on its own: the
+   user must first pick **adults / children / infants**. Submitting that creates the *lead*, the
+   button turns green **"Preserved"**, and only from then on does the trip endpoint return the
+   company block **and** `GET /api/v1/companies/{id}` return the full profile (§7).
+2. A customer may hold **one preserved journey at a time**. Preserving a second trip returns
+   **409 `ACTIVE_LEAD_EXISTS`** naming the trip in the way; they must cancel that one first (§5.9).
+   `GET /api/v1/customers/me/leads/active` tells you which trip is being held, so the button can be
+   rendered correctly before the user taps anything.
+3. Cancelling is a **new customer action**, `CANCEL`, legal from every status except `CASHBACK_PAID`,
+   and it requires a reason. It moves the lead to the new **`CANCELLED`** status, frees the slot, and
+   **takes the company's details away again**.
+4. A lead permanently stores its **commission** and **cashback** at the moment it is created. Nothing
    recalculates them later. Customers must **never** be shown commission — only cashback.
-3. The status flow is now **8 states** with a report → confirm handshake on each payment step.
-4. The app must **never post a target status**. Each step is its own named endpoint. Render buttons
+5. The status flow is **8 progress states plus `CANCELLED`**, with a report → confirm handshake on
+   each payment step.
+6. The app must **never post a target status**. Each step is its own named endpoint. Render buttons
    from the `availableActions` array the server returns on every lead.
 
 ---
@@ -62,6 +71,23 @@ Bean-validation failures (400) add a `fieldErrors` map:
 { "status": 400, "detail": "Request failed validation", "fieldErrors": { "adultCount": "At least one adult traveler is required" } }
 ```
 
+Some failures add a stable `code` plus extra fields, so you can branch on the failure instead of
+parsing English. Today there is exactly one — preserving a trip while another is already held:
+
+```json
+{
+  "status": 409,
+  "detail": "You already have a preserved journey. Cancel it before preserving another.",
+  "code": "ACTIVE_LEAD_EXISTS",
+  "activeLead": {
+    "leadId": "…", "tripId": "…", "tripTitle": "September Umrah - 12 Nights", "status": "DEPOSIT_PAID"
+  }
+}
+```
+
+Branch on `code` when it is present; fall back to showing `detail`. Treat an unknown `code` as a
+plain error — more will be added.
+
 Show `detail` to the user. Status codes you must handle on lead calls:
 
 | Code | Meaning | Suggested UI |
@@ -69,7 +95,7 @@ Show `detail` to the user. Status codes you must handle on lead calls:
 | 400 | field validation | inline field errors from `fieldErrors` |
 | 403 | not your lead / wrong role | generic "not allowed", pop the screen |
 | 404 | lead or trip gone | pop + refresh list |
-| 409 | **action illegal from the current status**, or travelers locked, or already paid | refresh the lead and re-render from `availableActions` — the app's state was stale |
+| 409 | **action illegal from the current status**, or travelers locked, or already paid, or `ACTIVE_LEAD_EXISTS` | with a `code`, handle it (see above); otherwise refresh the lead and re-render from `availableActions` — the app's state was stale |
 | 422 | domain rule (profile incomplete, trip unpublished, no wallet on file) | show `detail`, route to the fix (e.g. profile screen) |
 
 Auth is unchanged: `Authorization: Bearer <accessToken>`.
@@ -92,9 +118,11 @@ FULLY_PAID
   └─ admin records ────────────────────────────────────────────────────────────────► COMMISSION_PAID
 
 COMMISSION_PAID ──► (admin pays) ──► CASHBACK_PAID   [terminal]
+
+ANY of the above except CASHBACK_PAID ──► (customer cancels, reason required) ──► CANCELLED [terminal]
 ```
 
-Dart enum — order matters, it is the progress order:
+Dart enum — order matters for the eight progress states, it is the progress order:
 
 ```dart
 enum LeadStatus {
@@ -106,12 +134,20 @@ enum LeadStatus {
   pendingCommissionConfirmation,  // PENDING_COMMISSION_CONFIRMATION
   commissionPaid,                 // COMMISSION_PAID
   cashbackPaid,                   // CASHBACK_PAID
+  cancelled,                      // CANCELLED — NOT on the ladder, see below
 }
 ```
 
 Use `index` comparisons for "has it got at least this far" checks (e.g. review eligibility), never
 string matching. Treat an unrecognised status string as a non-fatal fallback rather than throwing —
 the backend may add states.
+
+> ⚠️ **`cancelled` is off the ladder.** It is listed last only because Dart enums need an order; it
+> does not mean "further along than `cashbackPaid`". Every progress comparison must exclude it
+> first — `if (status == LeadStatus.cancelled) { … } else if (status.index >= …)`. The backend
+> mirrors this: `CANCELLED` carries a negative stage server-side for exactly this reason. A
+> cancelled lead is finished: it has no `availableActions`, its travelers cannot be edited, and it
+> no longer entitles the customer to the company's contact details.
 
 **Suggested user-facing copy** (customer side):
 
@@ -125,6 +161,7 @@ the backend may add states.
 | `PENDING_COMMISSION_CONFIRMATION` | "Cashback being processed" | "Commission reported — awaiting platform" |
 | `COMMISSION_PAID` | "Cashback on its way" | "Commission confirmed" |
 | `CASHBACK_PAID` | "Cashback sent 🎉" | "Complete" |
+| `CANCELLED` | "Journey cancelled" | "Customer cancelled" |
 
 ---
 
@@ -149,11 +186,17 @@ const _actionLabels = {
   'REPORT_COMMISSION_PAID':  'I paid the commission',
   'CONFIRM_COMMISSION_PAID': 'Confirm commission',   // admin
   'PAY_CASHBACK':            'Send cashback',        // admin
+  'CANCEL':                  'Cancel this journey',  // customer only
 };
 ```
 
 An empty `availableActions` means "nothing for you to do — wait for the other side". Show a status
 chip, not a disabled button.
+
+`CANCEL` is present for the customer on every status except `CASHBACK_PAID`, so it will appear
+alongside the step button (e.g. `["REPORT_DEPOSIT", "CANCEL"]`). Give it destructive styling and a
+confirm dialog rather than putting it next to the primary action — and remember it needs a reason
+(§5.9), unlike every other action where the note is optional.
 
 ---
 
@@ -164,7 +207,8 @@ chip, not a disabled button.
 `GET /api/v1/trips/{id}` — public; send the token if the user is logged in.
 
 New field `cashbackPerTraveler`. The `company` object is **`null` until this customer has a lead on
-this trip**; that is the reveal gate described in §6.
+this trip that they have not cancelled**; that is the reveal gate described in §6. It goes back to
+`null` after a cancel, so re-fetch the trip whenever a lead's status changes.
 
 **Breaking:** `departureAirport`/`arrivalAirport` (strings) are replaced by **four airport objects**
 covering both legs, and `currency` is now an object rather than a 3-letter string. There is also a
@@ -222,9 +266,19 @@ Once a lead exists, `company` becomes:
 
 Rules: `adultCount >= 1`, `childCount >= 0`, `infantCount >= 0`.
 
-**Idempotent.** Calling it again for the same trip returns the existing lead rather than erroring —
-safe to retry on timeout. If the lead is still before `FULLY_PAID` the counts are refreshed;
-otherwise the existing counts stand and the call still succeeds.
+**Idempotent for the same trip.** Calling it again for the trip the customer is already holding
+returns the existing lead rather than erroring — safe to retry on timeout. If the lead is still
+before `FULLY_PAID` the counts are refreshed; otherwise the existing counts stand and the call still
+succeeds.
+
+**But only one trip at a time.** If the customer is holding a *different* trip, this returns
+`409` with `code: "ACTIVE_LEAD_EXISTS"` and an `activeLead` object (§2). Show the warning naming
+`activeLead.tripTitle`, and offer to cancel it (§5.9) and retry. Check
+`GET /api/v1/customers/me/leads/active` (§5.10) when the trip screen loads so you can warn *before*
+the user fills in the picker rather than after.
+
+A previously **cancelled** trip can be preserved again: the call succeeds and returns a **new**
+`leadId`, priced at today's rates. Do not assume the lead id for a trip is stable across a cancel.
 
 Failure modes: `422 "Complete your profile before contacting a company"` → route to profile;
 `422 "This trip is not available"` → trip unpublished, pop and refresh.
@@ -318,7 +372,9 @@ History payload:
   creation. Make this explicit in the UI: *"Changing traveller numbers will not change your cashback
   — it was fixed when you contacted the company."* Otherwise users will expect the cashback to move
   and file bugs.
-- `409 "Traveler counts cannot be changed once the booking is paid in full"` if it has locked.
+- `409 "Traveler counts cannot be changed once the booking is paid in full"` if it has locked, or
+  `409 "Traveler counts cannot be changed on a cancelled journey"` once cancelled. Gate the affordance
+  on `travelersEditable`, which covers both, rather than comparing statuses.
 
 ### 5.6 Lifecycle actions
 
@@ -339,6 +395,7 @@ All return the updated lead in the standard envelope.
 | COMPANY | `/api/v1/companies/me/leads/{id}/report-commission-paid` | `REPORT_COMMISSION_PAID` | `FULLY_PAID` → `PENDING_COMMISSION_CONFIRMATION` |
 | ADMIN | `/api/v1/admin/leads/{id}/confirm-commission` | `CONFIRM_COMMISSION_PAID` | `FULLY_PAID` **or** `PENDING_COMMISSION_CONFIRMATION` → `COMMISSION_PAID` |
 | ADMIN | `/api/v1/admin/leads/{id}/pay-cashback` | `PAY_CASHBACK` | `COMMISSION_PAID` → `CASHBACK_PAID` |
+| CUSTOMER | `/api/v1/customers/me/leads/{id}/cancel` | `CANCEL` | anything except `CASHBACK_PAID` → `CANCELLED` — **note required**, see §5.9 |
 
 Note the company's two "or" rows: **one button covers both confirming the customer's report and
 recording the payment first**. Label it contextually from the current status
@@ -372,38 +429,108 @@ attempting one returns 403.
 
 `GET /api/v1/companies/me` now includes `commissionPerTraveler` for the company's own profile view.
 
+### 5.9 Cancel a preserved journey
+
+`PATCH /api/v1/customers/me/leads/{id}/cancel` — role `CUSTOMER` → **200**
+
+```json
+{ "note": "Changed my travel dates." }
+```
+
+The body is **required here**, unlike every other action in §5.6, and `note` must be non-blank —
+a blank or missing reason is `422 "Tell us why you are cancelling this journey"`. Max 500 chars.
+Collect it in the confirm dialog.
+
+Returns the updated lead with `status: "CANCELLED"` and an empty `availableActions`.
+
+What changes on the server, so the app knows what to invalidate:
+
+- the customer's preserved-trip slot is freed — they may immediately preserve another trip;
+- `GET /trips/{id}` for that trip returns `company: null` again, and `GET /companies/{id}` goes back
+  to `403` unless another live lead with that company exists. **Pop any open company screen** and
+  refresh the trip;
+- traveler counts freeze (`travelersEditable: false`);
+- any commission the company owed the platform on this lead is voided;
+- the company is notified, and admins too if the lead had reached `DEPOSIT_PAID` or beyond.
+
+`409` means it is already cancelled, or the cashback has already been paid. Re-fetch the lead.
+
+**Money already paid is not refunded by the platform.** Cancelling a lead at `DEPOSIT_PAID` or later
+is allowed, but the refund is between the customer and the company. Say so in the confirm dialog
+when `status` is at least `DEPOSIT_PAID` — do not present it as a clean undo.
+
+### 5.10 The journey I am currently holding
+
+`GET /api/v1/customers/me/leads/active` — role `CUSTOMER` → **200**
+
+```json
+{ "data": null }
+```
+
+…or the full lead payload of §5.3 when one is held. `null` data is the normal empty case, not an
+error. Cancelled and `CASHBACK_PAID` leads never appear here — both free the slot.
+
+This is the one call that drives the trip-details button (§6.1). Fetch it with the trip detail:
+
+| `active` | `activeLead.tripId == thisTrip` | Button |
+|---|---|---|
+| null | — | grey **"Preserve the journey"** → opens the traveler picker |
+| present | yes | green **"Preserved"** → opens the lead screen; cancel lives there |
+| present | no | **"Preserve the journey"**, but tapping warns first, naming `activeLead.tripTitle` |
+
 ---
 
 ## 6. Screen-by-screen
 
-### 6.1 Program details → traveler picker → company reveal
+### 6.1 Program details → traveler picker → preserved
 
 ```
 [Trip details screen]
    shows: itinerary, hotels, room prices, cashbackPerTraveler
    company section: locked placeholder
+   on load: GET /trips/{id}  +  GET /customers/me/leads/active
         │
-        │  user taps "Show company details"
+        ├── active == null ────────────► grey  [ Preserve the journey ]
+        ├── active.tripId == this trip ► green [ ✓ Preserved ] ──► lead screen
+        └── active.tripId == other ────► grey  [ Preserve the journey ] but tap → warning ↓
+        │
+        │  user taps "Preserve the journey"
+        ▼
+[Warning dialog — only when another trip is held]
+   "You are already preserving <activeLead.tripTitle>. Cancel it to preserve this one instead."
+   [Keep the current one]   [Cancel it and continue]
+        │                          │
+        │                          │  PATCH /customers/me/leads/{activeLead.leadId}/cancel { note }
+        │                          ▼
+        └──────────────────────────┴──► continue to the picker
         ▼
 [Traveler picker sheet]   adults (min 1) · children · infants
    live preview: "Cashback: cashbackPerTraveler × adults"
         │
         │  POST /trips/{tripId}/contact-company  { adultCount, childCount, infantCount }
         ▼
-[201 → lead created]
+[201 → journey preserved]
+   button turns green [ ✓ Preserved ]
+   copy: "Client service will reach you soon."
    re-fetch GET /trips/{id}  → `company` is now populated
    GET /api/v1/companies/{companyId} → full profile: branches, licence, rating, description
-   render the full company screen + WhatsApp CTA
    deep-link to the new lead
 ```
 
 Implementation notes:
 
-- Persist the returned `leadId` — the lead screen is now reachable from the trip.
-- The call is idempotent, so a user who backs out and retaps simply re-enters the picker and the same
-  lead comes back. Do not show "you already contacted this company" as an error.
+- The button's three states come from **one** call, `GET /customers/me/leads/active` (§5.10) — do not
+  infer them from whether `company` is populated on the trip, which stays true for a completed
+  journey the customer is no longer holding.
+- Still handle `409 ACTIVE_LEAD_EXISTS` on the submit even though you checked up front: the slot may
+  have been taken on another device between the two calls. The 409 carries the same `activeLead`
+  object, so route it into the same warning dialog.
+- The submit is idempotent **for the trip already held**, so a user who backs out and retaps simply
+  re-enters the picker and the same lead comes back. Do not show "you already contacted this
+  company" as an error.
 - Guard the picker behind a completed profile check to avoid a 422 round trip, but still handle the
   422 (profile can be completed on another device).
+- Invalidate the trip screen and any cached company profile after a cancel — both go back to locked.
 
 ### 6.2 Lead detail screen (customer)
 
@@ -411,6 +538,12 @@ Sections: status stepper (8 states, current highlighted) · traveler counts with
 shown only when `travelersEditable` · cashback amount · action buttons from `availableActions` ·
 timeline from `audit` · review CTA once `status >= DEPOSIT_PAID` · company card backed by
 `GET /api/v1/companies/{companyId}`.
+
+When `status == CANCELLED`, replace the stepper with a terminal "Journey cancelled" state (the
+stepper's progress order does not apply — see §3), drop the company card, and offer "Preserve
+another journey" back to browse. `availableActions` is empty, so the action row disappears on its
+own. The `CANCEL` button lives here, at the bottom, styled destructively — see §5.9 for the required
+reason and the refund caveat.
 
 ### 6.3 Lead detail screen (company)
 
@@ -425,11 +558,15 @@ see §8.
 
 `GET /api/v1/companies/{id}` — any authenticated user.
 
-**Authorisation:** a customer may read this **only once they have contacted the company** (i.e. a
-lead exists between them). Before that it returns
+**Authorisation:** a customer may read this **only while they hold a lead with that company that
+they have not cancelled**. Before that — and again after cancelling — it returns
 `403 "Contact this company about a trip to see its full details"`. A company can always read its
 own; admins can read any. This is the same reveal rule that already gates company identity on the
 trip screen, extended to the full profile.
+
+Note the asymmetry with the customer's preserved-trip slot: a **completed** (`CASHBACK_PAID`)
+journey no longer occupies the slot but *does* still grant access to the company, so a past
+traveller keeps their operator's contact details. Only cancelling withdraws access.
 
 ```json
 {
@@ -517,6 +654,17 @@ release when it does.
 - [ ] Copy for "changing travellers does not change your cashback".
 - [ ] Handle 403 on the company profile call as "contact the company first", not as an auth error.
 - [ ] Push-notification `type` strings changed — see §11.
+- [ ] Rename the trip CTA to **"Preserve the journey"**; add the green **"Preserved"** state and the
+      "client service will reach you soon" copy (§6.1).
+- [ ] Add `CANCELLED` to the status enum **and audit every `index`/`>=` comparison** so it is
+      excluded first — it is not a progress state (§3).
+- [ ] Call `GET /customers/me/leads/active` on the trip screen to drive the button's three states (§5.10).
+- [ ] Handle `409 ACTIVE_LEAD_EXISTS` with the "cancel your current journey first" dialog, reading
+      `activeLead.tripTitle` from the error body (§2).
+- [ ] Add the cancel flow: destructive button, confirm dialog with a **required** reason, refund
+      caveat once `status >= DEPOSIT_PAID` (§5.9).
+- [ ] Invalidate the trip detail and company profile caches after a cancel — both re-lock.
+- [ ] Stop assuming a trip's `leadId` is stable: re-preserving a cancelled trip yields a new lead.
 
 ---
 
@@ -536,6 +684,8 @@ In-app notification rows (and future FCM pushes) carry a `type` plus a `data` ma
 | `COMMISSION_PAID` | company | admin confirmed the commission |
 | `CASHBACK_PAID` | customer | admin sent the cashback |
 | `COMMISSION_RATE_UPDATED` | company | admin changed the per-traveller rate |
+| `LEAD_CANCELLED` | company | customer cancelled their preserved journey |
+| `PAID_LEAD_CANCELLED` | admin | the cancelled journey had reached `DEPOSIT_PAID` or beyond — a refund needs following up |
 
 Old types `LEAD_ADMIN_REVIEW`, `COMMISSION_RELEASED` and `CASHBACK_SENT` no longer occur.
 

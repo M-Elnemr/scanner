@@ -37,27 +37,27 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     public ProblemDetail handleNotFound(NotFoundException e) {
-        return problem(HttpStatus.NOT_FOUND, e.getMessage());
+        return problem(HttpStatus.NOT_FOUND, e);
     }
 
     @ExceptionHandler(ConflictException.class)
     public ProblemDetail handleConflict(ConflictException e) {
-        return problem(HttpStatus.CONFLICT, e.getMessage());
+        return problem(HttpStatus.CONFLICT, e);
     }
 
     @ExceptionHandler(ForbiddenException.class)
     public ProblemDetail handleForbidden(ForbiddenException e) {
-        return problem(HttpStatus.FORBIDDEN, e.getMessage());
+        return problem(HttpStatus.FORBIDDEN, e);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedException e) {
-        return problem(HttpStatus.UNAUTHORIZED, e.getMessage());
+        return problem(HttpStatus.UNAUTHORIZED, e);
     }
 
     @ExceptionHandler(ValidationException.class)
     public ProblemDetail handleValidation(ValidationException e) {
-        return problem(HttpStatus.UNPROCESSABLE_CONTENT, e.getMessage());
+        return problem(HttpStatus.UNPROCESSABLE_CONTENT, e);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -97,5 +97,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private ProblemDetail problem(HttpStatus status, String detail) {
         return ProblemDetail.forStatusAndDetail(status, detail);
+    }
+
+    /**
+     * Adds whatever the domain exception chose to publish alongside its message — a stable
+     * {@code code} and any extra fields — so clients can branch on the failure rather than parse
+     * the English sentence describing it.
+     */
+    private ProblemDetail problem(HttpStatus status, DomainException e) {
+        ProblemDetail detail = problem(status, e.getMessage());
+        if (e.code() != null) {
+            detail.setProperty("code", e.code());
+        }
+        e.properties().forEach(detail::setProperty);
+        return detail;
     }
 }

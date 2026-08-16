@@ -2,6 +2,7 @@ package com.umrah.scanner.lead.application;
 
 import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadAction;
+import com.umrah.scanner.lead.domain.LeadStatus;
 import com.umrah.scanner.notification.application.NotificationDispatcher;
 import com.umrah.scanner.user.domain.Role;
 import com.umrah.scanner.user.domain.User;
@@ -33,7 +34,13 @@ public class LeadNotifier {
                         + lead.getTravelerCount() + " traveler(s).");
     }
 
-    public void actionPerformed(Lead lead, LeadAction action) {
+    /**
+     * @param statusBeforeAction where the lead sat before the action landed. Passed in rather than
+     *                           read off the lead, which by this point already carries the new
+     *                           status — cancellation in particular is only interesting relative to
+     *                           how far the booking had got.
+     */
+    public void actionPerformed(Lead lead, LeadAction action, LeadStatus statusBeforeAction) {
         switch (action) {
             case REPORT_DEPOSIT -> toCompany(lead, "DEPOSIT_CONFIRMATION_REQUIRED", "Confirm a deposit",
                     "A customer reported paying the deposit for " + lead.getTrip().getTitle() + ". Please confirm.");
@@ -55,6 +62,24 @@ public class LeadNotifier {
 
             case PAY_CASHBACK -> toCustomer(lead, "CASHBACK_PAID", "Cashback sent",
                     "Your cashback has been sent to your " + lead.getCustomer().getWalletType() + " wallet.");
+
+            case CANCEL -> leadCancelled(lead, statusBeforeAction);
+        }
+    }
+
+    /**
+     * The company always needs to know it has lost the booking. Admins are told as well once the
+     * lead had reached DEPOSIT_PAID, because from that point a cancellation means real money
+     * changed hands and someone has to sort out the refund.
+     */
+    private void leadCancelled(Lead lead, LeadStatus statusBeforeCancel) {
+        toCompany(lead, "LEAD_CANCELLED", "A customer cancelled",
+                "A customer cancelled their booking for " + lead.getTrip().getTitle() + ".");
+
+        if (statusBeforeCancel.isAtLeast(LeadStatus.DEPOSIT_PAID)) {
+            toAdmins(lead, "PAID_LEAD_CANCELLED", "A paid booking was cancelled",
+                    "A customer cancelled " + lead.getTrip().getTitle() + " after paying. "
+                            + "The commission has been voided; the refund needs following up.");
         }
     }
 
