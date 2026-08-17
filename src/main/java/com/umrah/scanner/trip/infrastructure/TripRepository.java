@@ -2,6 +2,7 @@ package com.umrah.scanner.trip.infrastructure;
 
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,6 +12,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Every query whose result is mapped to a response carries {@link Trip#GRAPH_WITH_REFERENCES},
@@ -24,6 +28,15 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     boolean existsByTripCode(String tripCode);
 
     Optional<Trip> findByIdAndCompanyId(UUID id, UUID companyId);
+
+    /**
+     * A bulk update rather than loading and soft-deleting each trip: this only ever runs as part of
+     * deleting the owning company (see {@code DeleteCompanyUseCase}), where the trips themselves are
+     * not otherwise inspected, so per-row auditing fields are not needed here.
+     */
+    @Modifying
+    @Query("update Trip t set t.deletedAt = :at where t.company.id = :companyId and t.deletedAt is null")
+    int softDeleteAllByCompanyId(@Param("companyId") UUID companyId, @Param("at") Instant at);
 
     @EntityGraph(Trip.GRAPH_WITH_REFERENCES)
     Page<Trip> findAllByCompanyId(UUID companyId, Pageable pageable);

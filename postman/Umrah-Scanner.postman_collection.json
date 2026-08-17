@@ -145,6 +145,21 @@
       "key": "usdCurrencyId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "hotelId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "secondCompanyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cairoCityId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -2622,6 +2637,39 @@
                   "['EGP','SAR','USD'].forEach(c => {",
                   "    if (by(c)) pm.collectionVariables.set(c.toLowerCase() + 'CurrencyId', by(c));",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cities"
+              ]
+            },
+            "description": "Public. Egyptian governorates used to scope a company address."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data || [];",
+                  "const by = n => (d.find(x => x.name === n) || {}).id;",
+                  "if (by('Cairo')) pm.collectionVariables.set('cairoCityId', by('Cairo'));"
                 ]
               }
             }
@@ -6524,6 +6572,770 @@
               ],
               "cookie": [],
               "body": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Hotels",
+          "item": [
+            {
+              "name": "List Hotels (public)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/hotels?city=MAKKAH",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "hotels"
+                  ],
+                  "query": [
+                    {
+                      "key": "city",
+                      "value": "MAKKAH"
+                    }
+                  ]
+                },
+                "description": "Public. The trip form's hotel picker — no auth required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: List All Hotels",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/hotels",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "hotels"
+                  ]
+                },
+                "description": "Includes retired (active=false) hotels the public list omits.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Create Hotel",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/hotels",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "hotels"
+                  ]
+                },
+                "description": "city is immutable after creation. 409 if the (city, name) pair already exists.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"city\": \"MAKKAH\",\n  \"name\": \"Test Hotel Makkah\",\n  \"nameAr\": null,\n  \"stars\": 4,\n  \"distanceToHaramM\": 500,\n  \"canWalk\": true,\n  \"locationUrl\": \"https://maps.google.com/?q=test\",\n  \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "if (pm.response.code === 200 && json.data) {",
+                      "    pm.collectionVariables.set(\"hotelId\", json.data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Update Hotel",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/hotels/{{hotelId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "hotels",
+                    "{{hotelId}}"
+                  ]
+                },
+                "description": "No city field — see the docs for why it's immutable.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Test Hotel Makkah\",\n  \"nameAr\": null,\n  \"stars\": 5,\n  \"distanceToHaramM\": 300,\n  \"canWalk\": true,\n  \"locationUrl\": \"https://maps.google.com/?q=test\",\n  \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Delete Hotel — 409 if any trip uses it",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/hotels/{{hotelId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "hotels",
+                    "{{hotelId}}"
+                  ]
+                },
+                "description": "Refuses with 409 naming the trip count if in use. Use PUT active=false to retire it instead.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Companies",
+          "item": [
+            {
+              "name": "Admin: Create Company From Scratch",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/companies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "companies"
+                  ]
+                },
+                "description": "Provisions the owner's account if it doesn't exist yet (placeholder Google subject, adopted on their first real sign-in — no invite flow needed). 409 if the email is already a non-COMPANY account, or already has a company profile.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ownerEmail\": \"new-owner@example.com\",\n  \"companyName\": \"Postman Test Travel\",\n  \"licenseNumber\": \"PM-TEST-001\",\n  \"logoUrl\": null,\n  \"whatsapp\": \"+201000000000\",\n  \"description\": \"Created via the admin API.\",\n  \"addresses\": [\n    {\n      \"cityId\": \"{{cairoCityId}}\",\n      \"addressText\": \"1 Test St\",\n      \"mobileNumber\": \"+201000000001\"\n    }\n  ],\n  \"commissionPerTraveler\": 1500.0,\n  \"autoApprove\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "if (pm.response.code === 200 && json.data) {",
+                      "    pm.collectionVariables.set(\"secondCompanyId\", json.data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Edit Any Company (incl. licenseNumber)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/companies/{{secondCompanyId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "companies",
+                    "{{secondCompanyId}}"
+                  ]
+                },
+                "description": "Unlike the self-service update, may change licenseNumber and works on a suspended company.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"licenseNumber\": \"PM-TEST-001-B\",\n  \"companyName\": \"Postman Test Travel\",\n  \"logoUrl\": null,\n  \"whatsapp\": \"+201000000000\",\n  \"description\": \"Updated via the admin API.\",\n  \"addresses\": [\n    {\n      \"cityId\": \"{{cairoCityId}}\",\n      \"addressText\": \"1 Test St\",\n      \"mobileNumber\": \"+201000000001\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Reinstate Suspended Company",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/companies/{{secondCompanyId}}/reinstate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "companies",
+                    "{{secondCompanyId}}",
+                    "reinstate"
+                  ]
+                },
+                "description": "409 unless the company is currently SUSPENDED. Restores straight to APPROVED.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Delete Company — 409 with live bookings",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/companies/{{secondCompanyId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "companies",
+                    "{{secondCompanyId}}"
+                  ]
+                },
+                "description": "409 naming the reason if it has live leads or an unsettled commission. Otherwise soft-deletes the company, its trips, and suspends the owner's account.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Trips",
+          "item": [
+            {
+              "name": "Admin: List Trips (filtered)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/trips?companyId={{companyId}}&status=PUBLISHED",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "trips"
+                  ],
+                  "query": [
+                    {
+                      "key": "companyId",
+                      "value": "{{companyId}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "PUBLISHED"
+                    }
+                  ]
+                },
+                "description": "Every filter optional and combinable: companyId, status, tier, departureFrom, departureTo, search (title or trip code).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Create Trip For Any Company",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/trips",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "trips"
+                  ]
+                },
+                "description": "companyId must be APPROVED. Hotel ids come from GET /hotels?city= — see the Hotels folder.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"trip\": {\n    \"tripCode\": \"ADMIN-TEST-001\",\n    \"title\": \"Admin-created test trip\",\n    \"departureDate\": \"2026-12-01\",\n    \"returnDate\": \"2026-12-11\",\n    \"outboundDepartureAirportId\": \"{{cairoAirportId}}\",\n    \"outboundArrivalAirportId\": \"{{jeddahAirportId}}\",\n    \"returnDepartureAirportId\": \"{{jeddahAirportId}}\",\n    \"returnArrivalAirportId\": \"{{cairoAirportId}}\",\n    \"airline\": \"EgyptAir\",\n    \"transitCount\": 0,\n    \"transitCity\": null,\n    \"transitDuration\": null,\n    \"daysInMakkah\": 5,\n    \"daysInMadinah\": 5,\n    \"visaIncluded\": true,\n    \"transportationIncluded\": true,\n    \"mealsIncluded\": true,\n    \"guideIncluded\": true,\n    \"zamzamIncluded\": true,\n    \"fastTrainIncluded\": true,\n    \"description\": \"Created via the admin API.\",\n    \"currencyId\": \"{{egpCurrencyId}}\",\n    \"availableSeats\": 20,\n    \"hotels\": [\n      {\n        \"hotelId\": \"{{hotelId}}\",\n        \"freeBusIncluded\": true\n      }\n    ],\n    \"prices\": [\n      {\n        \"roomType\": \"QUAD\",\n        \"price\": 100000\n      },\n      {\n        \"roomType\": \"DOUBLE\",\n        \"price\": 150000\n      }\n    ],\n    \"tier\": \"ECONOMIC\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Reassign Trip's Company",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/trips/{{tripId}}/company",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "trips",
+                    "{{tripId}}",
+                    "company"
+                  ]
+                },
+                "description": "Existing leads on this trip keep their ORIGINAL company and pricing — only new leads follow the new owner. Target must be APPROVED; trip must not be CLOSED.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyId\": \"{{secondCompanyId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Delete Any Trip",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/trips/{{tripId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "trips",
+                    "{{tripId}}"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Leads",
+          "item": [
+            {
+              "name": "Admin: List Leads (filtered)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads?companyId={{companyId}}&status=INTERESTED",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads"
+                  ],
+                  "query": [
+                    {
+                      "key": "companyId",
+                      "value": "{{companyId}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "INTERESTED"
+                    }
+                  ]
+                },
+                "description": "Optional/combinable: status, companyId, tripId, customerId, createdFrom, createdTo (ISO instants), search (customer name/phone or trip title/code).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Get Lead Detail (trip + company embedded)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}"
+                  ]
+                },
+                "description": "One call: { lead, trip, company } — no separate trip/company fetch needed.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: Override Lead Status — bypasses the workflow",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}",
+                    "status"
+                  ]
+                },
+                "description": "Forces ANY status from ANY status, skipping the normal report/confirm actions entirely. reason is required. Does NOT move the commission or cashback ledger — use confirm-commission/pay-cashback for that. 409 if already that status, or code=ACTIVE_LEAD_EXISTS if reviving a CANCELLED/CASHBACK_PAID lead would give the customer a second preserved journey.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"DEPOSIT_PAID\",\n  \"reason\": \"Manual correction: confirmed paid by phone.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: WhatsApp — Trip Details Message",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/whatsapp/trip?lang=ar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}",
+                    "whatsapp",
+                    "trip"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                },
+                "description": "Returns composed text + a wa.me link pre-filled with it. Nothing is sent automatically. lang defaults to ar; pass lang=en for English.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin: WhatsApp — Company Details Message",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/whatsapp/company?lang=ar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "leads",
+                    "{{leadId}}",
+                    "whatsapp",
+                    "company"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
             }
           ]
         }

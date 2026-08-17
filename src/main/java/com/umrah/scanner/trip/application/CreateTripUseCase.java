@@ -5,6 +5,7 @@ import com.umrah.scanner.common.exception.ConflictException;
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.company.domain.CompanyProfile;
+import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
 import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.Trip;
@@ -22,24 +23,47 @@ public class CreateTripUseCase {
     private final TripRepository tripRepository;
     private final CompanyProfileRepository companyProfileRepository;
     private final TripRouteResolver tripRouteResolver;
+    private final TripHotelResolver tripHotelResolver;
     private final AuditLogService auditLogService;
 
     public CreateTripUseCase(
             TripRepository tripRepository,
             CompanyProfileRepository companyProfileRepository,
             TripRouteResolver tripRouteResolver,
+            TripHotelResolver tripHotelResolver,
             AuditLogService auditLogService) {
         this.tripRepository = tripRepository;
         this.companyProfileRepository = companyProfileRepository;
         this.tripRouteResolver = tripRouteResolver;
+        this.tripHotelResolver = tripHotelResolver;
         this.auditLogService = auditLogService;
     }
 
+    /** The company's own trips — resolves the owning company from the authenticated user. */
     @Transactional
-    public Trip execute(UUID companyUserId, CreateTripCommand command) {
+    public Trip executeAsCompany(UUID companyUserId, CreateTripCommand command) {
         CompanyProfile company = companyProfileRepository.findByUserId(companyUserId)
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyUserId));
+        return create(company, companyUserId, command);
+    }
 
+    /** An admin creating a trip on behalf of any approved company. */
+    @Transactional
+    public Trip executeAsAdmin(UUID adminUserId, UUID companyId, CreateTripCommand command) {
+        CompanyProfile company = companyProfileRepository.findById(companyId)
+                .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyId));
+        if (company.getStatus() != CompanyStatus.APPROVED) {
+            throw new ValidationException("Trips can only be created for an approved company");
+        }
+        return create(company, adminUserId, command);
+    }
+
+    /**
+     * Unchanged body of what used to be the single {@code execute} method, minus resolving the
+     * company — {@code actorUserId} is who the audit log attributes the trip to, which is what
+     * makes an admin-created trip correctly show the admin, not the company, as its author.
+     */
+    private Trip create(CompanyProfile company, UUID actorUserId, CreateTripCommand command) {
         if (tripRepository.existsByTripCode(command.tripCode())) {
             throw new ConflictException("Trip code already in use: " + command.tripCode());
         }
@@ -81,16 +105,12 @@ public class CreateTripUseCase {
         trip.setLastUpdate(Instant.now());
 
         if (command.hotels() != null) {
-            for (TripHotelInput input : command.hotels()) {
-                TripHotel hotel = new TripHotel();
-                hotel.setCity(input.city());
-                hotel.setHotelName(input.hotelName());
-                hotel.setStars(input.stars());
-                hotel.setDistanceToHaramM(input.distanceToHaramM());
-                hotel.setCanWalk(input.canWalk());
-                hotel.setFreeBusIncluded(input.freeBusIncluded());
-                hotel.setLocationUrl(input.locationUrl());
-                trip.addHotel(hotel);
+            for (TripHotelResolver.ResolvedTripHotel resolved : tripHotelResolver.resolve(command.hotels())) {
+                TripHotel tripHotel = new TripHotel();
+                tripHotel.setHotel(resolved.hotel());
+                tripHotel.setCity(resolved.hotel().getCity());
+                tripHotel.setFreeBusIncluded(resolved.freeBusIncluded());
+                trip.addHotel(tripHotel);
             }
         }
         if (command.roomPrices() != null) {
@@ -103,7 +123,7 @@ public class CreateTripUseCase {
         }
 
         trip = tripRepository.save(trip);
-        auditLogService.record(companyUserId, "TRIP_CREATED", "Trip", trip.getId(), null, trip.getStatus());
+        auditLogService.record(actorUserId, "TRIP_CREATED", "Trip", trip.getId(), null, trip.getStatus());
         return trip;
     }
 }

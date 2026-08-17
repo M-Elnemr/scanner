@@ -1,18 +1,12 @@
 package com.umrah.scanner.trip.presentation;
 
-import com.umrah.scanner.trip.domain.TripCity;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
+import java.util.UUID;
 
-public record TripHotelRequest(
-        @NotNull TripCity city,
-        @NotBlank String hotelName,
-        @Min(1) @Max(5) short stars,
-        @PositiveOrZero Integer distanceToHaramM,
-        boolean canWalk,
-        boolean freeBusIncluded,
-        String locationUrl) {
+/**
+ * City is not sent — it is derived from the picked hotel, so a caller cannot claim a Makkah hotel is
+ * in Madinah. {@link com.umrah.scanner.trip.application.TripHotelResolver} enforces one hotel per
+ * city and that the hotel is active.
+ */
+public record TripHotelRequest(@NotNull UUID hotelId, boolean freeBusIncluded) {
 }

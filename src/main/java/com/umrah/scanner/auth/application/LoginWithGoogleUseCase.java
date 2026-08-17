@@ -4,6 +4,7 @@ import com.umrah.scanner.auth.domain.RefreshToken;
 import com.umrah.scanner.auth.infrastructure.RefreshTokenRepository;
 import com.umrah.scanner.common.exception.UnauthorizedException;
 import com.umrah.scanner.common.exception.ValidationException;
+import com.umrah.scanner.user.domain.PlaceholderGoogleSub;
 import com.umrah.scanner.user.domain.Role;
 import com.umrah.scanner.user.domain.User;
 import com.umrah.scanner.user.domain.UserStatus;
@@ -58,14 +59,31 @@ public class LoginWithGoogleUseCase {
     @Transactional
     public LoginResult executeForVerifiedIdentity(GoogleIdentity identity, Role requestedRoleForNewAccount) {
         User user = userRepository.findByGoogleSub(identity.subject())
-                .or(() -> userRepository.findByEmail(identity.email()))
-                .orElseGet(() -> registerNewUser(identity, requestedRoleForNewAccount));
+                .orElseGet(() -> userRepository.findByEmail(identity.email())
+                        .map(existing -> adoptPlaceholderSub(existing, identity.subject()))
+                        .orElseGet(() -> registerNewUser(identity, requestedRoleForNewAccount)));
 
         if (user.getStatus() == UserStatus.SUSPENDED) {
             throw new UnauthorizedException("This account has been suspended");
         }
 
         return new LoginResult(user, issueTokenPair(user));
+    }
+
+    /**
+     * First real sign-in claims an admin-provisioned account (see {@link PlaceholderGoogleSub}).
+     * Deliberately narrow: only a placeholder subject is ever overwritten, so an email match can
+     * never replace a real Google subject that was simply looked up the slow way.
+     *
+     * <p>Without this, the placeholder would survive forever — every later login for that owner
+     * would keep missing {@code findByGoogleSub} and falling through to this same email lookup,
+     * and a changed email would then lock the account out for good.
+     */
+    private User adoptPlaceholderSub(User user, String subject) {
+        if (PlaceholderGoogleSub.isPlaceholder(user.getGoogleSub())) {
+            user.setGoogleSub(subject);
+        }
+        return user;
     }
 
     private User registerNewUser(GoogleIdentity identity, Role requestedRole) {

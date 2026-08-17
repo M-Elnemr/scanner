@@ -1,13 +1,6 @@
 package com.umrah.scanner.trip.application;
 
-import com.umrah.scanner.trip.domain.TripCity;
+import java.util.UUID;
 
-public record TripHotelInput(
-        TripCity city,
-        String hotelName,
-        short stars,
-        Integer distanceToHaramM,
-        boolean canWalk,
-        boolean freeBusIncluded,
-        String locationUrl) {
+public record TripHotelInput(UUID hotelId, boolean freeBusIncluded) {
 }

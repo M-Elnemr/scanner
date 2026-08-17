@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -57,6 +58,12 @@ public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificat
     boolean existsNotCancelledByCustomerIdAndCompanyId(
             @Param("customerId") UUID customerId, @Param("companyId") UUID companyId);
 
+    /** The guard for deleting a company: refuse while it holds bookings still in flight. */
+    @Query("select count(l) from Lead l where l.company.id = :companyId "
+            + "and l.status not in (com.umrah.scanner.lead.domain.LeadStatus.CANCELLED, "
+            + "com.umrah.scanner.lead.domain.LeadStatus.CASHBACK_PAID)")
+    long countActiveByCompanyId(@Param("companyId") UUID companyId);
+
     Optional<Lead> findByIdAndCustomerId(UUID id, UUID customerId);
 
     Optional<Lead> findByIdAndCompanyId(UUID id, UUID companyId);
@@ -79,6 +86,11 @@ public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificat
     @Override
     @EntityGraph(attributePaths = {"trip", "company", "customer"})
     Page<Lead> findAll(Pageable pageable);
+
+    /** Redeclared purely to attach the graph — the admin lead console runs through this one. */
+    @Override
+    @EntityGraph(attributePaths = {"trip", "company", "customer"})
+    Page<Lead> findAll(Specification<Lead> spec, Pageable pageable);
 
     /** Every to-one association a lead's DTO needs, in one query — safe to combine with paging since none are collections. */
     @EntityGraph(attributePaths = {"trip", "company", "customer"})

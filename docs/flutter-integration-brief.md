@@ -783,41 +783,70 @@ between Makkah and Madinah** is in the package price — worth its own icon, tra
 
 ---
 
-## 13. Hotels — walking distance and free shuttle
+## 13. Hotels — now a catalogue, not free text (BREAKING)
 
-Each entry in a trip's `hotels` array (one MAKKAH row, one MADINAH row) gains two booleans,
-alongside the `distanceToHaramM` field that was already there:
+Hotels used to be typed out by hand on every trip. They are now a platform-curated catalogue a
+company **picks from** — the same shift that airports and currencies went through earlier in this
+brief. This changes both the read and the write shape.
+
+### Read: `TripHotel` is nested, not flat
 
 ```jsonc
 {
   "city": "MAKKAH",
-  "hotelName": "Swissotel Al Maqam Makkah",
-  "stars": 5,
-  "distanceToHaramM": 350,
-  "canWalk": true,
-  "freeBusIncluded": false,
-  "locationUrl": "https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah"
+  "hotel": {
+    "id": "d78ef4f0-…",
+    "city": "MAKKAH",
+    "name": "Swissotel Al Maqam Makkah",
+    "nameAr": null,
+    "stars": 5,
+    "distanceToHaramM": 350,
+    "canWalk": true,
+    "locationUrl": "https://maps.google.com/?q=Swissotel+Al+Maqam+Makkah",
+    "active": true
+  },
+  "freeBusIncluded": false
 }
 ```
 
-- **`distanceToHaramM`** — unchanged, but note it is genuinely generic: for the `MADINAH` row it is
-  the distance to the **Prophet's Mosque**, not the Haram. Label it accordingly per row rather than
-  reusing a single "distance to Haram" string for both.
-- **`canWalk`** (bool) — whether that distance is realistically walkable. Show a walking-person icon
-  next to the distance when true.
-- **`freeBusIncluded`** (bool) — whether the company runs a free shuttle between this hotel and the
-  Haram/Mosque. Show a bus icon when true. The two are independent fields, not a computed pair — a
-  company can offer both, neither, or just one, so render each on its own rather than assuming they
-  are mutually exclusive.
+Field-by-field migration for the model: `hotelName` → `hotel.name`, `stars` → `hotel.stars`,
+`distanceToHaramM` → `hotel.distanceToHaramM`, `canWalk` → `hotel.canWalk`, `locationUrl` →
+`hotel.locationUrl`. New: `hotel.id`, `hotel.nameAr` (nullable — not every hotel has a translation
+yet), `hotel.active`. `city` and `freeBusIncluded` are unchanged, still flat on the outer object.
 
-**Company trip form:** add both as toggles on each hotel row, next to the existing distance field.
-Neither is required — they default to `false` if omitted.
+As before, `distanceToHaramM`/`canWalk` mean **distance to the Prophet's Mosque**, not the Haram, on
+the `MADINAH` row — label per row rather than reusing one string. `freeBusIncluded` stays independent
+of `canWalk`: a company can offer both, neither, or just one.
 
-**Checklist addition:**
-- [ ] Add `canWalk` and `freeBusIncluded` to the hotel model, in both the trip detail response and
-      the create/update trip request bodies.
-- [ ] Add the two toggles to the company's hotel-entry form.
-- [ ] Show walking/bus icons on the tour details hotel cards, per city.
+### Write: the company's trip form becomes a picker, not a text field
+
+`POST/PUT` on a trip's `hotels` array now sends:
+
+```jsonc
+{ "hotelId": "d78ef4f0-…", "freeBusIncluded": false }
+```
+
+No `city`, no `hotelName`, no `stars` — the city is derived from the hotel you picked (the server
+rejects the same city twice), and every other fact belongs to the hotel record, not the trip.
+
+**New endpoint, needed before this form works at all:**
+
+`GET /api/v1/hotels?city=MAKKAH` — public, no auth required. Returns every **active** hotel in that
+city as `HotelResponse` (the same shape embedded above). Omit `city` for the full list. This is the
+picker's data source — replace the old free-text hotel-name field with an autocomplete/dropdown
+bound to this call, scoped to whichever city slot (Makkah/Madinah) the company is filling in.
+
+A hotel that has been retired (`active: false`) never appears here, so it silently drops out of the
+picker for new trips without touching trips that already reference it.
+
+**Checklist:**
+- [ ] Replace the hotel-name text field on the trip form with a picker backed by `GET /hotels?city=`.
+- [ ] Update the trip detail model: nest the nine hotel fields under `hotel`, keep `city` and
+      `freeBusIncluded` flat.
+- [ ] Update the create/update trip request: send `{ hotelId, freeBusIncluded }` per hotel, not the
+      old six-field shape.
+- [ ] Handle 404 `"Hotel not found"` and 422 `"<name> is no longer offered"` on trip save — a hotel
+      picked earlier may have been retired since.
 
 ---
 

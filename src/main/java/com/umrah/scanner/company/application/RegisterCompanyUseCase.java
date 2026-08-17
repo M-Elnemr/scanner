@@ -1,12 +1,9 @@
 package com.umrah.scanner.company.application;
 
 import com.umrah.scanner.audit.application.AuditLogService;
-import com.umrah.scanner.city.domain.City;
-import com.umrah.scanner.city.infrastructure.CityRepository;
 import com.umrah.scanner.common.exception.ConflictException;
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.common.exception.ValidationException;
-import com.umrah.scanner.company.domain.CompanyAddress;
 import com.umrah.scanner.company.domain.CompanyProfile;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
@@ -20,17 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class RegisterCompanyUseCase {
 
     private final CompanyProfileRepository companyProfileRepository;
-    private final CityRepository cityRepository;
+    private final CompanyProfileFactory companyProfileFactory;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
 
     public RegisterCompanyUseCase(
             CompanyProfileRepository companyProfileRepository,
-            CityRepository cityRepository,
+            CompanyProfileFactory companyProfileFactory,
             UserRepository userRepository,
             AuditLogService auditLogService) {
         this.companyProfileRepository = companyProfileRepository;
-        this.cityRepository = cityRepository;
+        this.companyProfileFactory = companyProfileFactory;
         this.userRepository = userRepository;
         this.auditLogService = auditLogService;
     }
@@ -44,9 +41,6 @@ public class RegisterCompanyUseCase {
         if (companyProfileRepository.existsByUserId(userId)) {
             throw new ConflictException("Company profile already exists for this user");
         }
-        if (command.addresses() == null || command.addresses().isEmpty()) {
-            throw new ValidationException("At least one address is required");
-        }
 
         CompanyProfile company = new CompanyProfile();
         company.setUser(user);
@@ -56,16 +50,7 @@ public class RegisterCompanyUseCase {
         company.setWhatsapp(command.whatsapp());
         company.setDescription(command.description());
         company.setStatus(CompanyStatus.PENDING);
-
-        for (CompanyAddressInput input : command.addresses()) {
-            City city = cityRepository.findById(input.cityId())
-                    .orElseThrow(() -> NotFoundException.of("City", input.cityId()));
-            CompanyAddress address = new CompanyAddress();
-            address.setCity(city);
-            address.setAddressText(input.addressText());
-            address.setMobileNumber(input.mobileNumber());
-            company.addAddress(address);
-        }
+        companyProfileFactory.replaceAddresses(company, command.addresses());
 
         company = companyProfileRepository.save(company);
         auditLogService.record(userId, "COMPANY_REGISTERED", "CompanyProfile", company.getId(), null, company.getStatus());

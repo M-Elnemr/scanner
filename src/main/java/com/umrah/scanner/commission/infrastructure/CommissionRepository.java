@@ -2,6 +2,7 @@ package com.umrah.scanner.commission.infrastructure;
 
 import com.umrah.scanner.commission.domain.Commission;
 import com.umrah.scanner.commission.domain.CommissionStatus;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -15,4 +16,7 @@ public interface CommissionRepository extends JpaRepository<Commission, UUID> {
     boolean existsByLeadId(UUID leadId);
 
     Page<Commission> findAllByCompanyIdAndStatus(UUID companyId, CommissionStatus status, Pageable pageable);
+
+    /** The other half of the delete guard: refuse while the company owes the platform money. */
+    boolean existsByCompanyIdAndStatusIn(UUID companyId, Collection<CommissionStatus> statuses);
 }

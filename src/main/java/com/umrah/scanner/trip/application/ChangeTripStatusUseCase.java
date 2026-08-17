@@ -1,8 +1,8 @@
 package com.umrah.scanner.trip.application;
 
 import com.umrah.scanner.common.exception.ValidationException;
+import com.umrah.scanner.hotel.domain.HotelCity;
 import com.umrah.scanner.trip.domain.Trip;
-import com.umrah.scanner.trip.domain.TripCity;
 import com.umrah.scanner.trip.domain.TripStatus;
 import java.time.Instant;
 import java.util.UUID;
@@ -19,9 +19,16 @@ public class ChangeTripStatusUseCase {
     }
 
     @Transactional
-    public Trip execute(UUID companyUserId, UUID tripId, TripStatus target) {
-        Trip trip = tripOwnershipGuard.findOwnedTrip(companyUserId, tripId);
+    public Trip executeAsCompany(UUID companyUserId, UUID tripId, TripStatus target) {
+        return change(tripOwnershipGuard.findOwnedTrip(companyUserId, tripId), target);
+    }
 
+    @Transactional
+    public Trip executeAsAdmin(UUID adminUserId, UUID tripId, TripStatus target) {
+        return change(tripOwnershipGuard.findAnyTrip(tripId), target);
+    }
+
+    private Trip change(Trip trip, TripStatus target) {
         if (trip.getStatus() == TripStatus.DRAFT && target == TripStatus.PUBLISHED) {
             requireReadyToPublish(trip);
         } else if (!(trip.getStatus() == TripStatus.PUBLISHED && target == TripStatus.CLOSED)) {
@@ -32,8 +39,7 @@ public class ChangeTripStatusUseCase {
         trip.setLastUpdate(Instant.now());
         // The controller maps the response after this transaction/session closes (open-in-view is
         // off), so any lazy collection it touches must be force-initialized here first.
-        trip.getHotels().size();
-        trip.getRoomPrices().size();
+        TripCollectionsInitializer.initialize(trip);
         return trip;
     }
 
@@ -41,8 +47,8 @@ public class ChangeTripStatusUseCase {
         if (trip.getRoomPrices().isEmpty()) {
             throw new ValidationException("Publish requires at least one room price");
         }
-        boolean hasMakkah = trip.getHotels().stream().anyMatch(h -> h.getCity() == TripCity.MAKKAH);
-        boolean hasMadinah = trip.getHotels().stream().anyMatch(h -> h.getCity() == TripCity.MADINAH);
+        boolean hasMakkah = trip.getHotels().stream().anyMatch(h -> h.getCity() == HotelCity.MAKKAH);
+        boolean hasMadinah = trip.getHotels().stream().anyMatch(h -> h.getCity() == HotelCity.MADINAH);
         if (!hasMakkah || !hasMadinah) {
             throw new ValidationException("Publish requires hotel details for both Makkah and Madinah");
         }

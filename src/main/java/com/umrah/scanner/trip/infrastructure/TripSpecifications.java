@@ -1,5 +1,6 @@
 package com.umrah.scanner.trip.infrastructure;
 
+import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
@@ -8,15 +9,49 @@ import com.umrah.scanner.trip.domain.TripTier;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Subquery;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 
-/** Dynamic filter predicates for the public trip-browse query. */
+/** Dynamic filter predicates for the public trip-browse query and the admin trip console. */
 public final class TripSpecifications {
 
     private TripSpecifications() {
+    }
+
+    /**
+     * Suspending or rejecting a company does not touch its trips, so without this a suspended
+     * company's PUBLISHED trips stayed visible in the public browse — a pre-existing gap this
+     * closes. A customer should never be able to reach a company that cannot be contacted.
+     */
+    public static Specification<Trip> companyIsApproved() {
+        return (root, query, cb) -> cb.equal(root.get("company").get("status"), CompanyStatus.APPROVED);
+    }
+
+    public static Specification<Trip> hasCompanyId(UUID companyId) {
+        return (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId);
+    }
+
+    public static Specification<Trip> titleOrCodeContains(String search) {
+        String pattern = "%" + search.toLowerCase() + "%";
+        return (root, query, cb) -> cb.or(
+                cb.like(cb.lower(root.get("title")), pattern),
+                cb.like(cb.lower(root.get("tripCode")), pattern));
+    }
+
+    public static Specification<Trip> createdBetween(Instant from, Instant to) {
+        return (root, query, cb) -> {
+            if (from != null && to != null) {
+                return cb.between(root.get("createdAt"), from, to);
+            }
+            if (from != null) {
+                return cb.greaterThanOrEqualTo(root.get("createdAt"), from);
+            }
+            return cb.lessThanOrEqualTo(root.get("createdAt"), to);
+        };
     }
 
     public static Specification<Trip> hasStatus(TripStatus status) {

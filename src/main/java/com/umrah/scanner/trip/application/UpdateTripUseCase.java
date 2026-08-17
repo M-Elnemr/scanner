@@ -17,20 +17,31 @@ public class UpdateTripUseCase {
     private final TripOwnershipGuard tripOwnershipGuard;
     private final TripRepository tripRepository;
     private final TripRouteResolver tripRouteResolver;
+    private final TripHotelResolver tripHotelResolver;
 
     public UpdateTripUseCase(
             TripOwnershipGuard tripOwnershipGuard,
             TripRepository tripRepository,
-            TripRouteResolver tripRouteResolver) {
+            TripRouteResolver tripRouteResolver,
+            TripHotelResolver tripHotelResolver) {
         this.tripOwnershipGuard = tripOwnershipGuard;
         this.tripRepository = tripRepository;
         this.tripRouteResolver = tripRouteResolver;
+        this.tripHotelResolver = tripHotelResolver;
     }
 
     @Transactional
-    public Trip execute(UUID companyUserId, UUID tripId, UpdateTripCommand command) {
-        Trip trip = tripOwnershipGuard.findOwnedTrip(companyUserId, tripId);
+    public Trip executeAsCompany(UUID companyUserId, UUID tripId, UpdateTripCommand command) {
+        return update(tripOwnershipGuard.findOwnedTrip(companyUserId, tripId), command);
+    }
 
+    /** Admin bypasses ownership only — every data-integrity rule below still applies. */
+    @Transactional
+    public Trip executeAsAdmin(UUID adminUserId, UUID tripId, UpdateTripCommand command) {
+        return update(tripOwnershipGuard.findAnyTrip(tripId), command);
+    }
+
+    private Trip update(Trip trip, UpdateTripCommand command) {
         if (trip.getStatus() == TripStatus.CLOSED) {
             throw new ValidationException("A closed trip can no longer be edited");
         }
@@ -73,16 +84,12 @@ public class UpdateTripUseCase {
             // Hibernate flushes inserts first and a replacement row for the same (trip_id, city)
             // hits uq_trip_hotels_trip_city before the old row is gone.
             tripRepository.flush();
-            for (TripHotelInput input : command.hotels()) {
-                TripHotel hotel = new TripHotel();
-                hotel.setCity(input.city());
-                hotel.setHotelName(input.hotelName());
-                hotel.setStars(input.stars());
-                hotel.setDistanceToHaramM(input.distanceToHaramM());
-                hotel.setCanWalk(input.canWalk());
-                hotel.setFreeBusIncluded(input.freeBusIncluded());
-                hotel.setLocationUrl(input.locationUrl());
-                trip.addHotel(hotel);
+            for (TripHotelResolver.ResolvedTripHotel resolved : tripHotelResolver.resolve(command.hotels())) {
+                TripHotel tripHotel = new TripHotel();
+                tripHotel.setHotel(resolved.hotel());
+                tripHotel.setCity(resolved.hotel().getCity());
+                tripHotel.setFreeBusIncluded(resolved.freeBusIncluded());
+                trip.addHotel(tripHotel);
             }
         }
         if (command.roomPrices() != null) {
@@ -99,8 +106,7 @@ public class UpdateTripUseCase {
 
         // The controller maps the response after this transaction/session closes (open-in-view is
         // off), so any lazy collection it touches must be force-initialized here first.
-        trip.getHotels().size();
-        trip.getRoomPrices().size();
+        TripCollectionsInitializer.initialize(trip);
         return trip;
     }
 }

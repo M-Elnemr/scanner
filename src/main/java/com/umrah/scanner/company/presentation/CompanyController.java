@@ -1,11 +1,16 @@
 package com.umrah.scanner.company.presentation;
 
+import com.umrah.scanner.company.application.AdminCreateCompanyCommand;
+import com.umrah.scanner.company.application.AdminCreateCompanyUseCase;
+import com.umrah.scanner.company.application.AdminUpdateCompanyProfileCommand;
 import com.umrah.scanner.company.application.ApproveCompanyUseCase;
 import com.umrah.scanner.company.application.CompanyAddressInput;
 import com.umrah.scanner.company.application.CompanyQueryService;
+import com.umrah.scanner.company.application.DeleteCompanyUseCase;
 import com.umrah.scanner.company.application.RegisterCompanyCommand;
 import com.umrah.scanner.company.application.RegisterCompanyUseCase;
 import com.umrah.scanner.company.application.RejectCompanyUseCase;
+import com.umrah.scanner.company.application.ReinstateCompanyUseCase;
 import com.umrah.scanner.company.application.SetCompanyCommissionUseCase;
 import com.umrah.scanner.company.application.SuspendCompanyUseCase;
 import com.umrah.scanner.company.application.UpdateCompanyProfileCommand;
@@ -27,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,6 +53,9 @@ public class CompanyController {
     private final ApproveCompanyUseCase approveCompanyUseCase;
     private final RejectCompanyUseCase rejectCompanyUseCase;
     private final SuspendCompanyUseCase suspendCompanyUseCase;
+    private final ReinstateCompanyUseCase reinstateCompanyUseCase;
+    private final AdminCreateCompanyUseCase adminCreateCompanyUseCase;
+    private final DeleteCompanyUseCase deleteCompanyUseCase;
     private final UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase;
     private final UploadCompanyLogoUseCase uploadCompanyLogoUseCase;
     private final SetCompanyCommissionUseCase setCompanyCommissionUseCase;
@@ -58,6 +67,9 @@ public class CompanyController {
             ApproveCompanyUseCase approveCompanyUseCase,
             RejectCompanyUseCase rejectCompanyUseCase,
             SuspendCompanyUseCase suspendCompanyUseCase,
+            ReinstateCompanyUseCase reinstateCompanyUseCase,
+            AdminCreateCompanyUseCase adminCreateCompanyUseCase,
+            DeleteCompanyUseCase deleteCompanyUseCase,
             UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase,
             UploadCompanyLogoUseCase uploadCompanyLogoUseCase,
             SetCompanyCommissionUseCase setCompanyCommissionUseCase,
@@ -67,6 +79,9 @@ public class CompanyController {
         this.approveCompanyUseCase = approveCompanyUseCase;
         this.rejectCompanyUseCase = rejectCompanyUseCase;
         this.suspendCompanyUseCase = suspendCompanyUseCase;
+        this.reinstateCompanyUseCase = reinstateCompanyUseCase;
+        this.adminCreateCompanyUseCase = adminCreateCompanyUseCase;
+        this.deleteCompanyUseCase = deleteCompanyUseCase;
         this.uploadCompanyDocumentUseCase = uploadCompanyDocumentUseCase;
         this.uploadCompanyLogoUseCase = uploadCompanyLogoUseCase;
         this.setCompanyCommissionUseCase = setCompanyCommissionUseCase;
@@ -100,7 +115,7 @@ public class CompanyController {
         var command = new UpdateCompanyProfileCommand(
                 request.companyName(), request.logoUrl(), request.whatsapp(), request.description(),
                 toAddressInputs(request.addresses()));
-        var company = updateCompanyProfileUseCase.execute(currentUser.userId(), command);
+        var company = updateCompanyProfileUseCase.executeAsCompany(currentUser.userId(), command);
         return ApiResponse.of(CompanyResponse.from(company));
     }
 
@@ -140,17 +155,68 @@ public class CompanyController {
 
     // --- Admin ---
 
+    @Operation(summary = "List companies",
+            description = "Both status and search are optional — omit status to see every company, not just PENDING.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/api/v1/admin/companies")
     public ApiResponse<PageResponse<CompanyResponse>> list(
-            @RequestParam(defaultValue = "PENDING") CompanyStatus status, Pageable pageable) {
-        return ApiResponse.of(PageResponse.of(companyQueryService.listByStatus(status, pageable), CompanyResponse::from));
+            @RequestParam(required = false) CompanyStatus status,
+            @RequestParam(required = false) String search,
+            Pageable pageable) {
+        return ApiResponse.of(PageResponse.of(companyQueryService.listForAdmin(status, search, pageable), CompanyResponse::from));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/api/v1/admin/companies/{id}")
     public ApiResponse<CompanyResponse> getById(@PathVariable UUID id) {
         return ApiResponse.of(CompanyResponse.from(companyQueryService.getById(id)));
+    }
+
+    @Operation(summary = "Create a company from scratch",
+            description = "Provisions the owner's account if one does not already exist for ownerEmail, using a "
+                    + "placeholder Google subject the owner's first real sign-in replaces. autoApprove=true skips "
+                    + "the PENDING queue, since the admin creating it is itself the vetting step.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/api/v1/admin/companies")
+    public ApiResponse<CompanyResponse> adminCreate(
+            @AuthenticationPrincipal AuthenticatedUser admin, @Valid @RequestBody AdminCreateCompanyRequest request) {
+        var command = new AdminCreateCompanyCommand(
+                request.ownerEmail(), request.companyName(), request.licenseNumber(), request.logoUrl(),
+                request.whatsapp(), request.description(), toAddressInputs(request.addresses()),
+                request.commissionPerTraveler(), request.autoApprove());
+        var company = adminCreateCompanyUseCase.execute(admin.userId(), command);
+        return ApiResponse.of(CompanyResponse.from(company));
+    }
+
+    @Operation(summary = "Edit any company's profile",
+            description = "Unlike the self-service update, this may also change licenseNumber and works on a "
+                    + "suspended company.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/api/v1/admin/companies/{id}")
+    public ApiResponse<CompanyResponse> adminUpdate(@PathVariable UUID id, @Valid @RequestBody AdminUpdateCompanyProfileRequest request) {
+        var profile = new UpdateCompanyProfileCommand(
+                request.companyName(), request.logoUrl(), request.whatsapp(), request.description(),
+                toAddressInputs(request.addresses()));
+        var company = updateCompanyProfileUseCase.executeAsAdmin(id, new AdminUpdateCompanyProfileCommand(request.licenseNumber(), profile));
+        return ApiResponse.of(CompanyResponse.from(company));
+    }
+
+    @Operation(summary = "Delete a company",
+            description = "Refuses with 409 while it has live bookings or an unsettled commission. Otherwise "
+                    + "soft-deletes the company, its trips, and suspends its owner's account.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/api/v1/admin/companies/{id}")
+    public void adminDelete(@AuthenticationPrincipal AuthenticatedUser admin, @PathVariable UUID id) {
+        deleteCompanyUseCase.execute(admin.userId(), id);
+    }
+
+    @Operation(summary = "Reinstate a suspended company", description = "Restores it straight to APPROVED.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/api/v1/admin/companies/{id}/reinstate")
+    public ApiResponse<CompanyResponse> reinstate(@AuthenticationPrincipal AuthenticatedUser admin, @PathVariable UUID id) {
+        return ApiResponse.of(CompanyResponse.from(reinstateCompanyUseCase.execute(admin.userId(), id)));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

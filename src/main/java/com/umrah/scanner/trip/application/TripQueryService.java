@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -57,6 +56,11 @@ public class TripQueryService {
     public Page<Trip> browsePublished(TripBrowseFilter filter, Pageable pageable) {
         List<Specification<Trip>> specs = new ArrayList<>();
         specs.add(TripSpecifications.hasStatus(TripStatus.PUBLISHED));
+        // Suspending a company does not touch its trips, so without this a suspended company's
+        // trips stayed reachable through browse. Not applied to getPublicDetail below: a customer
+        // who already holds a lead with a since-suspended company must keep reaching that trip by
+        // its direct link, matching the same carve-out CompanyQueryService.getVisibleTo documents.
+        specs.add(TripSpecifications.companyIsApproved());
         if (filter.tiers() != null && !filter.tiers().isEmpty()) {
             specs.add(TripSpecifications.hasTierIn(filter.tiers()));
         }
@@ -76,6 +80,28 @@ public class TripQueryService {
     @Transactional(readOnly = true)
     public Page<Trip> listForCompany(UUID companyId, Pageable pageable) {
         return tripRepository.findAllByCompanyId(companyId, pageable);
+    }
+
+    /** The admin console: any company, any status — unlike {@link #browsePublished}, nothing is forced. */
+    @Transactional(readOnly = true)
+    public Page<Trip> listForAdmin(AdminTripFilter filter, Pageable pageable) {
+        List<Specification<Trip>> specs = new ArrayList<>();
+        if (filter.companyId() != null) {
+            specs.add(TripSpecifications.hasCompanyId(filter.companyId()));
+        }
+        if (filter.status() != null) {
+            specs.add(TripSpecifications.hasStatus(filter.status()));
+        }
+        if (filter.tier() != null) {
+            specs.add(TripSpecifications.hasTierIn(List.of(filter.tier())));
+        }
+        if (filter.departureFrom() != null || filter.departureTo() != null) {
+            specs.add(TripSpecifications.departureBetween(filter.departureFrom(), filter.departureTo()));
+        }
+        if (filter.search() != null && !filter.search().isBlank()) {
+            specs.add(TripSpecifications.titleOrCodeContains(filter.search()));
+        }
+        return tripRepository.findAll(Specification.allOf(specs), pageable);
     }
 
     /**
@@ -132,7 +158,6 @@ public class TripQueryService {
      * controller can safely read both after this transaction commits.
      */
     private void initializeCollections(Trip trip) {
-        Hibernate.initialize(trip.getHotels());
-        Hibernate.initialize(trip.getRoomPrices());
+        TripCollectionsInitializer.initialize(trip);
     }
 }

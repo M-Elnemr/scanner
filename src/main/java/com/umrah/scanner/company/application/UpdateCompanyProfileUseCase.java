@@ -1,10 +1,7 @@
 package com.umrah.scanner.company.application;
 
-import com.umrah.scanner.city.domain.City;
-import com.umrah.scanner.city.infrastructure.CityRepository;
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.common.exception.ValidationException;
-import com.umrah.scanner.company.domain.CompanyAddress;
 import com.umrah.scanner.company.domain.CompanyProfile;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
@@ -16,44 +13,53 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdateCompanyProfileUseCase {
 
     private final CompanyProfileRepository companyProfileRepository;
-    private final CityRepository cityRepository;
+    private final CompanyProfileFactory companyProfileFactory;
 
-    public UpdateCompanyProfileUseCase(CompanyProfileRepository companyProfileRepository, CityRepository cityRepository) {
+    public UpdateCompanyProfileUseCase(CompanyProfileRepository companyProfileRepository, CompanyProfileFactory companyProfileFactory) {
         this.companyProfileRepository = companyProfileRepository;
-        this.cityRepository = cityRepository;
+        this.companyProfileFactory = companyProfileFactory;
     }
 
     @Transactional
-    public CompanyProfile execute(UUID userId, UpdateCompanyProfileCommand command) {
+    public CompanyProfile executeAsCompany(UUID userId, UpdateCompanyProfileCommand command) {
         CompanyProfile company = companyProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", userId));
 
         if (company.getStatus() == CompanyStatus.SUSPENDED) {
             throw new ValidationException("Suspended companies cannot update their profile");
         }
-        if (command.addresses() == null || command.addresses().isEmpty()) {
-            throw new ValidationException("At least one address is required");
-        }
 
+        apply(company, command);
+        CompanyProfileInitializer.initializeAddresses(company);
+        return company;
+    }
+
+    /**
+     * The admin variant skips the suspended-company guard — an admin editing a suspended company's
+     * details (a phone number, an address) is exactly when it is needed — and may also change
+     * {@code licenseNumber}, which the self-service path treats as immutable after registration.
+     */
+    @Transactional
+    public CompanyProfile executeAsAdmin(UUID companyId, AdminUpdateCompanyProfileCommand command) {
+        CompanyProfile company = companyProfileRepository.findById(companyId)
+                .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyId));
+
+        if (command.licenseNumber() == null || command.licenseNumber().isBlank()) {
+            throw new ValidationException("licenseNumber is required");
+        }
+        company.setLicenseNumber(command.licenseNumber());
+        apply(company, command.profile());
+        CompanyProfileInitializer.initializeAddresses(company);
+        return company;
+    }
+
+    // The client always sends its full current address list (add/remove happens in the UI
+    // beforehand), so this is a full replace, not a partial/patch update.
+    private void apply(CompanyProfile company, UpdateCompanyProfileCommand command) {
         company.setCompanyName(command.companyName());
         company.setLogoUrl(command.logoUrl());
         company.setWhatsapp(command.whatsapp());
         company.setDescription(command.description());
-
-        // The client always sends its full current address list (add/remove happens in the UI
-        // beforehand), so this is a full replace, not a partial/patch update.
-        company.getAddresses().clear();
-        for (CompanyAddressInput input : command.addresses()) {
-            City city = cityRepository.findById(input.cityId())
-                    .orElseThrow(() -> NotFoundException.of("City", input.cityId()));
-            CompanyAddress address = new CompanyAddress();
-            address.setCity(city);
-            address.setAddressText(input.addressText());
-            address.setMobileNumber(input.mobileNumber());
-            company.addAddress(address);
-        }
-
-        CompanyProfileInitializer.initializeAddresses(company);
-        return company;
+        companyProfileFactory.replaceAddresses(company, command.addresses());
     }
 }

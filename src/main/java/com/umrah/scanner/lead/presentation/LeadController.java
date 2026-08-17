@@ -208,14 +208,8 @@ public class LeadController {
     }
 
     // --- Admin ---
-
-    @Operation(summary = "List all leads")
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/api/v1/admin/leads")
-    public ApiResponse<PageResponse<LeadResponse>> listForAdmin(
-            @RequestParam(required = false) LeadStatus status, Pageable pageable) {
-        return ApiResponse.of(PageResponse.of(leadQueryService.listForAdmin(status, pageable), LeadResponse::forAdmin));
-    }
+    // Listing, detail-with-trip-and-company, and the status override live on AdminLeadController —
+    // they need TripQueryService and CompanyQueryService, which the actions below do not.
 
     @Operation(summary = "Confirm the company's commission payment",
             description = "Accepts a company's report, or records the payment directly from FULLY_PAID. "

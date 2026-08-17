@@ -1,6 +1,8 @@
 package com.umrah.scanner.trip.domain;
 
 import com.umrah.scanner.common.domain.BaseEntity;
+import com.umrah.scanner.hotel.domain.Hotel;
+import com.umrah.scanner.hotel.domain.HotelCity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -18,6 +20,16 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+/**
+ * Which catalogue {@link Hotel} a trip uses in one city, plus the one fact that is genuinely the
+ * trip's own: whether this company runs a free shuttle on this package. Everything else about the
+ * hotel — name, stars, distance, walkability — lives on {@code Hotel} itself.
+ *
+ * <p>{@code city} is denormalized here on purpose so {@code uq_trip_hotels_trip_city} (one hotel per
+ * city per trip) stays a simple two-column index. It can never disagree with {@code hotel.getCity()}
+ * because the database proves it: {@code fk_trip_hotels_hotel} is a composite FK on
+ * {@code (hotel_id, city)} against {@code hotels(id, city)}, not just {@code hotel_id} alone.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,28 +42,16 @@ public class TripHotel extends BaseEntity {
     @JoinColumn(name = "trip_id", nullable = false)
     private Trip trip;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "hotel_id", nullable = false)
+    private Hotel hotel;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "city", nullable = false, length = 20)
-    private TripCity city;
-
-    @Column(name = "hotel_name", nullable = false, length = 255)
-    private String hotelName;
-
-    @Column(name = "stars", nullable = false)
-    private short stars;
-
-    /** Distance to the Haram (Makkah) or the Prophet's Mosque (Madinah), whichever {@link #city} is. */
-    @Column(name = "distance_to_haram_m")
-    private Integer distanceToHaramM;
-
-    @Column(name = "can_walk", nullable = false)
-    private boolean canWalk;
+    private HotelCity city;
 
     @Column(name = "free_bus_included", nullable = false)
     private boolean freeBusIncluded;
-
-    @Column(name = "location_url", length = 500)
-    private String locationUrl;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

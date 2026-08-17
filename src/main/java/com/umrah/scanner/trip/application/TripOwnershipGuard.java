@@ -28,4 +28,10 @@ public class TripOwnershipGuard {
         return tripRepository.findByIdAndCompanyId(tripId, companyId)
                 .orElseThrow(() -> NotFoundException.of("Trip", tripId));
     }
+
+    /** Admin reach: ownership is not checked, because an admin owns nothing and reaches everything. */
+    @Transactional(readOnly = true)
+    public Trip findAnyTrip(UUID tripId) {
+        return tripRepository.findById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
+    }
 }

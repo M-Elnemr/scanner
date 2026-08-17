@@ -48,7 +48,8 @@ public class SecurityConfig {
                             // Reference lists are fixed lookup data with nothing sensitive in them, and the
                             // trip form needs them before a company has necessarily authenticated.
                             .requestMatchers(HttpMethod.GET, API_V1 + "/trips/**", API_V1 + "/companies/*/ratings",
-                                    API_V1 + "/cities", API_V1 + "/countries", API_V1 + "/airports", API_V1 + "/currencies")
+                                    API_V1 + "/cities", API_V1 + "/countries", API_V1 + "/airports", API_V1 + "/currencies",
+                                    API_V1 + "/hotels")
                             .permitAll()
                             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health")
                             .permitAll()

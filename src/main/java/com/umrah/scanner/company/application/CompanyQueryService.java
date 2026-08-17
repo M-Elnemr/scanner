@@ -5,12 +5,16 @@ import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.company.domain.CompanyProfile;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.company.infrastructure.CompanyProfileRepository;
+import com.umrah.scanner.company.infrastructure.CompanySpecifications;
 import com.umrah.scanner.customer.infrastructure.CustomerProfileRepository;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
 import com.umrah.scanner.user.domain.Role;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,9 +83,17 @@ public class CompanyQueryService {
         return company;
     }
 
+    /** status and search are both optional — the admin console opens on "everything", not just PENDING. */
     @Transactional(readOnly = true)
-    public Page<CompanyProfile> listByStatus(CompanyStatus status, Pageable pageable) {
-        Page<CompanyProfile> companies = companyProfileRepository.findAllByStatus(status, pageable);
+    public Page<CompanyProfile> listForAdmin(CompanyStatus status, String search, Pageable pageable) {
+        List<Specification<CompanyProfile>> specs = new ArrayList<>();
+        if (status != null) {
+            specs.add(CompanySpecifications.hasStatus(status));
+        }
+        if (search != null && !search.isBlank()) {
+            specs.add(CompanySpecifications.nameOrLicenseContains(search));
+        }
+        Page<CompanyProfile> companies = companyProfileRepository.findAll(Specification.allOf(specs), pageable);
         companies.forEach(CompanyProfileInitializer::initializeAddresses);
         return companies;
     }

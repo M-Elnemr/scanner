@@ -8,12 +8,15 @@ import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadStatus;
 import com.umrah.scanner.lead.domain.LeadStatusHistory;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
+import com.umrah.scanner.lead.infrastructure.LeadSpecifications;
 import com.umrah.scanner.lead.infrastructure.LeadStatusHistoryRepository;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,8 +73,33 @@ public class LeadQueryService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Lead> listForAdmin(LeadStatus status, Pageable pageable) {
-        return status == null ? leadRepository.findAll(pageable) : leadRepository.findAllByStatus(status, pageable);
+    public Page<Lead> listForAdmin(AdminLeadFilter filter, Pageable pageable) {
+        List<Specification<Lead>> specs = new ArrayList<>();
+        if (filter.status() != null) {
+            specs.add(LeadSpecifications.hasStatus(filter.status()));
+        }
+        if (filter.companyId() != null) {
+            specs.add(LeadSpecifications.hasCompanyId(filter.companyId()));
+        }
+        if (filter.tripId() != null) {
+            specs.add(LeadSpecifications.hasTripId(filter.tripId()));
+        }
+        if (filter.customerId() != null) {
+            specs.add(LeadSpecifications.hasCustomerId(filter.customerId()));
+        }
+        if (filter.createdFrom() != null || filter.createdTo() != null) {
+            specs.add(LeadSpecifications.createdBetween(filter.createdFrom(), filter.createdTo()));
+        }
+        if (filter.search() != null && !filter.search().isBlank()) {
+            specs.add(LeadSpecifications.search(filter.search()));
+        }
+        return leadRepository.findAll(Specification.allOf(specs), pageable);
+    }
+
+    /** Admin-only read, no ownership check — role is already enforced at the controller edge. */
+    @Transactional(readOnly = true)
+    public Lead getForAdmin(UUID leadId) {
+        return leadRepository.findWithDetailsById(leadId).orElseThrow(() -> NotFoundException.of("Lead", leadId));
     }
 
     /** A single lead, visible to its own customer, its own company, or any admin. */

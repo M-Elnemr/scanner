@@ -83,6 +83,18 @@ public class LeadNotifier {
         }
     }
 
+    /**
+     * An admin forced this lead's status directly, bypassing the normal report/confirm steps — see
+     * {@link OverrideLeadStatusUseCase}. Both sides are told, since either could otherwise be
+     * surprised by a status that neither of them produced.
+     */
+    public void statusOverridden(Lead lead, LeadStatus previous, LeadStatus target, String reason) {
+        String body = "An administrator changed this booking's status from " + previous + " to " + target
+                + " for " + lead.getTrip().getTitle() + ". Reason: " + reason;
+        toCustomer(lead, "LEAD_STATUS_OVERRIDDEN", "Your booking status was updated by an administrator", body);
+        toCompany(lead, "LEAD_STATUS_OVERRIDDEN", "A booking status was updated by an administrator", body);
+    }
+
     private void toCompany(Lead lead, String type, String title, String body) {
         notificationDispatcher.dispatch(lead.getCompany().getUser().getId(), type, title, body, payload(lead));
     }

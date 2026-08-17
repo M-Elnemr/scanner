@@ -8,14 +8,11 @@ import com.umrah.scanner.customer.application.CustomerQueryService;
 import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.trip.application.ChangeTripStatusUseCase;
 import com.umrah.scanner.trip.application.CompareTripsUseCase;
-import com.umrah.scanner.trip.application.CreateTripCommand;
 import com.umrah.scanner.trip.application.CreateTripUseCase;
 import com.umrah.scanner.trip.application.DeleteTripUseCase;
 import com.umrah.scanner.trip.application.RoomPriceInput;
 import com.umrah.scanner.trip.application.TripBrowseFilter;
-import com.umrah.scanner.trip.application.TripHotelInput;
 import com.umrah.scanner.trip.application.TripQueryService;
-import com.umrah.scanner.trip.application.UpdateTripCommand;
 import com.umrah.scanner.trip.application.UpdateTripUseCase;
 import com.umrah.scanner.trip.application.UpsertRoomPricesUseCase;
 import com.umrah.scanner.trip.domain.RoomType;
@@ -85,7 +82,7 @@ public class TripController {
     @PostMapping("/api/v1/companies/me/trips")
     public ApiResponse<TripDetailResponse> create(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody CreateTripRequest request) {
-        var trip = createTripUseCase.execute(currentUser.userId(), toCreateCommand(request));
+        var trip = createTripUseCase.executeAsCompany(currentUser.userId(), TripRequestMapper.toCreateCommand(request));
         return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
@@ -93,7 +90,7 @@ public class TripController {
     @PutMapping("/api/v1/companies/me/trips/{id}")
     public ApiResponse<TripDetailResponse> update(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id, @Valid @RequestBody UpdateTripRequest request) {
-        var trip = updateTripUseCase.execute(currentUser.userId(), id, toUpdateCommand(request));
+        var trip = updateTripUseCase.executeAsCompany(currentUser.userId(), id, TripRequestMapper.toUpdateCommand(request));
         return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
@@ -112,7 +109,7 @@ public class TripController {
     @PatchMapping("/api/v1/companies/me/trips/{id}/status")
     public ApiResponse<TripDetailResponse> changeStatus(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id, @Valid @RequestBody ChangeTripStatusRequest request) {
-        var trip = changeTripStatusUseCase.execute(currentUser.userId(), id, request.status());
+        var trip = changeTripStatusUseCase.executeAsCompany(currentUser.userId(), id, request.status());
         return ApiResponse.of(TripDetailResponse.from(tripQueryService.ownedDetail(trip.getId())));
     }
 
@@ -120,7 +117,7 @@ public class TripController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/api/v1/companies/me/trips/{id}")
     public void delete(@AuthenticationPrincipal AuthenticatedUser currentUser, @PathVariable UUID id) {
-        deleteTripUseCase.execute(currentUser.userId(), id);
+        deleteTripUseCase.executeAsCompany(currentUser.userId(), id);
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -201,45 +198,4 @@ public class TripController {
         return customerQueryService.findByUserId(currentUser.userId()).map(profile -> profile.getId());
     }
 
-    private CreateTripCommand toCreateCommand(CreateTripRequest r) {
-        return new CreateTripCommand(
-                r.tripCode(), r.title(), r.departureDate(), r.returnDate(),
-                r.outboundDepartureAirportId(), r.outboundArrivalAirportId(),
-                r.returnDepartureAirportId(), r.returnArrivalAirportId(),
-                r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
-                r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
-                r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
-                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
-    }
-
-    private UpdateTripCommand toUpdateCommand(UpdateTripRequest r) {
-        return new UpdateTripCommand(
-                r.title(), r.departureDate(), r.returnDate(),
-                r.outboundDepartureAirportId(), r.outboundArrivalAirportId(),
-                r.returnDepartureAirportId(), r.returnArrivalAirportId(),
-                r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
-                r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
-                r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
-                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
-    }
-
-    // null means "omitted" (leave untouched on update); an empty list is an explicit clear.
-    private List<TripHotelInput> toHotelInputs(List<TripHotelRequest> hotels) {
-        if (hotels == null) {
-            return null;
-        }
-        return hotels.stream()
-                .map(h -> new TripHotelInput(
-                        h.city(), h.hotelName(), h.stars(), h.distanceToHaramM(),
-                        h.canWalk(), h.freeBusIncluded(), h.locationUrl()))
-                .toList();
-    }
-
-    // null means "omitted" (leave untouched on update); an empty list is an explicit clear.
-    private List<RoomPriceInput> toRoomPriceInputs(List<RoomPriceRequest> prices) {
-        if (prices == null) {
-            return null;
-        }
-        return prices.stream().map(p -> new RoomPriceInput(p.roomType(), p.price())).toList();
-    }
 }

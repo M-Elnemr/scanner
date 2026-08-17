@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface TripHotelRepository extends JpaRepository<TripHotel, UUID> {
 
     List<TripHotel> findAllByTripId(UUID tripId);
+
+    /** The delete guard for a catalogue hotel: refuse while any trip still uses it. */
+    long countByHotelId(UUID hotelId);
 }
