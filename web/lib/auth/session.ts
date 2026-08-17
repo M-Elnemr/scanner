@@ -17,19 +17,24 @@ export interface SessionData {
 
 export const SESSION_COOKIE_NAME = "us_session";
 
-export const sessionOptions: SessionOptions = {
-  password: requireSecret(),
-  cookieName: SESSION_COOKIE_NAME,
-  cookieOptions: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    // Matches the backend's refresh-token TTL (P30D) — once the refresh token itself expires,
-    // there is nothing left to renew, so there is no point outliving it.
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-  },
-};
+// A function rather than a module-level constant: `next build` imports every route module (and
+// this middleware) to collect its metadata, which would run this before any real SESSION_SECRET
+// is ever supplied to the build.
+export function getSessionOptions(): SessionOptions {
+  return {
+    password: requireSecret(),
+    cookieName: SESSION_COOKIE_NAME,
+    cookieOptions: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      // Matches the backend's refresh-token TTL (P30D) — once the refresh token itself expires,
+      // there is nothing left to renew, so there is no point outliving it.
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    },
+  };
+}
 
 function requireSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -41,7 +46,7 @@ function requireSecret(): string {
 
 /** Use inside Route Handlers and Server Actions — the only places a session can be written. */
 export async function getSession() {
-  return getIronSession<SessionData>(await cookies(), sessionOptions);
+  return getIronSession<SessionData>(await cookies(), getSessionOptions());
 }
 
 /**
@@ -53,7 +58,7 @@ export async function readSessionFromCookieValue(value: string | undefined): Pro
     return null;
   }
   try {
-    return await unsealData<SessionData>(value, { password: sessionOptions.password });
+    return await unsealData<SessionData>(value, { password: requireSecret() });
   } catch {
     // Wrong/rotated secret, corrupted cookie, or expired seal — treat exactly like "logged out".
     return null;

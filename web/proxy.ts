@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sealData } from "iron-session";
-import { readSessionFromCookieValue, sessionOptions, SESSION_COOKIE_NAME, type SessionData } from "@/lib/auth/session";
+import { readSessionFromCookieValue, getSessionOptions, SESSION_COOKIE_NAME, type SessionData } from "@/lib/auth/session";
 
 const CLIENT_ONLY_PREFIXES = ["/leads", "/favourites", "/profile", "/notifications", "/trips/compare"];
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8080";
@@ -21,7 +21,7 @@ export async function proxy(request: NextRequest) {
       const refreshed = await tryRefresh(session.refreshToken);
       if (refreshed) {
         session = { ...session, ...refreshed };
-        refreshedSetCookie = await sealData(session, { password: sessionOptions.password });
+        refreshedSetCookie = await sealData(session, { password: getSessionOptions().password });
       } else {
         session = null;
       }
@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
 
   const response = routeFor(pathname, isAuthenticated, isAdmin, request);
   if (refreshedSetCookie) {
-    response.cookies.set(SESSION_COOKIE_NAME, refreshedSetCookie, sessionOptions.cookieOptions);
+    response.cookies.set(SESSION_COOKIE_NAME, refreshedSetCookie, getSessionOptions().cookieOptions);
   }
   return response;
 }
