@@ -1,0 +1,471 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createTripAction, updateTripAction, type RoomPriceInput, type TripInput } from "@/lib/admin/trips-actions";
+import type { AirportOption, CompanyOption, CurrencyOption } from "@/lib/admin/reference-data";
+import type { HotelOption } from "@/lib/admin/hotel-picker";
+
+const ROOM_TYPES: RoomPriceInput["roomType"][] = ["SINGLE", "DOUBLE", "TRIPLE", "QUAD", "CHILD", "INFANT"];
+const ROOM_LABEL: Record<RoomPriceInput["roomType"], string> = {
+  SINGLE: "Single",
+  DOUBLE: "Double",
+  TRIPLE: "Triple",
+  QUAD: "Quad",
+  CHILD: "Child",
+  INFANT: "Infant",
+};
+
+const INCLUSIONS: { key: keyof TripDraft; label: string }[] = [
+  { key: "visaIncluded", label: "Visa included" },
+  { key: "transportationIncluded", label: "Transportation included" },
+  { key: "mealsIncluded", label: "Meals included" },
+  { key: "guideIncluded", label: "Guide included" },
+  { key: "zamzamIncluded", label: "Zamzam water included" },
+  { key: "fastTrainIncluded", label: "Haramain fast train included" },
+];
+
+interface TripDraft {
+  tripCode: string;
+  title: string;
+  departureDate: string;
+  returnDate: string;
+  outboundDepartureAirportId: string;
+  outboundArrivalAirportId: string;
+  returnDepartureAirportId: string;
+  returnArrivalAirportId: string;
+  airline: string;
+  transitCount: string;
+  transitCity: string;
+  transitDuration: string;
+  daysInMakkah: string;
+  daysInMadinah: string;
+  visaIncluded: boolean;
+  transportationIncluded: boolean;
+  mealsIncluded: boolean;
+  guideIncluded: boolean;
+  zamzamIncluded: boolean;
+  fastTrainIncluded: boolean;
+  description: string;
+  currencyId: string;
+  availableSeats: string;
+  tier: "VIP" | "PREMIUM" | "ECONOMIC";
+  makkahHotelId: string;
+  makkahFreeBus: boolean;
+  madinahHotelId: string;
+  madinahFreeBus: boolean;
+  prices: Record<RoomPriceInput["roomType"], string>;
+}
+
+const EMPTY: TripDraft = {
+  tripCode: "",
+  title: "",
+  departureDate: "",
+  returnDate: "",
+  outboundDepartureAirportId: "",
+  outboundArrivalAirportId: "",
+  returnDepartureAirportId: "",
+  returnArrivalAirportId: "",
+  airline: "",
+  transitCount: "",
+  transitCity: "",
+  transitDuration: "",
+  daysInMakkah: "",
+  daysInMadinah: "",
+  visaIncluded: false,
+  transportationIncluded: false,
+  mealsIncluded: false,
+  guideIncluded: false,
+  zamzamIncluded: false,
+  fastTrainIncluded: false,
+  description: "",
+  currencyId: "",
+  availableSeats: "",
+  tier: "ECONOMIC",
+  makkahHotelId: "",
+  makkahFreeBus: false,
+  madinahHotelId: "",
+  madinahFreeBus: false,
+  prices: { SINGLE: "", DOUBLE: "", TRIPLE: "", QUAD: "", CHILD: "", INFANT: "" },
+};
+
+export function TripForm({
+  mode,
+  tripId,
+  airports,
+  currencies,
+  companies,
+  makkahHotels,
+  madinahHotels,
+  initial,
+}: {
+  mode: "create" | "edit";
+  tripId?: string;
+  airports: AirportOption[];
+  currencies: CurrencyOption[];
+  companies: CompanyOption[];
+  makkahHotels: HotelOption[];
+  madinahHotels: HotelOption[];
+  initial: Partial<TripDraft> & { companyId?: string };
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [companyId, setCompanyId] = useState(initial.companyId ?? "");
+  const [form, setForm] = useState<TripDraft>({ ...EMPTY, ...initial });
+
+  function set<K extends keyof TripDraft>(key: K, value: TripDraft[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+
+    const hotels: TripInput["hotels"] = [];
+    if (form.makkahHotelId) hotels.push({ hotelId: form.makkahHotelId, freeBusIncluded: form.makkahFreeBus });
+    if (form.madinahHotelId) hotels.push({ hotelId: form.madinahHotelId, freeBusIncluded: form.madinahFreeBus });
+
+    const prices: RoomPriceInput[] = ROOM_TYPES.filter((t) => form.prices[t]).map((t) => ({
+      roomType: t,
+      price: Number(form.prices[t]),
+    }));
+
+    const trip: TripInput = {
+      tripCode: form.tripCode,
+      title: form.title,
+      departureDate: form.departureDate,
+      returnDate: form.returnDate,
+      outboundDepartureAirportId: form.outboundDepartureAirportId,
+      outboundArrivalAirportId: form.outboundArrivalAirportId,
+      returnDepartureAirportId: form.returnDepartureAirportId,
+      returnArrivalAirportId: form.returnArrivalAirportId,
+      airline: form.airline,
+      transitCount: form.transitCount ? Number(form.transitCount) : undefined,
+      transitCity: form.transitCity || undefined,
+      transitDuration: form.transitDuration || undefined,
+      daysInMakkah: form.daysInMakkah ? Number(form.daysInMakkah) : undefined,
+      daysInMadinah: form.daysInMadinah ? Number(form.daysInMadinah) : undefined,
+      visaIncluded: form.visaIncluded,
+      transportationIncluded: form.transportationIncluded,
+      mealsIncluded: form.mealsIncluded,
+      guideIncluded: form.guideIncluded,
+      zamzamIncluded: form.zamzamIncluded,
+      fastTrainIncluded: form.fastTrainIncluded,
+      description: form.description || undefined,
+      currencyId: form.currencyId,
+      availableSeats: form.availableSeats ? Number(form.availableSeats) : undefined,
+      hotels,
+      prices,
+      tier: form.tier,
+    };
+
+    startTransition(async () => {
+      const result =
+        mode === "create" ? await createTripAction(companyId, trip) : await updateTripAction(tripId!, trip);
+
+      if (result.ok) {
+        setFieldErrors({});
+        toast.success(mode === "create" ? "Trip created." : "Trip updated.");
+        router.push(mode === "create" && result.data?.id ? `/admin/trips/${result.data.id}` : "/admin/trips");
+        router.refresh();
+      } else {
+        setFieldErrors(result.fieldErrors ?? {});
+        toast.error(result.error ?? "Something went wrong.");
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      {mode === "create" && (
+        <div className="space-y-1.5">
+          <Label>Company</Label>
+          <Select value={companyId} onValueChange={(v) => v && setCompanyId(v)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select the owning company" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Basics</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="tripCode">Trip code</Label>
+            <Input id="tripCode" value={form.tripCode} onChange={(e) => set("tripCode", e.target.value)} required />
+            {fieldErrors.tripCode && <p className="text-xs text-destructive">{fieldErrors.tripCode}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="title">Title</Label>
+            <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} required />
+            {fieldErrors.title && <p className="text-xs text-destructive">{fieldErrors.title}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Tier</Label>
+            <Select value={form.tier} onValueChange={(v) => v && set("tier", v as TripDraft["tier"])}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ECONOMIC">Economic</SelectItem>
+                <SelectItem value="PREMIUM">Premium</SelectItem>
+                <SelectItem value="VIP">VIP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Currency</Label>
+            <Select value={form.currencyId} onValueChange={(v) => v && set("currencyId", v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.code} ({c.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="departureDate">Departure date</Label>
+            <Input
+              id="departureDate"
+              type="date"
+              value={form.departureDate}
+              onChange={(e) => set("departureDate", e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="returnDate">Return date</Label>
+            <Input
+              id="returnDate"
+              type="date"
+              value={form.returnDate}
+              onChange={(e) => set("returnDate", e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="availableSeats">Available seats</Label>
+            <Input
+              id="availableSeats"
+              type="number"
+              min={0}
+              value={form.availableSeats}
+              onChange={(e) => set("availableSeats", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="daysInMakkah">Days in Makkah</Label>
+            <Input
+              id="daysInMakkah"
+              type="number"
+              min={0}
+              value={form.daysInMakkah}
+              onChange={(e) => set("daysInMakkah", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="daysInMadinah">Days in Madinah</Label>
+            <Input
+              id="daysInMadinah"
+              type="number"
+              min={0}
+              value={form.daysInMadinah}
+              onChange={(e) => set("daysInMadinah", e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Flights</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="airline">Airline</Label>
+            <Input id="airline" value={form.airline} onChange={(e) => set("airline", e.target.value)} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="transitCount">Transit stops</Label>
+            <Input
+              id="transitCount"
+              type="number"
+              min={0}
+              value={form.transitCount}
+              onChange={(e) => set("transitCount", e.target.value)}
+            />
+          </div>
+          <AirportField label="Outbound departure" value={form.outboundDepartureAirportId} onChange={(v) => set("outboundDepartureAirportId", v)} airports={airports} />
+          <AirportField label="Outbound arrival" value={form.outboundArrivalAirportId} onChange={(v) => set("outboundArrivalAirportId", v)} airports={airports} />
+          <AirportField label="Return departure" value={form.returnDepartureAirportId} onChange={(v) => set("returnDepartureAirportId", v)} airports={airports} />
+          <AirportField label="Return arrival" value={form.returnArrivalAirportId} onChange={(v) => set("returnArrivalAirportId", v)} airports={airports} />
+          <div className="space-y-1.5">
+            <Label htmlFor="transitCity">Transit city</Label>
+            <Input id="transitCity" value={form.transitCity} onChange={(e) => set("transitCity", e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="transitDuration">Transit duration</Label>
+            <Input
+              id="transitDuration"
+              placeholder="e.g. 2h 30m"
+              value={form.transitDuration}
+              onChange={(e) => set("transitDuration", e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Inclusions</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {INCLUSIONS.map((item) => (
+            <label key={item.key} className="flex items-center gap-2 text-sm">
+              <Checkbox checked={form[item.key] as boolean} onCheckedChange={(v) => set(item.key, v as never)} />
+              {item.label}
+            </label>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Hotels</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Makkah hotel</Label>
+            <Select value={form.makkahHotelId} onValueChange={(v) => set("makkahHotelId", v ?? "")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                {makkahHotels.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.makkahHotelId && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Checkbox checked={form.makkahFreeBus} onCheckedChange={(v) => set("makkahFreeBus", Boolean(v))} />
+                Free shuttle to the Haram
+              </label>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Madinah hotel</Label>
+            <Select value={form.madinahHotelId} onValueChange={(v) => set("madinahHotelId", v ?? "")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                {madinahHotels.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.madinahHotelId && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Checkbox checked={form.madinahFreeBus} onCheckedChange={(v) => set("madinahFreeBus", Boolean(v))} />
+                Free shuttle to the Mosque
+              </label>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Room prices</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-3">
+          {ROOM_TYPES.map((type) => (
+            <div key={type} className="space-y-1.5">
+              <Label htmlFor={`price-${type}`}>{ROOM_LABEL[type]}</Label>
+              <Input
+                id={`price-${type}`}
+                type="number"
+                min={0}
+                value={form.prices[type]}
+                onChange={(e) => setForm((f) => ({ ...f, prices: { ...f.prices, [type]: e.target.value } }))}
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea rows={4} value={form.description} onChange={(e) => set("description", e.target.value)} />
+        </CardContent>
+      </Card>
+
+      <Button type="submit" disabled={pending || (mode === "create" && !companyId)}>
+        {pending && <Loader2 className="size-4 animate-spin" />}
+        {mode === "create" ? "Create trip" : "Save changes"}
+      </Button>
+    </form>
+  );
+}
+
+function AirportField({
+  label,
+  value,
+  onChange,
+  airports,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  airports: AirportOption[];
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={(v) => v && onChange(v)}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Select airport" />
+        </SelectTrigger>
+        <SelectContent>
+          {airports.map((a) => (
+            <SelectItem key={a.id} value={a.id}>
+              {a.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}

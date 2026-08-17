@@ -1,0 +1,17 @@
+import { publicApi, unwrap } from "@/lib/api/client";
+import { pageableQuery } from "@/lib/api/pageable";
+import { TripGrid } from "@/components/trip/trip-grid";
+
+export async function FeaturedTrips() {
+  const result = await publicApi.GET("/api/v1/trips", {
+    params: { query: pageableQuery(0, 8) },
+    cache: "no-store",
+  });
+  const page = unwrap(result);
+
+  if (!page.content?.length) {
+    return <p className="text-muted-foreground">No published trips yet — check back soon.</p>;
+  }
+
+  return <TripGrid trips={page.content} />;
+}
