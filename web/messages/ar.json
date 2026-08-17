@@ -1,0 +1,15 @@
+{
+  "common": {
+    "appName": "سكانر العمرة",
+    "tagline": "قارن رحلات العمرة واحفظها وأدرها بسهولة.",
+    "titleTemplate": "{page} · سكانر العمرة",
+    "switchLanguage": "تغيير اللغة"
+  },
+  "nav": {
+    "browseTrips": "تصفح الرحلات",
+    "myBookings": "حجوزاتي",
+    "favourites": "المفضلة",
+    "signIn": "تسجيل الدخول",
+    "menu": "القائمة"
+  }
+}

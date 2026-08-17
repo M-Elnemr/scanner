@@ -134,4 +134,10 @@
   html {
     @apply font-sans;
   }
+  /* Geist/Plus Jakarta Sans have no Arabic glyphs — swap in Cairo (loaded in app/layout.tsx) for
+     both body and heading text whenever the page is RTL. */
+  html[dir="rtl"] {
+    --font-geist-sans: var(--font-arabic);
+    --font-heading: var(--font-arabic);
+  }
 }

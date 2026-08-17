@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans, Cairo } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -20,26 +22,44 @@ const heading = Plus_Jakarta_Sans({
   weight: ["600", "700", "800"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Umrah Scanner",
-    template: "%s · Umrah Scanner",
-  },
-  description: "Compare, preserve and manage your Umrah journey.",
-};
+// Geist/Plus Jakarta Sans have no Arabic glyphs — Cairo covers both scripts and is swapped in
+// for `--font-geist-sans`/`--font-heading` under `html[dir="rtl"]` in globals.css.
+const arabic = Cairo({
+  variable: "--font-arabic",
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common");
+  return {
+    title: {
+      default: t("appName"),
+      template: t("titleTemplate", { page: "%s" }),
+    },
+    description: t("tagline"),
+  };
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const messages = (await import(`../messages/${locale}.json`)).default;
+
   return (
     <html
-      lang="en"
+      lang={locale}
+      dir={dir}
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${heading.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${heading.variable} ${arabic.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Providers>
-          {children}
-          <Toaster richColors position="top-center" />
-        </Providers>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>
+            {children}
+            <Toaster richColors position="top-center" />
+          </Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

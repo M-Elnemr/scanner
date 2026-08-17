@@ -1,0 +1,15 @@
+{
+  "common": {
+    "appName": "Umrah Scanner",
+    "tagline": "Compare, preserve and manage your Umrah journey.",
+    "titleTemplate": "{page} · Umrah Scanner",
+    "switchLanguage": "Switch language"
+  },
+  "nav": {
+    "browseTrips": "Browse trips",
+    "myBookings": "My bookings",
+    "favourites": "Favourites",
+    "signIn": "Sign in",
+    "menu": "Menu"
+  }
+}
