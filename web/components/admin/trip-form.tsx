@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTripAction, updateTripAction, type RoomPriceInput, type TripInput } from "@/lib/admin/trips-actions";
 import type { AirportOption, CompanyOption, CurrencyOption } from "@/lib/admin/reference-data";
 import type { HotelOption } from "@/lib/admin/hotel-picker";
+import { today } from "@/lib/format/date";
 
 const ROOM_TYPES: RoomPriceInput["roomType"][] = ["SINGLE", "DOUBLE", "TRIPLE", "QUAD", "CHILD", "INFANT"];
 const ROOM_LABEL_KEY: Record<RoomPriceInput["roomType"], "roomSingle" | "roomDouble" | "roomTriple" | "roomQuad" | "roomChild" | "roomInfant"> = {
@@ -255,6 +256,7 @@ export function TripForm({
             <Input
               id="departureDate"
               type="date"
+              min={today()}
               value={form.departureDate}
               onChange={(e) => set("departureDate", e.target.value)}
               required
@@ -265,6 +267,7 @@ export function TripForm({
             <Input
               id="returnDate"
               type="date"
+              min={today()}
               value={form.returnDate}
               onChange={(e) => set("returnDate", e.target.value)}
               required

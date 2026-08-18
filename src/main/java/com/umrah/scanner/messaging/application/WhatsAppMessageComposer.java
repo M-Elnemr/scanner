@@ -11,6 +11,7 @@ import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripHotel;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DecimalStyle;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
@@ -32,19 +33,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class WhatsAppMessageComposer {
 
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter DATE_EN = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter DATE_AR = DateTimeFormatter.ofPattern("d MMMM yyyy", new Locale("ar"))
+            .withDecimalStyle(DecimalStyle.STANDARD);
 
     /** Everything a customer needs to recognise and act on the trip they preserved. */
     public String composeTripMessage(Trip trip, String customerName, WhatsAppLanguage lang) {
         boolean ar = lang == WhatsAppLanguage.AR;
         StringBuilder m = new StringBuilder();
 
-        m.append(ar ? "مرحباً " : "Hello ").append(customerName).append(ar ? "،\n\n" : ",\n\n");
+        m.append(ar
+                ? "السلام عليكم مع حضرتك شركه عمده اسكان حضرتك حجزت معانا رحله\n\n"
+                : "Hello, this is Omda Eskan. You've booked a trip with us.\n\n");
         m.append(ar ? "تفاصيل رحلتك: " : "Here are your trip details: ").append(trip.getTitle())
                 .append(" (").append(trip.getTripCode()).append(")\n\n");
 
-        m.append(ar ? "📅 السفر: " : "📅 Departure: ").append(trip.getDepartureDate().format(DATE)).append('\n');
-        m.append(ar ? "📅 العودة: " : "📅 Return: ").append(trip.getReturnDate().format(DATE)).append('\n');
+        DateTimeFormatter date = ar ? DATE_AR : DATE_EN;
+        m.append(ar ? "📅 السفر: " : "📅 Departure: ").append(trip.getDepartureDate().format(date)).append('\n');
+        m.append(ar ? "📅 العودة: " : "📅 Return: ").append(trip.getReturnDate().format(date)).append('\n');
         m.append(ar ? "✈️ الطيران: " : "✈️ Airline: ").append(trip.getAirline()).append('\n');
         m.append(route(trip, ar)).append('\n');
         m.append(ar ? "🕌 مكة: " : "🕌 Makkah: ").append(trip.getDaysInMakkah()).append(ar ? " أيام" : " nights").append('\n');
@@ -63,9 +69,7 @@ public class WhatsAppMessageComposer {
         for (RoomPrice price : trip.getRoomPrices()) {
             m.append(roomLine(price, trip, ar)).append('\n');
         }
-        m.append('\n');
 
-        m.append(ar ? "سيتواصل معك فريق خدمة العملاء قريباً." : "Our client service team will be in touch soon.");
         return m.toString();
     }
 
@@ -157,7 +161,7 @@ public class WhatsAppMessageComposer {
     }
 
     private String roomLine(RoomPrice price, Trip trip, boolean ar) {
-        return "💵 " + roomTypeLabel(price.getRoomType(), ar) + ": " + formatMoney(price.getPrice(), trip.getCurrency().getCode());
+        return "💵 " + roomTypeLabel(price.getRoomType(), ar) + ": " + formatMoney(price.getPrice(), trip.getCurrency().getCode(), ar);
     }
 
     private String roomTypeLabel(RoomType type, boolean ar) {
@@ -173,7 +177,8 @@ public class WhatsAppMessageComposer {
         };
     }
 
-    private String formatMoney(BigDecimal amount, String currencyCode) {
-        return amount.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " " + currencyCode;
+    private String formatMoney(BigDecimal amount, String currencyCode, boolean ar) {
+        String suffix = ar && "EGP".equals(currencyCode) ? "جنيه" : currencyCode;
+        return amount.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " " + suffix;
     }
 }

@@ -5,7 +5,6 @@ import {
   Bus,
   CalendarDays,
   Car,
-  Lock,
   MapPin,
   ShieldCheck,
   Soup,
@@ -13,14 +12,12 @@ import {
   TrainFront,
   UserRound,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { getCurrentUser } from "@/lib/auth/server";
-import { ApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { TripImage } from "@/components/trip/trip-image";
-import { CompanyCard } from "@/components/trip/company-card";
 import { PreserveFlow } from "@/components/trip/preserve-flow";
 import { FavouriteButton } from "@/components/trip/favourite-button";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +35,13 @@ export async function generateMetadata(props: PageProps<"/trips/[id]">): Promise
 
 export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   const { id } = await props.params;
-  const [user, api, t, tRoomTypes, tTiers] = await Promise.all([
+  const [user, api, t, tRoomTypes, tTiers, locale] = await Promise.all([
     getCurrentUser(),
     apiClient(),
     getTranslations("tripDetail"),
     getTranslations("roomTypes"),
     getTranslations("tiers"),
+    getLocale() as Promise<"ar" | "en">,
   ]);
 
   const ROOM_LABEL: Record<string, string> = {
@@ -73,11 +71,6 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
       activeLead = { leadId: active.id, tripId: active.tripId, tripTitle: active.tripTitle };
     }
     favourited = Boolean(favResult.data?.data?.content?.some((f) => f.trip?.id === id));
-  }
-
-  let company: Awaited<ReturnType<typeof loadCompany>> = null;
-  if (trip.company?.companyId) {
-    company = await loadCompany(api, trip.company.companyId);
   }
 
   const inclusions = [
@@ -113,8 +106,8 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Stat icon={CalendarDays} label={t("departs")} value={formatDate(trip.departureDate)} />
-            <Stat icon={CalendarDays} label={t("returns")} value={formatDate(trip.returnDate)} />
+            <Stat icon={CalendarDays} label={t("departs")} value={formatDate(trip.departureDate, undefined, locale)} />
+            <Stat icon={CalendarDays} label={t("returns")} value={formatDate(trip.returnDate, undefined, locale)} />
             <Stat icon={MapPin} label={t("makkah")} value={t("nightsCount", { count: trip.daysInMakkah ?? 0 })} />
             <Stat icon={MapPin} label={t("madinah")} value={t("nightsCount", { count: trip.daysInMadinah ?? 0 })} />
           </div>
@@ -206,7 +199,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
                     {trip.roomPrices.map((p, i) => (
                       <tr key={i} className="border-b border-border last:border-0 even:bg-secondary/30">
                         <td className="p-3">{p.roomType ? (ROOM_LABEL[p.roomType] ?? p.roomType) : "—"}</td>
-                        <td className="p-3 text-right font-semibold">{formatMoney(p.price, trip.currency)}</td>
+                        <td className="p-3 text-right font-semibold">{formatMoney(p.price, trip.currency, locale)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -223,7 +216,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
           )}
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
+        <div className="lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <CardContent className="space-y-4 pt-6">
               <p className="text-sm text-muted-foreground">{t("seatsLeft", { count: trip.availableSeats ?? 0 })}</p>
@@ -238,17 +231,6 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
               )}
             </CardContent>
           </Card>
-
-          {company ? (
-            <CompanyCard company={company} />
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
-                <Lock className="size-6" />
-                <p className="text-sm">{t("operatorLocked")}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
@@ -284,12 +266,4 @@ function RouteLeg({
       <span className="flex-1">{to?.city ?? to?.iataCode}</span>
     </div>
   );
-}
-
-/** 403 means "not revealed to this caller yet" — a normal state, not an error to surface. */
-async function loadCompany(api: Awaited<ReturnType<typeof apiClient>>, companyId: string) {
-  const result = await api.GET("/api/v1/companies/{id}", { params: { path: { id: companyId } }, cache: "no-store" });
-  if (result.response.status === 403) return null;
-  if (result.error) throw new ApiError(result.error as never);
-  return result.data?.data ?? null;
 }

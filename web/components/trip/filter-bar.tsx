@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { today } from "@/lib/format/date";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -171,12 +172,14 @@ export function FilterBar() {
               <div className="flex items-center gap-2">
                 <Input
                   type="date"
+                  min={today()}
                   value={draft.departureFrom}
                   onChange={(e) => setDraft((d) => ({ ...d, departureFrom: e.target.value }))}
                 />
                 <span className="text-muted-foreground">–</span>
                 <Input
                   type="date"
+                  min={today()}
                   value={draft.departureTo}
                   onChange={(e) => setDraft((d) => ({ ...d, departureTo: e.target.value }))}
                 />

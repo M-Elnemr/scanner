@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarDays, MapPin, Users } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { TripImage } from "@/components/trip/trip-image";
 import { CompareToggle } from "@/components/trip/compare-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ type TripSummary = components["schemas"]["TripSummaryResponse"];
 export function TripCard({ trip }: { trip: TripSummary }) {
   const t = useTranslations("trips");
   const tTiers = useTranslations("tiers");
+  const locale = useLocale() as "ar" | "en";
   const nights = tripDurationNights(trip.departureDate, trip.returnDate);
 
   const TIER_LABEL: Record<string, string> = { VIP: tTiers("vip"), PREMIUM: tTiers("premium"), ECONOMIC: tTiers("economic") };
@@ -42,7 +43,7 @@ export function TripCard({ trip }: { trip: TripSummary }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <CalendarDays className="size-3.5" />
-            {formatDate(trip.departureDate)}
+            {formatDate(trip.departureDate, undefined, locale)}
             {nights != null ? ` · ${t("nightsAbbrev", { count: nights })}` : ""}
           </span>
           <span className="flex items-center gap-1">
@@ -59,7 +60,7 @@ export function TripCard({ trip }: { trip: TripSummary }) {
           <div>
             <p className="text-[11px] text-muted-foreground">{t("from")}</p>
             <p className="font-heading text-lg font-bold text-primary">
-              {formatMoney(trip.priceStartsFrom, trip.currency)}
+              {formatMoney(trip.priceStartsFrom, trip.currency, locale)}
             </p>
           </div>
         </div>

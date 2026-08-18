@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { AdminLeadStatusBadge } from "@/components/admin/admin-lead-status-badge";
 import { AdminLeadActions } from "@/components/admin/admin-lead-actions";
@@ -20,6 +20,7 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
   const { id } = await props.params;
   const t = await getTranslations("admin.leads");
   const tStatus = await getTranslations("admin.leadStatus");
+  const locale = (await getLocale()) as "ar" | "en";
   const api = await apiClient();
   const [detailResult, historyResult] = await Promise.all([
     api.GET("/api/v1/admin/leads/{id}", { params: { path: { id } }, cache: "no-store" }),
@@ -67,15 +68,15 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("commissionPerTraveler")}</span>
-              <span>{formatMoney(lead.commissionPerTraveler, { code: "EGP" })}</span>
+              <span>{formatMoney(lead.commissionPerTraveler, { code: "EGP" }, locale)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("commissionOwed")}</span>
-              <span>{formatMoney(lead.commissionAmount, { code: "EGP" })}</span>
+              <span>{formatMoney(lead.commissionAmount, { code: "EGP" }, locale)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("cashbackOwed")}</span>
-              <span>{formatMoney(lead.cashbackAmount, { code: "EGP" })}</span>
+              <span>{formatMoney(lead.cashbackAmount, { code: "EGP" }, locale)}</span>
             </div>
           </CardContent>
         </Card>
@@ -116,7 +117,7 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
                       {h.fromStatus ? tStatus(h.fromStatus as Parameters<typeof tStatus>[0]) : "—"} →{" "}
                       {h.toStatus ? tStatus(h.toStatus as Parameters<typeof tStatus>[0]) : h.toStatus}
                     </span>
-                    <span className="text-xs text-muted-foreground">{formatDate(h.changedAt, "d MMM yyyy, HH:mm")}</span>
+                    <span className="text-xs text-muted-foreground">{formatDate(h.changedAt, "d MMM yyyy, HH:mm", locale)}</span>
                   </div>
                   {h.note && <p className="text-xs text-muted-foreground">{h.note}</p>}
                 </li>

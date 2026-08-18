@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Ticket } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient, requireUser } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
 import { LeadStatusBadge } from "@/components/lead/lead-status-badge";
@@ -18,6 +18,7 @@ export default async function LeadsPage() {
   const user = await requireUser();
   const t = await getTranslations("leads");
   const tNav = await getTranslations("nav");
+  const locale = (await getLocale()) as "ar" | "en";
 
   if (user.role !== "CUSTOMER") {
     return (
@@ -53,7 +54,7 @@ export default async function LeadsPage() {
                   <div>
                     <p className="font-heading font-semibold">{lead.tripTitle}</p>
                     <p className="text-xs text-muted-foreground">
-                      {t("preservedOn", { date: formatDate(lead.createdAt, "d MMM yyyy") })}
+                      {t("preservedOn", { date: formatDate(lead.createdAt, "d MMM yyyy", locale) })}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

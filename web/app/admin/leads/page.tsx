@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -24,6 +24,7 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
 
   const t = await getTranslations("admin.leads");
   const tStatus = await getTranslations("admin.leadStatus");
+  const locale = (await getLocale()) as "ar" | "en";
   const STATUS_OPTIONS = (
     [
       "INTERESTED",
@@ -106,13 +107,16 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
                 <TableCell className="text-muted-foreground">{l.tripTitle}</TableCell>
                 <TableCell className="text-muted-foreground">{l.companyName}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {l.commissionAmount != null ? formatMoney(l.commissionAmount, { code: "EGP" }) : "—"}
+                  {l.commissionAmount != null ? formatMoney(l.commissionAmount, { code: "EGP" }, locale) : "—"}
                 </TableCell>
                 <TableCell>
                   <AdminLeadStatusBadge status={l.status} />
                 </TableCell>
-                <TableCell className="text-muted-foreground">{formatDate(l.createdAt)}</TableCell>
-                <TableCell>{l.id && <WhatsAppButtons leadId={l.id} compact />}</TableCell>
+                <TableCell className="text-muted-foreground">{formatDate(l.createdAt, undefined, locale)}</TableCell>
+                <TableCell>
+                  <p className="text-xs text-muted-foreground">{l.customer?.phone}</p>
+                  {l.id && <WhatsAppButtons leadId={l.id} compact />}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

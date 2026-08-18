@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Plus } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
 import { listApprovedCompanies } from "@/lib/admin/reference-data";
@@ -23,10 +23,12 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
   const searchParams = await props.searchParams;
   const status = typeof searchParams.status === "string" ? searchParams.status : undefined;
   const search = typeof searchParams.search === "string" ? searchParams.search : undefined;
+  const companyId = typeof searchParams.companyId === "string" ? searchParams.companyId : undefined;
   const page = typeof searchParams.page === "string" ? Number(searchParams.page) : 0;
 
   const t = await getTranslations("admin.trips");
   const tStatus = await getTranslations("admin.tripStatus");
+  const locale = (await getLocale()) as "ar" | "en";
   const STATUS_OPTIONS = (["DRAFT", "PUBLISHED", "CLOSED", "EXPIRED"] as const).map((value) => ({
     value,
     label: tStatus(value),
@@ -39,6 +41,7 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
         query: {
           ...(status ? { status: status as "DRAFT" | "PUBLISHED" | "CLOSED" | "EXPIRED" } : {}),
           ...(search ? { search } : {}),
+          ...(companyId ? { companyId } : {}),
           ...pageableQuery(page, 20, "departureDate,desc"),
         },
       },
@@ -61,7 +64,11 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
         </Button>
       </div>
 
-      <AdminFilterBar statusOptions={STATUS_OPTIONS} searchPlaceholder={t("searchPlaceholder")} />
+      <AdminFilterBar
+        statusOptions={STATUS_OPTIONS}
+        searchPlaceholder={t("searchPlaceholder")}
+        companyOptions={companies.map((c) => ({ value: c.id, label: c.name }))}
+      />
 
       <div className="overflow-hidden rounded-xl border border-border bg-background">
         <Table>
@@ -96,7 +103,7 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
                 <TableCell>
                   <Badge variant="outline">{t.tier}</Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{formatDate(t.departureDate)}</TableCell>
+                <TableCell className="text-muted-foreground">{formatDate(t.departureDate, undefined, locale)}</TableCell>
                 <TableCell className="text-muted-foreground">{t.availableSeats ?? "—"}</TableCell>
                 <TableCell>
                   <TripStatusBadge status={t.status} />

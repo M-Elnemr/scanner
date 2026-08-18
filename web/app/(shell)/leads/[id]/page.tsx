@@ -7,7 +7,6 @@ import { apiClient, requireUser } from "@/lib/auth/server";
 import { LeadStatusBadge } from "@/components/lead/lead-status-badge";
 import { LeadDetailActions } from "@/components/lead/lead-detail-actions";
 import { ReviewCard } from "@/components/lead/review-card";
-import { CompanyCard } from "@/components/trip/company-card";
 import { simplifyLeadStatus } from "@/lib/leads/status";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -35,11 +34,6 @@ export default async function LeadDetailPage(props: PageProps<"/leads/[id]">) {
   const result = await api.GET("/api/v1/leads/{id}", { params: { path: { id } }, cache: "no-store" });
   const lead = result.data?.data;
   if (!lead?.id) notFound();
-
-  const companyResult = lead.companyId
-    ? await api.GET("/api/v1/companies/{id}", { params: { path: { id: lead.companyId } }, cache: "no-store" })
-    : null;
-  const company = companyResult?.data?.data ?? null;
 
   const state = simplifyLeadStatus(lead.status);
 
@@ -97,8 +91,6 @@ export default async function LeadDetailPage(props: PageProps<"/leads/[id]">) {
           />
         </div>
       )}
-
-      {company && <div className="mb-8">{<CompanyCard company={company} />}</div>}
 
       {state !== "cancelled" && lead.id && <ReviewCard leadId={lead.id} />}
     </div>

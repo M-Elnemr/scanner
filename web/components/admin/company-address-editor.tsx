@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ export function CompanyAddressEditor({
   cities: CityOption[];
 }) {
   const t = useTranslations("admin.companies.form.addresses");
+  const locale = useLocale();
 
   function update(index: number, patch: Partial<CompanyAddressInput>) {
     onChange(addresses.map((a, i) => (i === index ? { ...a, ...patch } : a)));
@@ -59,7 +60,7 @@ export function CompanyAddressEditor({
                 <SelectContent>
                   {cities.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                      {locale === "ar" && c.nameAr ? c.nameAr : c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

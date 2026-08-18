@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { Bell, BellOff } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { markNotificationReadAction } from "@/lib/customer/actions";
 import { formatDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export interface NotificationItem {
 export function NotificationList({ notifications }: { notifications: NotificationItem[] }) {
   const [pending, startTransition] = useTransition();
   const t = useTranslations("notifications");
+  const locale = useLocale() as "ar" | "en";
 
   if (notifications.length === 0) {
     return (
@@ -44,7 +45,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <p className="font-medium">{n.title}</p>
-              <span className="shrink-0 text-xs text-muted-foreground">{formatDate(n.createdAt, "d MMM, HH:mm")}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{formatDate(n.createdAt, "d MMM, HH:mm", locale)}</span>
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>
             {!n.readAt && (

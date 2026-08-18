@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser, apiClient } from "@/lib/auth/server";
 import { formatDate, tripDurationNights } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
@@ -14,13 +14,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type TripSummary = components["schemas"]["TripSummaryResponse"];
 
-function buildRows(t: Awaited<ReturnType<typeof getTranslations>>): {
+function buildRows(
+  t: Awaited<ReturnType<typeof getTranslations>>,
+  locale: "ar" | "en",
+): {
   label: string;
   render: (trip: TripSummary) => React.ReactNode;
 }[] {
   return [
     { label: t("rowTier"), render: (trip) => trip.tier },
-    { label: t("rowDeparture"), render: (trip) => formatDate(trip.departureDate) },
+    { label: t("rowDeparture"), render: (trip) => formatDate(trip.departureDate, undefined, locale) },
     { label: t("rowNights"), render: (trip) => tripDurationNights(trip.departureDate, trip.returnDate) ?? "—" },
     { label: t("rowAirline"), render: (trip) => trip.airline },
     {
@@ -30,7 +33,7 @@ function buildRows(t: Awaited<ReturnType<typeof getTranslations>>): {
     { label: t("rowMakkahNights"), render: (trip) => trip.daysInMakkah },
     { label: t("rowMadinahNights"), render: (trip) => trip.daysInMadinah },
     { label: t("rowSeatsLeft"), render: (trip) => trip.availableSeats },
-    { label: t("rowPriceFrom"), render: (trip) => formatMoney(trip.priceStartsFrom, trip.currency) },
+    { label: t("rowPriceFrom"), render: (trip) => formatMoney(trip.priceStartsFrom, trip.currency, locale) },
   ];
 }
 
@@ -38,6 +41,7 @@ export default async function ComparePage(props: PageProps<"/trips/compare">) {
   const user = await requireUser();
   const t = await getTranslations("compare");
   const tNav = await getTranslations("nav");
+  const locale = (await getLocale()) as "ar" | "en";
   const sp = await props.searchParams;
   const ids = (Array.isArray(sp.ids) ? sp.ids[0] : sp.ids)?.split(",").filter(Boolean) ?? [];
 
@@ -63,7 +67,7 @@ export default async function ComparePage(props: PageProps<"/trips/compare">) {
   const api = await apiClient();
   const result = await api.GET("/api/v1/trips/compare", { params: { query: { ids } } });
   const trips = result.data?.data ?? [];
-  const ROWS = buildRows(t);
+  const ROWS = buildRows(t, locale);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

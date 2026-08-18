@@ -4,8 +4,13 @@ interface CurrencyLike {
 }
 
 /** Every trip quotes and is paid in its own currency — never assume EGP. */
-export function formatMoney(amount: number | undefined | null, currency?: CurrencyLike): string {
+export function formatMoney(
+  amount: number | undefined | null,
+  currency?: CurrencyLike,
+  locale: "ar" | "en" = "en",
+): string {
   if (amount == null) return "—";
   const formatted = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
+  if (locale === "ar" && currency?.code === "EGP") return `${formatted} جنيه`;
   return currency?.symbol ? `${currency.symbol} ${formatted}` : `${formatted} ${currency?.code ?? ""}`.trim();
 }

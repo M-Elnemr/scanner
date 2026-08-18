@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export function AdminFilterBar({
   statusOptions,
+  companyOptions,
   searchPlaceholder,
 }: {
   statusOptions: { value: string; label: string }[];
+  companyOptions?: { value: string; label: string }[];
   searchPlaceholder?: string;
 }) {
   const t = useTranslations("admin.common");
@@ -21,6 +23,7 @@ export function AdminFilterBar({
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const status = searchParams.get("status") ?? "";
+  const companyId = searchParams.get("companyId") ?? "";
 
   function pushParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
@@ -37,7 +40,7 @@ export function AdminFilterBar({
     });
   }
 
-  const hasFilters = Boolean(status || searchParams.get("search"));
+  const hasFilters = Boolean(status || companyId || searchParams.get("search"));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -66,6 +69,24 @@ export function AdminFilterBar({
           ))}
         </SelectContent>
       </Select>
+
+      {companyOptions && (
+        <Select
+          value={companyId}
+          onValueChange={(v) => pushParams((params) => (v ? params.set("companyId", v) : params.delete("companyId")))}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder={t("allCompanies")} />
+          </SelectTrigger>
+          <SelectContent>
+            {companyOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {hasFilters && (
         <Button
