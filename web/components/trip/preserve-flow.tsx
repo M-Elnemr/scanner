@@ -37,6 +37,7 @@ export function PreserveFlow({
   const t = useTranslations("preserveFlow");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [blockedBy, setBlockedBy] = useState<ActiveLeadSummary | null>(null);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [counts, setCounts] = useTravelerPickerState();
   const [pending, startTransition] = useTransition();
@@ -93,6 +94,11 @@ export function PreserveFlow({
           tripId: result.activeLead.tripId,
           tripTitle: result.activeLead.tripTitle,
         });
+        return;
+      }
+      if (result.code === "PROFILE_INCOMPLETE") {
+        setPickerOpen(false);
+        setProfileIncomplete(true);
         return;
       }
       toast.error(result.error ?? t("toastCouldNotPreserve"));
@@ -168,6 +174,20 @@ export function PreserveFlow({
             <Button variant="destructive" className="flex-1" onClick={cancelAndContinue} disabled={pending}>
               {pending && <Loader2 className="size-4 animate-spin" />}
               {t("cancelAndContinue")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={profileIncomplete} onOpenChange={setProfileIncomplete}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("completeProfileTitle")}</DialogTitle>
+            <DialogDescription>{t("completeProfileDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button className="w-full" render={<Link href="/profile" />}>
+              {t("completeProfileCta")}
             </Button>
           </DialogFooter>
         </DialogContent>

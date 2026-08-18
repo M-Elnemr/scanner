@@ -6,6 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 public record UpdateCustomerProfileRequest(
         @NotBlank String fullName,
         @NotBlank String phone,
-        @NotBlank String cashbackWalletNumber,
+        String cashbackWalletNumber,
         WalletType walletType) {
 }

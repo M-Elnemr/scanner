@@ -6,4 +6,8 @@ public class ValidationException extends DomainException {
     public ValidationException(String message) {
         super(message);
     }
+
+    public ValidationException(String message, String code) {
+        super(message, code, java.util.Map.of());
+    }
 }

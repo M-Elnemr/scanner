@@ -204,7 +204,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
               <div className="overflow-hidden rounded-xl border border-border">
                 <table className="w-full text-sm">
                   <tbody>
-                    {trip.roomPrices.map((p, i) => (
+                    {[...trip.roomPrices].sort((a, b) => roomTypeSortOrder(a.roomType) - roomTypeSortOrder(b.roomType)).map((p, i) => (
                       <tr key={i} className="border-b border-border last:border-0 even:bg-secondary/30">
                         <td className="p-3">{p.roomType ? (ROOM_LABEL[p.roomType] ?? p.roomType) : "—"}</td>
                         <td className="p-3 text-right font-semibold">{formatMoney(p.price, trip.currency, locale)}</td>
@@ -242,6 +242,12 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
       </div>
     </div>
   );
+}
+
+const ROOM_TYPE_ORDER: Record<string, number> = { DOUBLE: 0, TRIPLE: 1, QUAD: 2, CHILD: 3, INFANT: 4, SINGLE: 5 };
+
+function roomTypeSortOrder(roomType: string | undefined): number {
+  return roomType != null && roomType in ROOM_TYPE_ORDER ? ROOM_TYPE_ORDER[roomType] : 99;
 }
 
 function Stat({ icon: Icon, label, value }: { icon: typeof CalendarDays; label: string; value: string }) {

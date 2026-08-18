@@ -38,13 +38,14 @@ public class WhatsAppMessageComposer {
             .withDecimalStyle(DecimalStyle.STANDARD);
 
     /** Everything a customer needs to recognise and act on the trip they preserved. */
-    public String composeTripMessage(Trip trip, String customerName, WhatsAppLanguage lang) {
+    public String composeTripMessage(
+            Trip trip, String customerName, int adultCount, int childCount, int infantCount, WhatsAppLanguage lang) {
         boolean ar = lang == WhatsAppLanguage.AR;
         StringBuilder m = new StringBuilder();
 
         m.append(ar
-                ? "السلام عليكم مع حضرتك شركه عمده اسكان حضرتك حجزت معانا رحله\n\n"
-                : "Hello, this is Omda Eskan. You've booked a trip with us.\n\n");
+                ? "السلام عليكم مع حضرتك شركه عمره اسكان حضرتك حجزت معانا رحله\n\n"
+                : "Hello, this is Omra Eskan. You've booked a trip with us.\n\n");
         m.append(ar ? "تفاصيل رحلتك: " : "Here are your trip details: ").append(trip.getTitle())
                 .append(" (").append(trip.getTripCode()).append(")\n\n");
 
@@ -69,8 +70,47 @@ public class WhatsAppMessageComposer {
         for (RoomPrice price : trip.getRoomPrices()) {
             m.append(roomLine(price, trip, ar)).append('\n');
         }
+        m.append('\n');
+
+        m.append(travelersLine(adultCount, childCount, infantCount, ar)).append('\n');
+        BigDecimal total = totalCost(trip, adultCount, childCount, infantCount);
+        if (total != null) {
+            m.append(ar ? "💰 الإجمالي: " : "💰 Total: ")
+                    .append(formatMoney(total, trip.getCurrency().getCode(), ar));
+        }
 
         return m.toString();
+    }
+
+    private String travelersLine(int adultCount, int childCount, int infantCount, boolean ar) {
+        StringBuilder line = new StringBuilder(ar ? "👥 عدد المسافرين: " : "👥 Travelers: ");
+        line.append(ar ? adultCount + " بالغ" : adultCount + " adult" + (adultCount == 1 ? "" : "s"));
+        if (childCount > 0) {
+            line.append(ar ? "، " + childCount + " طفل" : ", " + childCount + " child" + (childCount == 1 ? "" : "ren"));
+        }
+        if (infantCount > 0) {
+            line.append(ar ? "، " + infantCount + " رضيع" : ", " + infantCount + " infant" + (infantCount == 1 ? "" : "s"));
+        }
+        return line.toString();
+    }
+
+    /** Adults price at the QUAD (4-bed) rate, matching how "price starts from" is quoted elsewhere. */
+    private BigDecimal totalCost(Trip trip, int adultCount, int childCount, int infantCount) {
+        BigDecimal total = BigDecimal.ZERO;
+        boolean priced = false;
+        for (RoomPrice price : trip.getRoomPrices()) {
+            int count = switch (price.getRoomType()) {
+                case QUAD -> adultCount;
+                case CHILD -> childCount;
+                case INFANT -> infantCount;
+                default -> 0;
+            };
+            if (count > 0) {
+                total = total.add(price.getPrice().multiply(BigDecimal.valueOf(count)));
+                priced = true;
+            }
+        }
+        return priced ? total : null;
     }
 
     /** The operator's own identity and how to reach every branch. */
@@ -78,7 +118,6 @@ public class WhatsAppMessageComposer {
         boolean ar = lang == WhatsAppLanguage.AR;
         StringBuilder m = new StringBuilder();
 
-        m.append(ar ? "مرحباً " : "Hello ").append(customerName).append(ar ? "،\n\n" : ",\n\n");
         m.append(ar ? "بيانات الشركة المنظمة لرحلتك:\n\n" : "Here are the details of the company running your trip:\n\n");
 
         m.append("🏢 ").append(company.getCompanyName()).append('\n');

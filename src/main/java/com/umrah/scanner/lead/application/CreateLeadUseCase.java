@@ -60,9 +60,9 @@ public class CreateLeadUseCase {
     @Transactional
     public Lead execute(UUID customerUserId, CreateLeadCommand command) {
         CustomerProfile customer = customerProfileRepository.findByUserId(customerUserId)
-                .orElseThrow(() -> new ValidationException("Complete your profile before contacting a company"));
+                .orElseThrow(() -> new ValidationException("Complete your profile before contacting a company", "PROFILE_INCOMPLETE"));
         if (!customer.isProfileCompleted()) {
-            throw new ValidationException("Complete your profile before contacting a company");
+            throw new ValidationException("Complete your profile before contacting a company", "PROFILE_INCOMPLETE");
         }
 
         Trip trip = tripRepository.findWithDetailsById(command.tripId())

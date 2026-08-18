@@ -37,10 +37,9 @@ public class UpdateCustomerProfileUseCase {
         return customerProfileRepository.save(profile);
     }
 
+    /** Wallet info is not required for now — cashback payout collection is deferred client-side. */
     private boolean isComplete(CustomerProfile profile) {
         return profile.getFullName() != null && !profile.getFullName().isBlank()
-                && profile.getPhone() != null && !profile.getPhone().isBlank()
-                && profile.getCashbackWalletNumber() != null && !profile.getCashbackWalletNumber().isBlank()
-                && profile.getWalletType() != null;
+                && profile.getPhone() != null && !profile.getPhone().isBlank();
     }
 }

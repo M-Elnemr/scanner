@@ -7,16 +7,9 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updateProfileAction } from "@/lib/customer/actions";
 
 type WalletType = "VODAFONE_CASH" | "ETISALAT_CASH" | "INSTA_PAY";
-
-const WALLET_LABEL_KEY: Record<WalletType, "walletVodafoneCash" | "walletEtisalatCash" | "walletInstaPay"> = {
-  VODAFONE_CASH: "walletVodafoneCash",
-  ETISALAT_CASH: "walletEtisalatCash",
-  INSTA_PAY: "walletInstaPay",
-};
 
 export function ProfileForm({
   initial,
@@ -56,7 +49,7 @@ export function ProfileForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="phone">{t("phone")}</Label>
+        <Label htmlFor="phone">{t("whatsappNumber")}</Label>
         <Input
           id="phone"
           value={values.phone}
@@ -65,42 +58,6 @@ export function ProfileForm({
           required
         />
         {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>{t("payoutWallet")}</Label>
-        <p className="text-xs text-muted-foreground">{t("payoutWalletHint")}</p>
-        <div className="flex gap-2">
-          <Select
-            value={values.walletType}
-            onValueChange={(v) => v && setValues((val) => ({ ...val, walletType: v as WalletType }))}
-            items={(Object.keys(WALLET_LABEL_KEY) as WalletType[]).map((type) => ({
-              value: type,
-              label: t(WALLET_LABEL_KEY[type]),
-            }))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(WALLET_LABEL_KEY) as WalletType[]).map((type) => (
-                <SelectItem key={type} value={type}>
-                  {t(WALLET_LABEL_KEY[type])}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={values.cashbackWalletNumber}
-            onChange={(e) => setValues((v) => ({ ...v, cashbackWalletNumber: e.target.value }))}
-            placeholder={t("walletNumberPlaceholder")}
-            className="flex-1"
-            required
-          />
-        </div>
-        {fieldErrors.cashbackWalletNumber && (
-          <p className="text-xs text-destructive">{fieldErrors.cashbackWalletNumber}</p>
-        )}
       </div>
 
       <Button type="submit" disabled={pending}>
