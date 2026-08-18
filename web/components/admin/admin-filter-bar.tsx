@@ -57,6 +57,7 @@ export function AdminFilterBar({
       <Select
         value={status}
         onValueChange={(v) => pushParams((params) => (v ? params.set("status", v) : params.delete("status")))}
+        items={statusOptions}
       >
         <SelectTrigger className="w-44">
           <SelectValue placeholder={t("allStatuses")} />
@@ -74,6 +75,7 @@ export function AdminFilterBar({
         <Select
           value={companyId}
           onValueChange={(v) => pushParams((params) => (v ? params.set("companyId", v) : params.delete("companyId")))}
+          items={companyOptions}
         >
           <SelectTrigger className="w-44">
             <SelectValue placeholder={t("allCompanies")} />

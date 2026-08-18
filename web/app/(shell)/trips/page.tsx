@@ -49,7 +49,8 @@ export default async function TripsPage(props: PageProps<"/trips">) {
         ...pageableQuery(page, 12),
       },
     },
-    cache: "no-store",
+    cache: "force-cache",
+    next: { revalidate: 30 },
   });
   const result_ = unwrap(result);
 

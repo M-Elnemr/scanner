@@ -74,6 +74,10 @@ export function ProfileForm({
           <Select
             value={values.walletType}
             onValueChange={(v) => v && setValues((val) => ({ ...val, walletType: v as WalletType }))}
+            items={(Object.keys(WALLET_LABEL_KEY) as WalletType[]).map((type) => ({
+              value: type,
+              label: t(WALLET_LABEL_KEY[type]),
+            }))}
           >
             <SelectTrigger className="w-40">
               <SelectValue />

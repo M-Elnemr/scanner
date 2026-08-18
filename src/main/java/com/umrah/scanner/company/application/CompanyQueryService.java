@@ -94,7 +94,12 @@ public class CompanyQueryService {
             specs.add(CompanySpecifications.nameOrLicenseContains(search));
         }
         Page<CompanyProfile> companies = companyProfileRepository.findAll(Specification.allOf(specs), pageable);
-        companies.forEach(CompanyProfileInitializer::initializeAddresses);
+        List<UUID> ids = companies.getContent().stream().map(CompanyProfile::getId).toList();
+        if (!ids.isEmpty()) {
+            // Same managed entities as `companies` (same persistence context) — this just warms
+            // their addresses/city associations in one query instead of one per row.
+            companyProfileRepository.findAllById(ids);
+        }
         return companies;
     }
 }

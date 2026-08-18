@@ -100,7 +100,14 @@ export function WhatsAppButtons({ leadId, compact = false }: { leadId: string; c
             </DialogDescription>
           </DialogHeader>
 
-          <Select value={lang} onValueChange={(v) => v && compose(kind, v as "ar" | "en")}>
+          <Select
+            value={lang}
+            onValueChange={(v) => v && compose(kind, v as "ar" | "en")}
+            items={[
+              { value: "ar", label: t("languageArabic") },
+              { value: "en", label: t("languageEnglish") },
+            ]}
+          >
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>

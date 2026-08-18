@@ -68,7 +68,11 @@ export function AdminLeadActions({ leadId, availableActions }: { leadId: string;
           </DialogHeader>
           <div className="space-y-1.5">
             <Label>{t("newStatusLabel")}</Label>
-            <Select value={targetStatus} onValueChange={(v) => v && setTargetStatus(v as LeadStatus)}>
+            <Select
+              value={targetStatus}
+              onValueChange={(v) => v && setTargetStatus(v as LeadStatus)}
+              items={ALL_LEAD_STATUSES.map((s) => ({ value: s, label: leadStatusLabel(s) }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

@@ -53,7 +53,11 @@ export function CompanyAddressEditor({
           <div key={index} className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[1fr_1fr_auto]">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">{t("cityLabel")}</Label>
-              <Select value={address.cityId} onValueChange={(v) => v && update(index, { cityId: v })}>
+              <Select
+                value={address.cityId}
+                onValueChange={(v) => v && update(index, { cityId: v })}
+                items={cities.map((c) => ({ value: c.id, label: locale === "ar" && c.nameAr ? c.nameAr : c.name }))}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={t("cityPlaceholder")} />
                 </SelectTrigger>

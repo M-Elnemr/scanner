@@ -62,6 +62,12 @@ public final class TripSpecifications {
         return (root, query, cb) -> root.get("tier").in(tiers);
     }
 
+    /** Hides trips whose departure date has already passed from discovery (browse/home). Not
+     * applied to single-trip lookups — see the carve-out comment at its call site. */
+    public static Specification<Trip> departureOnOrAfter(LocalDate date) {
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("departureDate"), date);
+    }
+
     public static Specification<Trip> departureBetween(LocalDate from, LocalDate to) {
         return (root, query, cb) -> {
             if (from != null && to != null) {
