@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowRightLeft, Eye, Loader2, MoreHorizontal, Pencil, Send, Trash2, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,6 +32,8 @@ export function TripRowActions({
   companies: CompanyOption[];
 }) {
   const router = useRouter();
+  const t = useTranslations("admin.trips.actions");
+  const tCommon = useTranslations("admin.common");
   const [pending, startTransition] = useTransition();
   const [reassignOpen, setReassignOpen] = useState(false);
   const [targetCompany, setTargetCompany] = useState("");
@@ -46,7 +49,7 @@ export function TripRowActions({
         after?.();
         router.refresh();
       } else {
-        toast.error(result.error ?? "Something went wrong.");
+        toast.error(result.error ?? tCommon("somethingWentWrong"));
       }
     });
   }
@@ -59,27 +62,27 @@ export function TripRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem render={<Link href={`/trips/${id}`} target="_blank" />}>
-            <Eye /> View public page
+            <Eye /> {t("viewPublic")}
           </DropdownMenuItem>
           <DropdownMenuItem render={<Link href={`/admin/trips/${id}`} />}>
-            <Pencil /> Edit
+            <Pencil /> {t("edit")}
           </DropdownMenuItem>
           {s === "DRAFT" && (
-            <DropdownMenuItem onClick={() => run("Trip published.", () => changeTripStatusAction(id, "PUBLISHED"))}>
-              <Send /> Publish
+            <DropdownMenuItem onClick={() => run(t("publishedToast"), () => changeTripStatusAction(id, "PUBLISHED"))}>
+              <Send /> {t("publish")}
             </DropdownMenuItem>
           )}
           {s === "PUBLISHED" && (
-            <DropdownMenuItem onClick={() => run("Trip closed.", () => changeTripStatusAction(id, "CLOSED"))}>
-              <XCircle /> Close
+            <DropdownMenuItem onClick={() => run(t("closedToast"), () => changeTripStatusAction(id, "CLOSED"))}>
+              <XCircle /> {t("close")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => setReassignOpen(true)}>
-            <ArrowRightLeft /> Reassign company
+            <ArrowRightLeft /> {t("reassign")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 /> Delete
+            <Trash2 /> {tCommon("delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -87,17 +90,14 @@ export function TripRowActions({
       <Dialog open={reassignOpen} onOpenChange={setReassignOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Reassign this trip</DialogTitle>
-            <DialogDescription>
-              Existing bookings stay with the current company and keep their original pricing — only new bookings
-              follow the new owner.
-            </DialogDescription>
+            <DialogTitle>{t("reassignDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("reassignDialogDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label>New company</Label>
+            <Label>{t("newCompanyLabel")}</Label>
             <Select value={targetCompany} onValueChange={(v) => v && setTargetCompany(v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select company" />
+                <SelectValue placeholder={t("selectCompanyPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {companies.map((c) => (
@@ -113,11 +113,11 @@ export function TripRowActions({
               className="w-full"
               disabled={pending || !targetCompany}
               onClick={() =>
-                run("Trip reassigned.", () => reassignTripCompanyAction(id, targetCompany), () => setReassignOpen(false))
+                run(t("reassignedToast"), () => reassignTripCompanyAction(id, targetCompany), () => setReassignOpen(false))
               }
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Reassign
+              {t("reassignSubmit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -126,21 +126,21 @@ export function TripRowActions({
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete this trip?</DialogTitle>
-            <DialogDescription>This can&apos;t be undone from here.</DialogDescription>
+            <DialogTitle>{t("deleteDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("deleteDialogDesc")}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setDeleteOpen(false)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               variant="destructive"
               className="flex-1"
               disabled={pending}
-              onClick={() => run("Trip deleted.", () => deleteTripAction(id), () => setDeleteOpen(false))}
+              onClick={() => run(t("deletedToast"), () => deleteTripAction(id), () => setDeleteOpen(false))}
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Delete
+              {tCommon("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

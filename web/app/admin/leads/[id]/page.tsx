@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { AdminLeadStatusBadge } from "@/components/admin/admin-lead-status-badge";
 import { AdminLeadActions } from "@/components/admin/admin-lead-actions";
@@ -10,10 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 
-export const metadata: Metadata = { title: "Lead detail · Admin" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.pageTitle");
+  return { title: t("leadDetail") };
+}
 
 export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads/[id]">) {
   const { id } = await props.params;
+  const t = await getTranslations("admin.leads");
+  const tStatus = await getTranslations("admin.leadStatus");
   const api = await apiClient();
   const [detailResult, historyResult] = await Promise.all([
     api.GET("/api/v1/admin/leads/{id}", { params: { path: { id } }, cache: "no-store" }),
@@ -27,7 +33,7 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <Link href="/admin/leads" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3.5" /> Leads
+        <ArrowLeft className="size-3.5" /> {t("backLink")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -43,32 +49,32 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Travelers</CardTitle>
+            <CardTitle className="font-heading text-base">{t("travelersTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2 text-sm">
             <Users className="size-4 text-muted-foreground" />
-            {lead.adultCount} adult{lead.adultCount === 1 ? "" : "s"}
-            {lead.childCount ? `, ${lead.childCount} child${lead.childCount === 1 ? "" : "ren"}` : ""}
-            {lead.infantCount ? `, ${lead.infantCount} infant${lead.infantCount === 1 ? "" : "s"}` : ""}
-            <span className="text-muted-foreground">({lead.travelerCount} billable)</span>
+            {t("travelersAdults", { count: lead.adultCount ?? 0 })}
+            {lead.childCount ? `, ${t("travelersChildren", { count: lead.childCount })}` : ""}
+            {lead.infantCount ? `, ${t("travelersInfants", { count: lead.infantCount })}` : ""}
+            <span className="text-muted-foreground">{t("billableSuffix", { count: lead.travelerCount ?? 0 })}</span>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Ledger</CardTitle>
+            <CardTitle className="font-heading text-base">{t("ledgerTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Commission per traveler</span>
+              <span className="text-muted-foreground">{t("commissionPerTraveler")}</span>
               <span>{formatMoney(lead.commissionPerTraveler, { code: "EGP" })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Commission owed</span>
+              <span className="text-muted-foreground">{t("commissionOwed")}</span>
               <span>{formatMoney(lead.commissionAmount, { code: "EGP" })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Cashback owed</span>
+              <span className="text-muted-foreground">{t("cashbackOwed")}</span>
               <span>{formatMoney(lead.cashbackAmount, { code: "EGP" })}</span>
             </div>
           </CardContent>
@@ -77,7 +83,7 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Company</CardTitle>
+          <CardTitle className="font-heading text-base">{t("companyTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <Link href={`/admin/companies/${lead.companyId}`} className="text-foreground hover:text-primary">
@@ -87,19 +93,19 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
       </Card>
 
       <div>
-        <h2 className="mb-3 font-heading text-base font-semibold">Actions</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold">{t("actionsTitle")}</h2>
         <AdminLeadActions leadId={lead.id} availableActions={lead.availableActions ?? []} />
       </div>
 
       <div>
-        <h2 className="mb-3 font-heading text-base font-semibold">WhatsApp</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold">{t("whatsappTitle")}</h2>
         <WhatsAppButtons leadId={lead.id} />
       </div>
 
       {history.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">History</CardTitle>
+            <CardTitle className="font-heading text-base">{t("historyTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -107,7 +113,8 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
                 <li key={i} className="flex flex-col gap-0.5 border-b border-border pb-3 text-sm last:border-0 last:pb-0">
                   <div className="flex items-center justify-between">
                     <span>
-                      {h.fromStatus ?? "—"} → {h.toStatus}
+                      {h.fromStatus ? tStatus(h.fromStatus as Parameters<typeof tStatus>[0]) : "—"} →{" "}
+                      {h.toStatus ? tStatus(h.toStatus as Parameters<typeof tStatus>[0]) : h.toStatus}
                     </span>
                     <span className="text-xs text-muted-foreground">{formatDate(h.changedAt, "d MMM yyyy, HH:mm")}</span>
                   </div>

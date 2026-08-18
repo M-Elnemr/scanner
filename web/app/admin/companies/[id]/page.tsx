@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { listCities } from "@/lib/admin/cities";
 import { CompanyForm } from "@/components/admin/company-form";
@@ -7,10 +8,14 @@ import { CompanyStatusBadge } from "@/components/admin/company-status-badge";
 import { CompanyRowActions } from "@/components/admin/company-row-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "Edit company · Admin" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.pageTitle");
+  return { title: t("companyEdit") };
+}
 
 export default async function EditCompanyPage(props: PageProps<"/admin/companies/[id]">) {
   const { id } = await props.params;
+  const t = await getTranslations("admin.companies");
   const api = await apiClient();
   const [companyResult, cities] = await Promise.all([
     api.GET("/api/v1/admin/companies/{id}", { params: { path: { id } }, cache: "no-store" }),
@@ -27,7 +32,7 @@ export default async function EditCompanyPage(props: PageProps<"/admin/companies
           <div className="mt-1 flex items-center gap-2">
             <CompanyStatusBadge status={company.status} />
             {company.rejectionReason && (
-              <span className="text-xs text-muted-foreground">Reason: {company.rejectionReason}</span>
+              <span className="text-xs text-muted-foreground">{t("reasonLabel", { reason: company.rejectionReason })}</span>
             )}
           </div>
         </div>
@@ -36,7 +41,7 @@ export default async function EditCompanyPage(props: PageProps<"/admin/companies
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-lg">Company details</CardTitle>
+          <CardTitle className="font-heading text-lg">{t("detailsTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <CompanyForm

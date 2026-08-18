@@ -39,7 +39,7 @@ public class WhatsAppLeadMessageService {
     public WhatsAppMessage tripMessage(UUID leadId, WhatsAppLanguage lang) {
         Lead lead = leadQueryService.getForAdmin(leadId);
         Trip trip = tripQueryService.ownedDetail(lead.getTrip().getId()).trip();
-        String message = composer.composeTripMessage(trip, lead.getCustomer().getFullName(), lead.getCashbackAmount(), lang);
+        String message = composer.composeTripMessage(trip, lead.getCustomer().getFullName(), lang);
         return toMessage(lead, message);
     }
 

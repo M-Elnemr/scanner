@@ -2,9 +2,11 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 export function TablePagination({ page, totalPages }: { page: number; totalPages: number }) {
+  const t = useTranslations("pagination");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -22,9 +24,7 @@ export function TablePagination({ page, totalPages }: { page: number; totalPages
       <Button variant="outline" size="icon" disabled={page <= 0} onClick={() => goTo(page - 1)}>
         <ChevronLeft className="size-4" />
       </Button>
-      <span className="px-3 text-sm text-muted-foreground">
-        Page {page + 1} of {totalPages}
-      </span>
+      <span className="px-3 text-sm text-muted-foreground">{t("pageOf", { page: page + 1, total: totalPages })}</span>
       <Button variant="outline" size="icon" disabled={page >= totalPages - 1} onClick={() => goTo(page + 1)}>
         <ChevronRight className="size-4" />
       </Button>

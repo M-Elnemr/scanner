@@ -35,7 +35,7 @@ public class WhatsAppMessageComposer {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
 
     /** Everything a customer needs to recognise and act on the trip they preserved. */
-    public String composeTripMessage(Trip trip, String customerName, BigDecimal cashbackAmount, WhatsAppLanguage lang) {
+    public String composeTripMessage(Trip trip, String customerName, WhatsAppLanguage lang) {
         boolean ar = lang == WhatsAppLanguage.AR;
         StringBuilder m = new StringBuilder();
 
@@ -64,9 +64,6 @@ public class WhatsAppMessageComposer {
             m.append(roomLine(price, trip, ar)).append('\n');
         }
         m.append('\n');
-
-        m.append(ar ? "💰 الكاش باك لهذا الحجز: " : "💰 Your cashback on this booking: ")
-                .append(formatMoney(cashbackAmount, "EGP")).append("\n\n");
 
         m.append(ar ? "سيتواصل معك فريق خدمة العملاء قريباً." : "Our client service team will be in touch soon.");
         return m.toString();

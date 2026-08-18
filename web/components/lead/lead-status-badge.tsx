@@ -1,6 +1,7 @@
 import { CheckCircle2, Compass, XCircle } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
-import { simplifyLeadStatus, SIMPLE_STATE_LABEL } from "@/lib/leads/status";
+import { simplifyLeadStatus } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
 
 const STYLES: Record<string, string> = {
@@ -11,13 +12,14 @@ const STYLES: Record<string, string> = {
 
 const ICONS = { preserved: Compass, completed: CheckCircle2, cancelled: XCircle };
 
-export function LeadStatusBadge({ status }: { status: string | undefined }) {
+export async function LeadStatusBadge({ status }: { status: string | undefined }) {
   const state = simplifyLeadStatus(status);
   const Icon = ICONS[state];
+  const t = await getTranslations("leadStatus");
   return (
     <Badge variant="outline" className={cn("gap-1 rounded-full", STYLES[state])}>
       <Icon className="size-3" />
-      {SIMPLE_STATE_LABEL[state]}
+      {t(state)}
     </Badge>
   );
 }

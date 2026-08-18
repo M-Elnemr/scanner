@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +12,10 @@ import { updateProfileAction } from "@/lib/customer/actions";
 
 type WalletType = "VODAFONE_CASH" | "ETISALAT_CASH" | "INSTA_PAY";
 
-const WALLET_LABEL: Record<WalletType, string> = {
-  VODAFONE_CASH: "Vodafone Cash",
-  ETISALAT_CASH: "Etisalat Cash",
-  INSTA_PAY: "InstaPay",
+const WALLET_LABEL_KEY: Record<WalletType, "walletVodafoneCash" | "walletEtisalatCash" | "walletInstaPay"> = {
+  VODAFONE_CASH: "walletVodafoneCash",
+  ETISALAT_CASH: "walletEtisalatCash",
+  INSTA_PAY: "walletInstaPay",
 };
 
 export function ProfileForm({
@@ -25,6 +26,7 @@ export function ProfileForm({
   const [values, setValues] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const t = useTranslations("profile");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,10 +34,10 @@ export function ProfileForm({
       const result = await updateProfileAction(values);
       if (result.ok) {
         setFieldErrors({});
-        toast.success("Profile updated.");
+        toast.success(t("updated"));
       } else {
         setFieldErrors(result.fieldErrors ?? {});
-        toast.error(result.error ?? "Could not update your profile.");
+        toast.error(result.error ?? t("couldNotUpdate"));
       }
     });
   }
@@ -43,7 +45,7 @@ export function ProfileForm({
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="fullName">Full name</Label>
+        <Label htmlFor="fullName">{t("fullName")}</Label>
         <Input
           id="fullName"
           value={values.fullName}
@@ -54,20 +56,20 @@ export function ProfileForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="phone">Phone</Label>
+        <Label htmlFor="phone">{t("phone")}</Label>
         <Input
           id="phone"
           value={values.phone}
           onChange={(e) => setValues((v) => ({ ...v, phone: e.target.value }))}
-          placeholder="+2010…"
+          placeholder={t("phonePlaceholder")}
           required
         />
         {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label>Payout wallet</Label>
-        <p className="text-xs text-muted-foreground">Where we send your payout once a booking completes.</p>
+        <Label>{t("payoutWallet")}</Label>
+        <p className="text-xs text-muted-foreground">{t("payoutWalletHint")}</p>
         <div className="flex gap-2">
           <Select
             value={values.walletType}
@@ -77,9 +79,9 @@ export function ProfileForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(Object.keys(WALLET_LABEL) as WalletType[]).map((type) => (
+              {(Object.keys(WALLET_LABEL_KEY) as WalletType[]).map((type) => (
                 <SelectItem key={type} value={type}>
-                  {WALLET_LABEL[type]}
+                  {t(WALLET_LABEL_KEY[type])}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -87,7 +89,7 @@ export function ProfileForm({
           <Input
             value={values.cashbackWalletNumber}
             onChange={(e) => setValues((v) => ({ ...v, cashbackWalletNumber: e.target.value }))}
-            placeholder="Wallet number"
+            placeholder={t("walletNumberPlaceholder")}
             className="flex-1"
             required
           />
@@ -99,7 +101,7 @@ export function ProfileForm({
 
       <Button type="submit" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
-        Save changes
+        {t("saveChanges")}
       </Button>
     </form>
   );

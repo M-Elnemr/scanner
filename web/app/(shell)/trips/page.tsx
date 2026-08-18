@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { publicApi, unwrap } from "@/lib/api/client";
 import { pageableQuery } from "@/lib/api/pageable";
 import { FilterBar } from "@/components/trip/filter-bar";
@@ -6,7 +7,10 @@ import { TripGrid } from "@/components/trip/trip-grid";
 import { TripPagination } from "@/components/trip/trip-pagination";
 import { CompareTray } from "@/components/trip/compare-tray";
 
-export const metadata: Metadata = { title: "Browse trips" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("trips");
+  return { title: t("title") };
+}
 
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -18,6 +22,7 @@ function many(value: string | string[] | undefined): string[] {
 }
 
 export default async function TripsPage(props: PageProps<"/trips">) {
+  const t = await getTranslations("trips");
   const sp = await props.searchParams;
   const page = Number(first(sp.page) ?? 0);
 
@@ -58,9 +63,9 @@ export default async function TripsPage(props: PageProps<"/trips">) {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col gap-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Browse trips</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            {result_.totalElements ?? 0} journey{result_.totalElements === 1 ? "" : "s"} available
+            {t("journeysAvailable", { count: result_.totalElements ?? 0 })}
           </p>
         </div>
         <FilterBar />
@@ -78,7 +83,7 @@ export default async function TripsPage(props: PageProps<"/trips">) {
         </>
       ) : (
         <div className="rounded-2xl border border-dashed border-border py-24 text-center text-muted-foreground">
-          No trips match these filters yet — try widening your search.
+          {t("noResults")}
         </div>
       )}
 

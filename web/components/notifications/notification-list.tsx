@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Bell, BellOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { markNotificationReadAction } from "@/lib/customer/actions";
 import { formatDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,13 @@ export interface NotificationItem {
 
 export function NotificationList({ notifications }: { notifications: NotificationItem[] }) {
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("notifications");
 
   if (notifications.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border py-20 text-center">
         <BellOff className="mx-auto mb-3 size-8 text-muted-foreground" />
-        <p className="text-muted-foreground">You&apos;re all caught up — no notifications yet.</p>
+        <p className="text-muted-foreground">{t("empty")}</p>
       </div>
     );
   }
@@ -56,7 +58,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                 }
                 className="mt-2 text-xs font-medium text-primary hover:underline disabled:opacity-60"
               >
-                Mark as read
+                {t("markAsRead")}
               </button>
             )}
           </div>

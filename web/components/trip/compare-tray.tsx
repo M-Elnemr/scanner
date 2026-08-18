@@ -3,12 +3,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Scale, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCompare } from "@/components/trip/compare-store";
 import { Button } from "@/components/ui/button";
 
 export function CompareTray() {
   const { ids, clear, max } = useCompare();
   const router = useRouter();
+  const t = useTranslations("trips");
 
   return (
     <AnimatePresence>
@@ -23,7 +25,7 @@ export function CompareTray() {
           <div className="flex items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2.5 shadow-xl backdrop-blur">
             <span className="flex items-center gap-1.5 text-sm font-medium">
               <Scale className="size-4 text-primary" />
-              {ids.length} of {max} selected
+              {t("selectedOfMax", { count: ids.length, max })}
             </span>
             <Button
               size="sm"
@@ -31,7 +33,7 @@ export function CompareTray() {
               disabled={ids.length < 2}
               onClick={() => router.push(`/trips/compare?ids=${ids.join(",")}`)}
             >
-              Compare
+              {t("compareButton")}
             </Button>
             <Button size="icon-sm" variant="ghost" className="rounded-full" onClick={clear}>
               <X className="size-4" />

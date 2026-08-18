@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, MessageCircle, ExternalLink } from "lucide-react";
+import { Loader2, MessageCircle, ExternalLink, Building2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +13,8 @@ import { composeCompanyWhatsAppAction, composeTripWhatsAppAction, type WhatsAppM
 
 type Kind = "trip" | "company";
 
-export function WhatsAppButtons({ leadId }: { leadId: string }) {
+export function WhatsAppButtons({ leadId, compact = false }: { leadId: string; compact?: boolean }) {
+  const t = useTranslations("admin.whatsapp");
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<"ar" | "en">("ar");
@@ -37,24 +40,63 @@ export function WhatsAppButtons({ leadId }: { leadId: string }) {
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" disabled={pending} onClick={() => compose("trip")}>
-          {pending && kind === "trip" ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
-          Message about trip
-        </Button>
-        <Button variant="outline" disabled={pending} onClick={() => compose("company")}>
-          {pending && kind === "company" ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
-          Message about company
-        </Button>
-      </div>
+      {compact ? (
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={pending}
+                  onClick={() => compose("trip")}
+                  aria-label={t("messageAboutTrip")}
+                />
+              }
+            >
+              {pending && kind === "trip" ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+            </TooltipTrigger>
+            <TooltipContent>{t("messageAboutTrip")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={pending}
+                  onClick={() => compose("company")}
+                  aria-label={t("messageAboutCompany")}
+                />
+              }
+            >
+              {pending && kind === "company" ? <Loader2 className="size-4 animate-spin" /> : <Building2 className="size-4" />}
+            </TooltipTrigger>
+            <TooltipContent>{t("messageAboutCompany")}</TooltipContent>
+          </Tooltip>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={pending} onClick={() => compose("trip")}>
+            {pending && kind === "trip" ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+            {t("messageAboutTrip")}
+          </Button>
+          <Button variant="outline" disabled={pending} onClick={() => compose("company")}>
+            {pending && kind === "company" ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+            {t("messageAboutCompany")}
+          </Button>
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>WhatsApp message preview</DialogTitle>
+            <DialogTitle>{t("previewTitle")}</DialogTitle>
             <DialogDescription>
-              To {preview?.recipientName ?? "the customer"} ({preview?.recipientPhone ?? "—"}). Nothing is sent until
-              you press send in WhatsApp.
+              {t("previewDesc", {
+                name: preview?.recipientName ?? t("defaultRecipient"),
+                phone: preview?.recipientPhone ?? "—",
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -63,8 +105,8 @@ export function WhatsAppButtons({ leadId }: { leadId: string }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ar">Arabic</SelectItem>
-              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ar">{t("languageArabic")}</SelectItem>
+              <SelectItem value="en">{t("languageEnglish")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -72,7 +114,7 @@ export function WhatsAppButtons({ leadId }: { leadId: string }) {
 
           <DialogFooter>
             <Button className="w-full" disabled={!preview?.link} render={<a href={preview?.link} target="_blank" rel="noreferrer" />}>
-              <ExternalLink className="size-4" /> Open in WhatsApp
+              <ExternalLink className="size-4" /> {t("openInWhatsapp")}
             </Button>
           </DialogFooter>
         </DialogContent>

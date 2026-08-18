@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { publicApi, unwrap } from "@/lib/api/client";
 import { pageableQuery } from "@/lib/api/pageable";
 import { TripGrid } from "@/components/trip/trip-grid";
@@ -10,7 +11,8 @@ export async function FeaturedTrips() {
   const page = unwrap(result);
 
   if (!page.content?.length) {
-    return <p className="text-muted-foreground">No published trips yet — check back soon.</p>;
+    const t = await getTranslations("home");
+    return <p className="text-muted-foreground">{t("featuredEmpty")}</p>;
   }
 
   return <TripGrid trips={page.content} />;

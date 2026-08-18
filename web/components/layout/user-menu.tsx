@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LogOut, User as UserIcon, Heart, Ticket, LayoutDashboard, Bell } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { logoutAction } from "@/lib/auth/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
 
 export function UserMenu({ role }: { role: "CUSTOMER" | "COMPANY" | "ADMIN" }) {
   const initial = role === "ADMIN" ? "A" : "U";
+  const t = useTranslations("nav");
 
   return (
     <DropdownMenu>
@@ -26,28 +28,28 @@ export function UserMenu({ role }: { role: "CUSTOMER" | "COMPANY" | "ADMIN" }) {
       <DropdownMenuContent align="end" className="w-52">
         {role === "ADMIN" ? (
           <DropdownMenuItem render={<Link href="/admin" />}>
-            <LayoutDashboard /> Admin dashboard
+            <LayoutDashboard /> {t("adminDashboard")}
           </DropdownMenuItem>
         ) : (
           <>
             <DropdownMenuItem render={<Link href="/leads" />}>
-              <Ticket /> My bookings
+              <Ticket /> {t("myBookings")}
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/favourites" />}>
-              <Heart /> Favourites
+              <Heart /> {t("favourites")}
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/notifications" />}>
-              <Bell /> Notifications
+              <Bell /> {t("notifications")}
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/profile" />}>
-              <UserIcon /> Profile
+              <UserIcon /> {t("profile")}
             </DropdownMenuItem>
           </>
         )}
         <DropdownMenuSeparator />
         <form action={logoutAction}>
           <DropdownMenuItem variant="destructive" render={<button type="submit" className="w-full" />}>
-            <LogOut /> Sign out
+            <LogOut /> {t("signOut")}
           </DropdownMenuItem>
         </form>
       </DropdownMenuContent>

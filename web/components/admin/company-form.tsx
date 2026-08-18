@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,8 @@ export function CompanyForm({
   initial: Partial<FormState>;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin.companies.form");
+  const tCommon = useTranslations("admin.common");
   const [pending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormState>({
@@ -75,12 +78,12 @@ export function CompanyForm({
 
       if (result.ok) {
         setFieldErrors({});
-        toast.success(mode === "create" ? "Company created." : "Company updated.");
+        toast.success(mode === "create" ? t("createdToast") : t("updatedToast"));
         router.push(mode === "create" && result.data?.id ? `/admin/companies/${result.data.id}` : `/admin/companies`);
         router.refresh();
       } else {
         setFieldErrors(result.fieldErrors ?? {});
-        toast.error(result.error ?? "Something went wrong.");
+        toast.error(result.error ?? tCommon("somethingWentWrong"));
       }
     });
   }
@@ -89,7 +92,7 @@ export function CompanyForm({
     <form onSubmit={submit} className="space-y-6">
       {mode === "create" && (
         <div className="space-y-1.5">
-          <Label htmlFor="ownerEmail">Owner email</Label>
+          <Label htmlFor="ownerEmail">{t("ownerEmailLabel")}</Label>
           <Input
             id="ownerEmail"
             type="email"
@@ -98,15 +101,13 @@ export function CompanyForm({
             required
           />
           {fieldErrors.ownerEmail && <p className="text-xs text-destructive">{fieldErrors.ownerEmail}</p>}
-          <p className="text-xs text-muted-foreground">
-            Provisions the owner&apos;s account if one doesn&apos;t exist yet — their first real Google sign-in claims it.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("ownerEmailHint")}</p>
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="companyName">Company name</Label>
+          <Label htmlFor="companyName">{t("nameLabel")}</Label>
           <Input
             id="companyName"
             value={form.companyName}
@@ -116,7 +117,7 @@ export function CompanyForm({
           {fieldErrors.companyName && <p className="text-xs text-destructive">{fieldErrors.companyName}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="licenseNumber">Licence number</Label>
+          <Label htmlFor="licenseNumber">{t("licenceLabel")}</Label>
           <Input
             id="licenseNumber"
             value={form.licenseNumber}
@@ -129,17 +130,17 @@ export function CompanyForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="whatsapp">WhatsApp number</Label>
+          <Label htmlFor="whatsapp">{t("whatsappLabel")}</Label>
           <Input id="whatsapp" value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="logoUrl">Logo URL</Label>
+          <Label htmlFor="logoUrl">{t("logoLabel")}</Label>
           <Input id="logoUrl" value={form.logoUrl} onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))} />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t("descriptionLabel")}</Label>
         <Textarea
           id="description"
           rows={3}
@@ -151,7 +152,7 @@ export function CompanyForm({
       {mode === "create" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="commission">Commission per traveler (EGP)</Label>
+            <Label htmlFor="commission">{t("commissionLabel")}</Label>
             <Input
               id="commission"
               type="number"
@@ -162,8 +163,8 @@ export function CompanyForm({
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3">
             <div>
-              <Label htmlFor="autoApprove">Auto-approve</Label>
-              <p className="text-xs text-muted-foreground">Skip the pending queue.</p>
+              <Label htmlFor="autoApprove">{t("autoApproveLabel")}</Label>
+              <p className="text-xs text-muted-foreground">{t("autoApproveHint")}</p>
             </div>
             <Switch
               id="autoApprove"
@@ -182,7 +183,7 @@ export function CompanyForm({
 
       <Button type="submit" disabled={pending || form.addresses.length === 0}>
         {pending && <Loader2 className="size-4 animate-spin" />}
-        {mode === "create" ? "Create company" : "Save changes"}
+        {mode === "create" ? t("createSubmit") : t("saveSubmit")}
       </Button>
     </form>
   );

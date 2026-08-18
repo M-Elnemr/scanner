@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Plus } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
 import { listApprovedCompanies } from "@/lib/admin/reference-data";
@@ -13,20 +14,23 @@ import { AdminFilterBar } from "@/components/admin/admin-filter-bar";
 import { TablePagination } from "@/components/admin/table-pagination";
 import { formatDate } from "@/lib/format/date";
 
-export const metadata: Metadata = { title: "Trips · Admin" };
-
-const STATUS_OPTIONS = [
-  { value: "DRAFT", label: "Draft" },
-  { value: "PUBLISHED", label: "Published" },
-  { value: "CLOSED", label: "Closed" },
-  { value: "EXPIRED", label: "Expired" },
-];
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.pageTitle");
+  return { title: t("trips") };
+}
 
 export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
   const searchParams = await props.searchParams;
   const status = typeof searchParams.status === "string" ? searchParams.status : undefined;
   const search = typeof searchParams.search === "string" ? searchParams.search : undefined;
   const page = typeof searchParams.page === "string" ? Number(searchParams.page) : 0;
+
+  const t = await getTranslations("admin.trips");
+  const tStatus = await getTranslations("admin.tripStatus");
+  const STATUS_OPTIONS = (["DRAFT", "PUBLISHED", "CLOSED", "EXPIRED"] as const).map((value) => ({
+    value,
+    label: tStatus(value),
+  }));
 
   const api = await apiClient();
   const [result, companies] = await Promise.all([
@@ -49,26 +53,26 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight">Trips</h1>
-          <p className="text-sm text-muted-foreground">{pageData?.totalElements ?? 0} total</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("total", { count: pageData?.totalElements ?? 0 })}</p>
         </div>
         <Button render={<Link href="/admin/trips/new" />}>
-          <Plus /> New trip
+          <Plus /> {t("new")}
         </Button>
       </div>
 
-      <AdminFilterBar statusOptions={STATUS_OPTIONS} searchPlaceholder="Search by title or trip code…" />
+      <AdminFilterBar statusOptions={STATUS_OPTIONS} searchPlaceholder={t("searchPlaceholder")} />
 
       <div className="overflow-hidden rounded-xl border border-border bg-background">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Trip</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead>Departs</TableHead>
-              <TableHead>Seats</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t("colTrip")}</TableHead>
+              <TableHead>{t("colCompany")}</TableHead>
+              <TableHead>{t("colTier")}</TableHead>
+              <TableHead>{t("colDeparts")}</TableHead>
+              <TableHead>{t("colSeats")}</TableHead>
+              <TableHead>{t("colStatus")}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -76,7 +80,7 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
             {trips.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                  No trips match these filters.
+                  {t("empty")}
                 </TableCell>
               </TableRow>
             )}

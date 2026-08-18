@@ -11,22 +11,25 @@ import {
   Menu,
   Ticket,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { logoutAction } from "@/lib/auth/actions";
 import type { CurrentUser } from "@/lib/auth/server";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/companies", label: "Companies", icon: Building2 },
-  { href: "/admin/trips", label: "Trips", icon: Compass },
-  { href: "/admin/hotels", label: "Hotels", icon: Hotel },
-  { href: "/admin/leads", label: "Leads", icon: Ticket },
-];
-
 export function AdminShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations("admin");
+  const tNav = useTranslations("nav");
+
+  const NAV = [
+    { href: "/admin", label: t("nav.dashboard"), icon: LayoutDashboard, exact: true },
+    { href: "/admin/companies", label: t("nav.companies"), icon: Building2 },
+    { href: "/admin/trips", label: t("nav.trips"), icon: Compass },
+    { href: "/admin/hotels", label: t("nav.hotels"), icon: Hotel },
+    { href: "/admin/leads", label: t("nav.leads"), icon: Ticket },
+  ];
 
   return (
     <div className="flex min-h-screen bg-secondary/30">
@@ -35,7 +38,7 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
           <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Compass className="size-4.5" />
           </span>
-          Admin
+          {t("sidebarTitle")}
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map((item) => {
@@ -60,7 +63,7 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
         <div className="border-t border-sidebar-border p-3">
           <form action={logoutAction}>
             <Button type="submit" variant="ghost" className="w-full justify-start gap-3 text-sidebar-foreground/80">
-              <LogOut className="size-4" /> Sign out
+              <LogOut className="size-4" /> {tNav("signOut")}
             </Button>
           </form>
         </div>
@@ -74,7 +77,7 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
             </SheetTrigger>
             <SheetContent side="left" className="w-full max-w-xs">
               <SheetHeader>
-                <SheetTitle>Admin</SheetTitle>
+                <SheetTitle>{t("sidebarTitle")}</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-4">
                 {NAV.map((item) => (
@@ -90,7 +93,7 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
               </nav>
             </SheetContent>
           </Sheet>
-          <p className="hidden text-sm text-muted-foreground md:block">Signed in as admin ({user.userId.slice(0, 8)})</p>
+          <p className="hidden text-sm text-muted-foreground md:block">{t("signedInAs", { id: user.userId.slice(0, 8) })}</p>
           <form action={logoutAction} className="md:hidden">
             <Button type="submit" size="sm" variant="ghost">
               <LogOut className="size-4" />

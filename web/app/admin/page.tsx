@@ -1,43 +1,49 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Building2, Compass, Hotel, Ticket, ArrowRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.pageTitle");
+  return { title: t("dashboard") };
+}
 
-const SECTIONS = [
-  {
-    href: "/admin/companies",
-    icon: Building2,
-    title: "Companies",
-    description: "Approve, edit, suspend, reinstate or delete operators.",
-  },
-  {
-    href: "/admin/trips",
-    icon: Compass,
-    title: "Trips",
-    description: "Create, edit and reassign trips across every company.",
-  },
-  {
-    href: "/admin/hotels",
-    icon: Hotel,
-    title: "Hotels",
-    description: "Manage the Makkah/Madinah catalogue trips pick from.",
-  },
-  {
-    href: "/admin/leads",
-    icon: Ticket,
-    title: "Leads",
-    description: "Filter bookings, override status, message customers.",
-  },
-];
+export default async function AdminDashboardPage() {
+  const t = await getTranslations("admin.dashboard");
 
-export default function AdminDashboardPage() {
+  const SECTIONS = [
+    {
+      href: "/admin/companies",
+      icon: Building2,
+      title: t("companiesTitle"),
+      description: t("companiesDescription"),
+    },
+    {
+      href: "/admin/trips",
+      icon: Compass,
+      title: t("tripsTitle"),
+      description: t("tripsDescription"),
+    },
+    {
+      href: "/admin/hotels",
+      icon: Hotel,
+      title: t("hotelsTitle"),
+      description: t("hotelsDescription"),
+    },
+    {
+      href: "/admin/leads",
+      icon: Ticket,
+      title: t("leadsTitle"),
+      description: t("leadsDescription"),
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Full control over companies, trips, hotels and leads.</p>
+        <h1 className="font-heading text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -1,42 +1,30 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, ShieldCheck, Sparkles } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { HeroSearchCta } from "@/components/home/hero-search-cta";
 import { FeaturedTrips } from "@/components/home/featured-trips";
 
-const HIGHLIGHTS = [
-  {
-    icon: Sparkles,
-    title: "Compare with clarity",
-    body: "Every package side by side — hotels, inclusions, and price — no digging through PDFs.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Preserve, don't chase",
-    body: "Tap once and our client service team reaches out to you — no more cold calls to operators.",
-  },
-  {
-    icon: BadgeCheck,
-    title: "Licensed operators only",
-    body: "Every company is vetted before its packages ever reach you.",
-  },
-];
+export default async function HomePage() {
+  const t = await getTranslations("home");
 
-export default function HomePage() {
+  const HIGHLIGHTS = [
+    { icon: Sparkles, title: t("highlightCompareTitle"), body: t("highlightCompareBody") },
+    { icon: ShieldCheck, title: t("highlightPreserveTitle"), body: t("highlightPreserveBody") },
+    { icon: BadgeCheck, title: t("highlightLicensedTitle"), body: t("highlightLicensedBody") },
+  ];
+
   return (
     <div>
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28">
           <span className="rounded-full border border-primary/20 bg-primary/5 px-4 py-1 text-xs font-medium tracking-wide text-primary uppercase">
-            Umrah, planned properly
+            {t("kicker")}
           </span>
           <h1 className="max-w-3xl font-heading text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">
-            Find, compare and preserve your Umrah journey
+            {t("title")}
           </h1>
-          <p className="max-w-xl text-lg text-muted-foreground text-pretty">
-            Browse verified packages from licensed operators, compare hotels and prices side by
-            side, and let us handle the rest.
-          </p>
+          <p className="max-w-xl text-lg text-muted-foreground text-pretty">{t("subtitle")}</p>
           <HeroSearchCta />
         </div>
       </section>
@@ -55,9 +43,9 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-heading text-2xl font-bold tracking-tight">Featured journeys</h2>
+          <h2 className="font-heading text-2xl font-bold tracking-tight">{t("featuredTitle")}</h2>
           <Button variant="ghost" render={<Link href="/trips" />}>
-            View all <ArrowRight className="size-4" />
+            {t("viewAll")} <ArrowRight className="size-4" />
           </Button>
         </div>
         <FeaturedTrips />

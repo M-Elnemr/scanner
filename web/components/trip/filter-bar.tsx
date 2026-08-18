@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,16 +25,20 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 
-const TIERS = [
-  { value: "VIP", label: "VIP" },
-  { value: "PREMIUM", label: "Premium" },
-  { value: "ECONOMIC", label: "Economic" },
-];
+const TIER_VALUES = ["VIP", "PREMIUM", "ECONOMIC"] as const;
 
 export function FilterBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("trips");
+  const tTiers = useTranslations("tiers");
+  const tRoomTypes = useTranslations("roomTypes");
   const activeTiers = searchParams.getAll("tiers");
+
+  const TIERS = TIER_VALUES.map((value) => ({
+    value,
+    label: value === "VIP" ? tTiers("vip") : value === "PREMIUM" ? tTiers("premium") : tTiers("economic"),
+  }));
 
   const [draft, setDraft] = useState({
     roomSize: searchParams.get("roomSize") ?? "",
@@ -96,7 +101,7 @@ export function FilterBar() {
       <Sheet>
         <SheetTrigger render={<Button variant="outline" size="sm" className="rounded-full" />}>
           <SlidersHorizontal className="size-3.5" />
-          Filters
+          {t("filtersButton")}
           {advancedCount > 0 && (
             <span className="ml-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
               {advancedCount}
@@ -105,37 +110,37 @@ export function FilterBar() {
         </SheetTrigger>
         <SheetContent side="right" className="w-full sm:max-w-sm">
           <SheetHeader>
-            <SheetTitle>Filter trips</SheetTitle>
+            <SheetTitle>{t("filtersTitle")}</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col gap-5 overflow-y-auto px-4">
             <div className="space-y-1.5">
-              <Label>Room size</Label>
+              <Label>{t("roomSize")}</Label>
               <Select value={draft.roomSize} onValueChange={(v) => setDraft((d) => ({ ...d, roomSize: v ?? "" }))}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Any" />
+                  <SelectValue placeholder={t("any")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Single</SelectItem>
-                  <SelectItem value="2">Double</SelectItem>
-                  <SelectItem value="3">Triple</SelectItem>
-                  <SelectItem value="4">Quad</SelectItem>
+                  <SelectItem value="1">{tRoomTypes("single")}</SelectItem>
+                  <SelectItem value="2">{tRoomTypes("double")}</SelectItem>
+                  <SelectItem value="3">{tRoomTypes("triple")}</SelectItem>
+                  <SelectItem value="4">{tRoomTypes("quad")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Price range</Label>
+              <Label>{t("priceRange")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
-                  placeholder="Min"
+                  placeholder={t("min")}
                   value={draft.minPrice}
                   onChange={(e) => setDraft((d) => ({ ...d, minPrice: e.target.value }))}
                 />
                 <span className="text-muted-foreground">–</span>
                 <Input
                   type="number"
-                  placeholder="Max"
+                  placeholder={t("max")}
                   value={draft.maxPrice}
                   onChange={(e) => setDraft((d) => ({ ...d, maxPrice: e.target.value }))}
                 />
@@ -143,18 +148,18 @@ export function FilterBar() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Trip length (nights)</Label>
+              <Label>{t("tripLength")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
-                  placeholder="Min"
+                  placeholder={t("min")}
                   value={draft.minDays}
                   onChange={(e) => setDraft((d) => ({ ...d, minDays: e.target.value }))}
                 />
                 <span className="text-muted-foreground">–</span>
                 <Input
                   type="number"
-                  placeholder="Max"
+                  placeholder={t("max")}
                   value={draft.maxDays}
                   onChange={(e) => setDraft((d) => ({ ...d, maxDays: e.target.value }))}
                 />
@@ -162,7 +167,7 @@ export function FilterBar() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Departure window</Label>
+              <Label>{t("departureWindow")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="date"
@@ -179,14 +184,14 @@ export function FilterBar() {
             </div>
           </div>
           <SheetFooter>
-            <SheetClose render={<Button onClick={applyAdvanced} />}>Apply filters</SheetClose>
+            <SheetClose render={<Button onClick={applyAdvanced} />}>{t("applyFilters")}</SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
       {hasAnyFilter && (
         <Button variant="ghost" size="sm" onClick={clearAll} className="text-muted-foreground">
-          <X className="size-3.5" /> Clear
+          <X className="size-3.5" /> {t("clear")}
         </Button>
       )}
     </div>

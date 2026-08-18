@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { DevSignIn } from "@/components/auth/dev-sign-in";
 import { LoginCard } from "@/components/auth/login-card";
 
-export const metadata: Metadata = { title: "Sign in" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("nav");
+  return { title: t("signIn") };
+}
 
 export default async function LoginPage(props: PageProps<"/login">) {
   const searchParams = await props.searchParams;

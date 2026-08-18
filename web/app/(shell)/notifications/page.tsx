@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { apiClient, requireUser } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
 import { NotificationList } from "@/components/notifications/notification-list";
 
-export const metadata: Metadata = { title: "Notifications" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("notifications");
+  return { title: t("title") };
+}
 
 export default async function NotificationsPage() {
   const user = await requireUser();
+  const t = await getTranslations("notifications");
 
   if (user.role !== "CUSTOMER") {
     return (
       <div className="mx-auto max-w-2xl px-4 py-24 text-center text-muted-foreground">
-        Notifications are available to customer accounts.
+        {t("customersOnly")}
       </div>
     );
   }
@@ -25,7 +30,7 @@ export default async function NotificationsPage() {
     .filter((n) => n.id)
     .map((n) => ({
       id: n.id!,
-      title: n.title ?? "Notification",
+      title: n.title ?? t("defaultTitle"),
       body: n.body ?? "",
       readAt: n.readAt ?? null,
       createdAt: n.createdAt ?? new Date().toISOString(),
@@ -33,7 +38,7 @@ export default async function NotificationsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <h1 className="mb-8 font-heading text-3xl font-bold tracking-tight">Notifications</h1>
+      <h1 className="mb-8 font-heading text-3xl font-bold tracking-tight">{t("title")}</h1>
       <NotificationList notifications={notifications} />
     </div>
   );

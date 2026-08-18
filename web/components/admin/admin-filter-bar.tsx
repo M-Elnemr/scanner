@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function AdminFilterBar({
   statusOptions,
-  searchPlaceholder = "Search…",
+  searchPlaceholder,
 }: {
   statusOptions: { value: string; label: string }[];
   searchPlaceholder?: string;
 }) {
+  const t = useTranslations("admin.common");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,7 +46,7 @@ export function AdminFilterBar({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t("searchPlaceholderDefault")}
           className="w-64 pl-8"
         />
       </form>
@@ -54,7 +56,7 @@ export function AdminFilterBar({
         onValueChange={(v) => pushParams((params) => (v ? params.set("status", v) : params.delete("status")))}
       >
         <SelectTrigger className="w-44">
-          <SelectValue placeholder="All statuses" />
+          <SelectValue placeholder={t("allStatuses")} />
         </SelectTrigger>
         <SelectContent>
           {statusOptions.map((o) => (
@@ -75,7 +77,7 @@ export function AdminFilterBar({
             router.push(pathname);
           }}
         >
-          <X className="size-3.5" /> Clear
+          <X className="size-3.5" /> {t("clear")}
         </Button>
       )}
     </div>

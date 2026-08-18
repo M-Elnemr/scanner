@@ -21,8 +21,7 @@ export function TripGrid({ trips }: { trips: TripSummary[] }) {
     <motion.div
       variants={container}
       initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-40px" }}
+      animate="show"
       className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       {trips.map((trip) => (

@@ -13,6 +13,7 @@ import {
   TrainFront,
   UserRound,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { getCurrentUser } from "@/lib/auth/server";
 import { ApiError } from "@/lib/api/errors";
@@ -25,27 +26,36 @@ import { FavouriteButton } from "@/components/trip/favourite-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-const ROOM_LABEL: Record<string, string> = {
-  SINGLE: "Single",
-  DOUBLE: "Double",
-  TRIPLE: "Triple",
-  QUAD: "Quad",
-  CHILD: "Child",
-  INFANT: "Infant",
-};
-
-const TIER_LABEL: Record<string, string> = { VIP: "VIP", PREMIUM: "Premium", ECONOMIC: "Economic" };
-
 export async function generateMetadata(props: PageProps<"/trips/[id]">): Promise<Metadata> {
   const { id } = await props.params;
   const api = await apiClient();
-  const result = await api.GET("/api/v1/trips/{id}", { params: { path: { id } } });
-  return { title: result.data?.data?.title ?? "Trip" };
+  const [result, t] = await Promise.all([
+    api.GET("/api/v1/trips/{id}", { params: { path: { id } } }),
+    getTranslations("tripDetail"),
+  ]);
+  return { title: result.data?.data?.title ?? t("metaFallbackTitle") };
 }
 
 export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   const { id } = await props.params;
-  const [user, api] = await Promise.all([getCurrentUser(), apiClient()]);
+  const [user, api, t, tRoomTypes, tTiers] = await Promise.all([
+    getCurrentUser(),
+    apiClient(),
+    getTranslations("tripDetail"),
+    getTranslations("roomTypes"),
+    getTranslations("tiers"),
+  ]);
+
+  const ROOM_LABEL: Record<string, string> = {
+    SINGLE: tRoomTypes("single"),
+    DOUBLE: tRoomTypes("double"),
+    TRIPLE: tRoomTypes("triple"),
+    QUAD: tRoomTypes("quad"),
+    CHILD: tRoomTypes("child"),
+    INFANT: tRoomTypes("infant"),
+  };
+
+  const TIER_LABEL: Record<string, string> = { VIP: tTiers("vip"), PREMIUM: tTiers("premium"), ECONOMIC: tTiers("economic") };
 
   const result = await api.GET("/api/v1/trips/{id}", { params: { path: { id } }, cache: "no-store" });
   const trip = result.data?.data;
@@ -71,12 +81,12 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   }
 
   const inclusions = [
-    { active: trip.visaIncluded, icon: ShieldCheck, label: "Visa" },
-    { active: trip.transportationIncluded, icon: Car, label: "Transport" },
-    { active: trip.mealsIncluded, icon: Soup, label: "Meals" },
-    { active: trip.guideIncluded, icon: UserRound, label: "Guide" },
-    { active: trip.zamzamIncluded, icon: Sparkles, label: "Zamzam water" },
-    { active: trip.fastTrainIncluded, icon: TrainFront, label: "Haramain train" },
+    { active: trip.visaIncluded, icon: ShieldCheck, label: t("inclusionVisa") },
+    { active: trip.transportationIncluded, icon: Car, label: t("inclusionTransport") },
+    { active: trip.mealsIncluded, icon: Soup, label: t("inclusionMeals") },
+    { active: trip.guideIncluded, icon: UserRound, label: t("inclusionGuide") },
+    { active: trip.zamzamIncluded, icon: Sparkles, label: t("inclusionZamzam") },
+    { active: trip.fastTrainIncluded, icon: TrainFront, label: t("inclusionHaramainTrain") },
   ].filter((i) => i.active);
 
   return (
@@ -99,35 +109,35 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
                 <FavouriteButton tripId={trip.id} initialFavourited={favourited} />
               )}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Trip code {trip.tripCode}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("tripCode", { code: trip.tripCode ?? "" })}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Stat icon={CalendarDays} label="Departs" value={formatDate(trip.departureDate)} />
-            <Stat icon={CalendarDays} label="Returns" value={formatDate(trip.returnDate)} />
-            <Stat icon={MapPin} label="Makkah" value={`${trip.daysInMakkah} nights`} />
-            <Stat icon={MapPin} label="Madinah" value={`${trip.daysInMadinah} nights`} />
+            <Stat icon={CalendarDays} label={t("departs")} value={formatDate(trip.departureDate)} />
+            <Stat icon={CalendarDays} label={t("returns")} value={formatDate(trip.returnDate)} />
+            <Stat icon={MapPin} label={t("makkah")} value={t("nightsCount", { count: trip.daysInMakkah ?? 0 })} />
+            <Stat icon={MapPin} label={t("madinah")} value={t("nightsCount", { count: trip.daysInMadinah ?? 0 })} />
           </div>
 
           <Card>
             <CardContent className="space-y-3 pt-6">
-              <h2 className="font-heading text-lg font-semibold">Itinerary</h2>
+              <h2 className="font-heading text-lg font-semibold">{t("itinerary")}</h2>
               <RouteLeg
-                label="Outbound"
+                label={t("outbound")}
                 from={trip.outboundDepartureAirport}
                 to={trip.outboundArrivalAirport}
                 airline={trip.airline}
               />
               <RouteLeg
-                label="Return"
+                label={t("return")}
                 from={trip.returnDepartureAirport}
                 to={trip.returnArrivalAirport}
                 airline={trip.airline}
               />
               {trip.transitCount ? (
                 <p className="text-xs text-muted-foreground">
-                  {trip.transitCount} stop{trip.transitCount === 1 ? "" : "s"}
-                  {trip.transitCity ? ` via ${trip.transitCity}` : ""}
+                  {t("stopsCount", { count: trip.transitCount })}
+                  {trip.transitCity ? t("viaCity", { city: trip.transitCity }) : ""}
                   {trip.transitDuration ? ` (${trip.transitDuration})` : ""}
                 </p>
               ) : null}
@@ -136,7 +146,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
 
           {inclusions.length > 0 && (
             <div>
-              <h2 className="mb-3 font-heading text-lg font-semibold">What&apos;s included</h2>
+              <h2 className="mb-3 font-heading text-lg font-semibold">{t("whatsIncluded")}</h2>
               <div className="flex flex-wrap gap-2">
                 {inclusions.map((inc) => (
                   <span
@@ -152,13 +162,13 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
 
           {trip.hotels?.length ? (
             <div>
-              <h2 className="mb-3 font-heading text-lg font-semibold">Hotels</h2>
+              <h2 className="mb-3 font-heading text-lg font-semibold">{t("hotels")}</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {trip.hotels.map((th, i) => (
                   <Card key={i}>
                     <CardContent className="space-y-1.5 pt-6">
                       <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        {th.city === "MAKKAH" ? "Makkah" : "Madinah"}
+                        {th.city === "MAKKAH" ? t("makkah") : t("madinah")}
                       </p>
                       <p className="font-heading font-semibold">{th.hotel?.name}</p>
                       <div className="flex items-center gap-1 text-amber-500">
@@ -168,13 +178,16 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
                       </div>
                       {th.hotel?.distanceToHaramM != null && (
                         <p className="text-sm text-muted-foreground">
-                          {th.hotel.distanceToHaramM}m from the {th.city === "MAKKAH" ? "Haram" : "Prophet's Mosque"}
-                          {th.hotel.canWalk ? " · walkable" : ""}
+                          {t("distanceFrom", {
+                            distance: th.hotel.distanceToHaramM,
+                            place: th.city === "MAKKAH" ? t("haram") : t("prophetsMosque"),
+                          })}
+                          {th.hotel.canWalk ? t("walkableSuffix") : ""}
                         </p>
                       )}
                       {th.freeBusIncluded && (
                         <p className="flex items-center gap-1 text-sm text-primary">
-                          <Bus className="size-3.5" /> Free shuttle included
+                          <Bus className="size-3.5" /> {t("freeShuttle")}
                         </p>
                       )}
                     </CardContent>
@@ -186,7 +199,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
 
           {trip.roomPrices?.length ? (
             <div>
-              <h2 className="mb-3 font-heading text-lg font-semibold">Room prices</h2>
+              <h2 className="mb-3 font-heading text-lg font-semibold">{t("roomPrices")}</h2>
               <div className="overflow-hidden rounded-xl border border-border">
                 <table className="w-full text-sm">
                   <tbody>
@@ -204,7 +217,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
 
           {trip.description && (
             <div>
-              <h2 className="mb-2 font-heading text-lg font-semibold">About this journey</h2>
+              <h2 className="mb-2 font-heading text-lg font-semibold">{t("aboutJourney")}</h2>
               <p className="whitespace-pre-line text-muted-foreground">{trip.description}</p>
             </div>
           )}
@@ -213,11 +226,11 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
         <div className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <CardContent className="space-y-4 pt-6">
-              <p className="text-sm text-muted-foreground">{trip.availableSeats} seats left</p>
+              <p className="text-sm text-muted-foreground">{t("seatsLeft", { count: trip.availableSeats ?? 0 })}</p>
               {trip.id && (
                 <PreserveFlow
                   tripId={trip.id}
-                  tripTitle={trip.title ?? "this trip"}
+                  tripTitle={trip.title ?? t("thisTripFallback")}
                   isLoggedIn={Boolean(user)}
                   canPreserve={!user || user.role === "CUSTOMER"}
                   activeLead={activeLead}
@@ -232,7 +245,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
                 <Lock className="size-6" />
-                <p className="text-sm">Preserve this journey to reveal the operator&apos;s details.</p>
+                <p className="text-sm">{t("operatorLocked")}</p>
               </CardContent>
             </Card>
           )}

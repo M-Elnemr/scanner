@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { CreditCard, Loader2, Pencil, Wallet, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ export function LeadDetailActions({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [counts, setCounts] = useTravelerPickerState(initialCounts);
+  const t = useTranslations("leadActions");
 
   const actions = new Set(availableActions as Action[]);
 
@@ -42,7 +44,7 @@ export function LeadDetailActions({
     startTransition(async () => {
       const result = await fn();
       if (result.ok) toast.success(label);
-      else toast.error(result.error ?? "Something went wrong.");
+      else toast.error(result.error ?? t("genericError"));
     });
   }
 
@@ -52,40 +54,38 @@ export function LeadDetailActions({
         <Button
           variant="outline"
           disabled={pending}
-          onClick={() => run("Thanks — the operator will confirm your deposit shortly.", () => reportDepositAction(leadId))}
+          onClick={() => run(t("depositToastSuccess"), () => reportDepositAction(leadId))}
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
-          I paid the deposit
+          {t("iPaidDeposit")}
         </Button>
       )}
       {actions.has("REPORT_FULL_PAYMENT") && (
         <Button
           variant="outline"
           disabled={pending}
-          onClick={() =>
-            run("Thanks — the operator will confirm your full payment shortly.", () => reportFullPaymentAction(leadId))
-          }
+          onClick={() => run(t("fullPaymentToastSuccess"), () => reportFullPaymentAction(leadId))}
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
-          I paid in full
+          {t("iPaidInFull")}
         </Button>
       )}
       {travelersEditable && (
         <Button variant="outline" onClick={() => setEditOpen(true)}>
-          <Pencil className="size-4" /> Edit travellers
+          <Pencil className="size-4" /> {t("editTravellers")}
         </Button>
       )}
       {actions.has("CANCEL") && (
         <Button variant="destructive" onClick={() => setCancelOpen(true)}>
-          <X className="size-4" /> Cancel this journey
+          <X className="size-4" /> {t("cancelJourney")}
         </Button>
       )}
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Edit travellers</DialogTitle>
-            <DialogDescription>This won&apos;t change anything you&apos;ve already been quoted.</DialogDescription>
+            <DialogTitle>{t("editTravellers")}</DialogTitle>
+            <DialogDescription>{t("editTravellersDescription")}</DialogDescription>
           </DialogHeader>
           <TravelerPicker value={counts} onChange={setCounts} />
           <DialogFooter>
@@ -96,16 +96,16 @@ export function LeadDetailActions({
                 startTransition(async () => {
                   const result = await updateTravelersAction(leadId, counts.adultCount, counts.childCount, counts.infantCount);
                   if (result.ok) {
-                    toast.success("Traveller count updated.");
+                    toast.success(t("travellersUpdated"));
                     setEditOpen(false);
                   } else {
-                    toast.error(result.error ?? "Could not update travellers.");
+                    toast.error(result.error ?? t("couldNotUpdateTravellers"));
                   }
                 })
               }
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Save
+              {t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -114,25 +114,22 @@ export function LeadDetailActions({
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cancel this journey?</DialogTitle>
-            <DialogDescription>
-              If you&apos;ve already paid the operator, this does not refund you automatically — that&apos;s
-              between you and the operator.
-            </DialogDescription>
+            <DialogTitle>{t("cancelDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("cancelDialogDescription")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="cancel-reason-lead">Reason</Label>
+            <Label htmlFor="cancel-reason-lead">{t("reasonLabel")}</Label>
             <Textarea
               id="cancel-reason-lead"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Tell us why you're cancelling"
+              placeholder={t("reasonPlaceholder")}
               rows={3}
             />
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setCancelOpen(false)}>
-              Keep it
+              {t("keepIt")}
             </Button>
             <Button
               variant="destructive"
@@ -142,16 +139,16 @@ export function LeadDetailActions({
                 startTransition(async () => {
                   const result = await cancelLeadAction(leadId, cancelReason.trim(), tripId);
                   if (result.ok) {
-                    toast.success("Journey cancelled.");
+                    toast.success(t("journeyCancelled"));
                     setCancelOpen(false);
                   } else {
-                    toast.error(result.error ?? "Could not cancel.");
+                    toast.error(result.error ?? t("couldNotCancel"));
                   }
                 })
               }
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Cancel journey
+              {t("cancelJourneyButton")}
             </Button>
           </DialogFooter>
         </DialogContent>

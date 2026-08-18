@@ -1,18 +1,20 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCompare } from "@/components/trip/compare-store";
 import { cn } from "@/lib/utils";
 
 export function CompareToggle({ tripId }: { tripId: string }) {
   const { isSelected, toggle, ids, max } = useCompare();
+  const t = useTranslations("trips");
   const selected = isSelected(tripId);
   const disabled = !selected && ids.length >= max;
 
   return (
     <button
       type="button"
-      title={disabled ? `Compare up to ${max} trips` : selected ? "Remove from compare" : "Add to compare"}
+      title={disabled ? t("compareUpToMax", { max }) : selected ? t("removeFromCompare") : t("addToCompare")}
       disabled={disabled}
       onClick={(e) => {
         e.preventDefault();

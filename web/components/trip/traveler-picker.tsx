@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 export interface TravelerCounts {
@@ -10,12 +11,6 @@ export interface TravelerCounts {
   infantCount: number;
 }
 
-const ROWS: { key: keyof TravelerCounts; label: string; hint: string; min: number }[] = [
-  { key: "adultCount", label: "Adults", hint: "12 years and older", min: 1 },
-  { key: "childCount", label: "Children", hint: "2–11 years", min: 0 },
-  { key: "infantCount", label: "Infants", hint: "Under 2 years", min: 0 },
-];
-
 export function TravelerPicker({
   value,
   onChange,
@@ -23,6 +18,14 @@ export function TravelerPicker({
   value: TravelerCounts;
   onChange: (next: TravelerCounts) => void;
 }) {
+  const t = useTranslations("travelerPicker");
+
+  const ROWS: { key: keyof TravelerCounts; label: string; hint: string; min: number }[] = [
+    { key: "adultCount", label: t("adults"), hint: t("adultsHint"), min: 1 },
+    { key: "childCount", label: t("children"), hint: t("childrenHint"), min: 0 },
+    { key: "infantCount", label: t("infants"), hint: t("infantsHint"), min: 0 },
+  ];
+
   return (
     <div className="space-y-4">
       {ROWS.map((row) => (

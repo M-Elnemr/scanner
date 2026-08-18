@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { listAirports, listApprovedCompanies, listCurrencies } from "@/lib/admin/reference-data";
 import { listHotelsByCity } from "@/lib/admin/hotel-picker";
@@ -7,7 +8,10 @@ import { TripForm } from "@/components/admin/trip-form";
 import { TripStatusBadge } from "@/components/admin/trip-status-badge";
 import { TripRowActions } from "@/components/admin/trip-row-actions";
 
-export const metadata: Metadata = { title: "Edit trip · Admin" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.pageTitle");
+  return { title: t("tripEdit") };
+}
 
 export default async function EditTripPage(props: PageProps<"/admin/trips/[id]">) {
   const { id } = await props.params;

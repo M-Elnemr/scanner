@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export function TripPagination({
+export async function TripPagination({
   page,
   totalPages,
   basePath,
@@ -14,6 +15,7 @@ export function TripPagination({
   searchParams: URLSearchParams;
 }) {
   if (totalPages <= 1) return null;
+  const t = await getTranslations("trips");
 
   function hrefFor(targetPage: number) {
     const params = new URLSearchParams(searchParams);
@@ -36,7 +38,7 @@ export function TripPagination({
         </Button>
       )}
       <span className="px-3 text-sm text-muted-foreground">
-        Page {page + 1} of {totalPages}
+        {t("pageOf", { page: page + 1, totalPages })}
       </span>
       {hasNext ? (
         <Button variant="outline" size="icon" render={<Link href={hrefFor(page + 1)} />}>

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { CalendarDays, MapPin, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { TripImage } from "@/components/trip/trip-image";
 import { CompareToggle } from "@/components/trip/compare-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +12,12 @@ import type { components } from "@/lib/api/schema";
 
 type TripSummary = components["schemas"]["TripSummaryResponse"];
 
-const TIER_LABEL: Record<string, string> = { VIP: "VIP", PREMIUM: "Premium", ECONOMIC: "Economic" };
-
 export function TripCard({ trip }: { trip: TripSummary }) {
+  const t = useTranslations("trips");
+  const tTiers = useTranslations("tiers");
   const nights = tripDurationNights(trip.departureDate, trip.returnDate);
+
+  const TIER_LABEL: Record<string, string> = { VIP: tTiers("vip"), PREMIUM: tTiers("premium"), ECONOMIC: tTiers("economic") };
 
   return (
     <Link
@@ -38,7 +43,7 @@ export function TripCard({ trip }: { trip: TripSummary }) {
           <span className="flex items-center gap-1">
             <CalendarDays className="size-3.5" />
             {formatDate(trip.departureDate)}
-            {nights != null ? ` · ${nights}N` : ""}
+            {nights != null ? ` · ${t("nightsAbbrev", { count: nights })}` : ""}
           </span>
           <span className="flex items-center gap-1">
             <MapPin className="size-3.5" />
@@ -46,13 +51,13 @@ export function TripCard({ trip }: { trip: TripSummary }) {
           </span>
           <span className="flex items-center gap-1">
             <Users className="size-3.5" />
-            {trip.availableSeats} seats left
+            {t("seatsLeft", { count: trip.availableSeats ?? 0 })}
           </span>
         </div>
 
         <div className="mt-auto flex items-end justify-between pt-2">
           <div>
-            <p className="text-[11px] text-muted-foreground">From</p>
+            <p className="text-[11px] text-muted-foreground">{t("from")}</p>
             <p className="font-heading text-lg font-bold text-primary">
               {formatMoney(trip.priceStartsFrom, trip.currency)}
             </p>

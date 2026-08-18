@@ -4,18 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Banknote, CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { confirmCommissionAction, overrideLeadStatusAction, payCashbackAction } from "@/lib/admin/leads-actions";
-import { LEAD_STATUS_LABEL, type LeadStatus } from "@/components/admin/admin-lead-status-badge";
-
-const ALL_STATUSES = Object.keys(LEAD_STATUS_LABEL) as LeadStatus[];
+import { ALL_LEAD_STATUSES, useLeadStatusLabel, type LeadStatus } from "@/components/admin/admin-lead-status-badge";
 
 export function AdminLeadActions({ leadId, availableActions }: { leadId: string; availableActions: string[] }) {
   const router = useRouter();
+  const t = useTranslations("admin.leads.actions");
+  const tCommon = useTranslations("admin.common");
+  const leadStatusLabel = useLeadStatusLabel();
   const [pending, startTransition] = useTransition();
   const [overrideOpen, setOverrideOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState<LeadStatus>("INTERESTED");
@@ -31,7 +33,7 @@ export function AdminLeadActions({ leadId, availableActions }: { leadId: string;
         after?.();
         router.refresh();
       } else {
-        toast.error(result.error ?? "Something went wrong.");
+        toast.error(result.error ?? tCommon("somethingWentWrong"));
       }
     });
   }
@@ -42,53 +44,50 @@ export function AdminLeadActions({ leadId, availableActions }: { leadId: string;
         <Button
           variant="outline"
           disabled={pending}
-          onClick={() => run("Commission confirmed.", () => confirmCommissionAction(leadId))}
+          onClick={() => run(t("confirmedToast"), () => confirmCommissionAction(leadId))}
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-          Confirm commission
+          {t("confirmCommission")}
         </Button>
       )}
       {actions.has("PAY_CASHBACK") && (
-        <Button variant="outline" disabled={pending} onClick={() => run("Cashback recorded as paid.", () => payCashbackAction(leadId))}>
+        <Button variant="outline" disabled={pending} onClick={() => run(t("paidToast"), () => payCashbackAction(leadId))}>
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Banknote className="size-4" />}
-          Pay cashback
+          {t("payCashback")}
         </Button>
       )}
       <Button variant="outline" onClick={() => setOverrideOpen(true)}>
-        <ShieldAlert className="size-4" /> Override status
+        <ShieldAlert className="size-4" /> {t("overrideStatus")}
       </Button>
 
       <Dialog open={overrideOpen} onOpenChange={setOverrideOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Override this lead&apos;s status</DialogTitle>
-            <DialogDescription>
-              Bypasses the normal report/confirm workflow. Does not move the commission or cashback ledgers — use
-              confirm commission / pay cashback for that. Both the customer and company are notified.
-            </DialogDescription>
+            <DialogTitle>{t("overrideDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("overrideDialogDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label>New status</Label>
+            <Label>{t("newStatusLabel")}</Label>
             <Select value={targetStatus} onValueChange={(v) => v && setTargetStatus(v as LeadStatus)}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ALL_STATUSES.map((s) => (
+                {ALL_LEAD_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {LEAD_STATUS_LABEL[s]}
+                    {leadStatusLabel(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="override-reason">Reason</Label>
+            <Label htmlFor="override-reason">{t("reasonLabel")}</Label>
             <Textarea id="override-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setOverrideOpen(false)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -96,7 +95,7 @@ export function AdminLeadActions({ leadId, availableActions }: { leadId: string;
               disabled={pending || !reason.trim()}
               onClick={() =>
                 run(
-                  "Status overridden.",
+                  t("overriddenToast"),
                   () => overrideLeadStatusAction(leadId, targetStatus, reason.trim()),
                   () => {
                     setOverrideOpen(false);
@@ -106,7 +105,7 @@ export function AdminLeadActions({ leadId, availableActions }: { leadId: string;
               }
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Confirm
+              {tCommon("confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

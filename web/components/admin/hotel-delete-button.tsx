@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -19,6 +20,8 @@ import { deleteHotelAction } from "@/lib/admin/hotels-actions";
 
 export function HotelDeleteButton({ id }: { id: string }) {
   const router = useRouter();
+  const t = useTranslations("admin.hotels.delete");
+  const tCommon = useTranslations("admin.common");
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -29,13 +32,11 @@ export function HotelDeleteButton({ id }: { id: string }) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this hotel?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Refused while any trip still uses it — mark it inactive instead if you just want it off the picker.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("description")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
           <Button
             variant="destructive"
             disabled={pending}
@@ -43,17 +44,17 @@ export function HotelDeleteButton({ id }: { id: string }) {
               startTransition(async () => {
                 const result = await deleteHotelAction(id);
                 if (result.ok) {
-                  toast.success("Hotel deleted.");
+                  toast.success(t("deletedToast"));
                   setOpen(false);
                   router.refresh();
                 } else {
-                  toast.error(result.error ?? "Could not delete hotel.");
+                  toast.error(result.error ?? t("errorToast"));
                 }
               })
             }
           >
             {pending && <Loader2 className="size-4 animate-spin" />}
-            Delete
+            {tCommon("delete")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

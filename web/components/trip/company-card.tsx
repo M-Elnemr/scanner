@@ -1,10 +1,13 @@
 import { Star, MapPin, Phone, BadgeCheck } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { components } from "@/lib/api/schema";
 
 type PublicCompany = components["schemas"]["PublicCompany"];
 
-export function CompanyCard({ company }: { company: PublicCompany }) {
+export async function CompanyCard({ company }: { company: PublicCompany }) {
+  const t = await getTranslations("companyCard");
+
   return (
     <Card>
       <CardHeader>
@@ -12,17 +15,17 @@ export function CompanyCard({ company }: { company: PublicCompany }) {
           <BadgeCheck className="size-5 text-primary" />
           {company.companyName}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">Licence {company.licenseNumber}</p>
+        <p className="text-xs text-muted-foreground">{t("licence", { number: company.licenseNumber ?? "" })}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {company.ratingCount ? (
           <div className="flex items-center gap-1.5 text-sm">
             <Star className="size-4 fill-amber-400 text-amber-400" />
             <span className="font-medium">{company.ratingAvg?.toFixed(1)}</span>
-            <span className="text-muted-foreground">({company.ratingCount} reviews)</span>
+            <span className="text-muted-foreground">{t("reviewsCount", { count: company.ratingCount })}</span>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No reviews yet</p>
+          <p className="text-sm text-muted-foreground">{t("noReviews")}</p>
         )}
 
         {company.description && <p className="text-sm text-muted-foreground">{company.description}</p>}

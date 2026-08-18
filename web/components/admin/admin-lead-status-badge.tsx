@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 
 type LeadStatus =
@@ -11,17 +14,17 @@ type LeadStatus =
   | "CASHBACK_PAID"
   | "CANCELLED";
 
-const LABEL: Record<LeadStatus, string> = {
-  INTERESTED: "Interested",
-  PENDING_DEPOSIT_CONFIRMATION: "Deposit pending confirmation",
-  DEPOSIT_PAID: "Deposit paid",
-  PENDING_FULL_PAYMENT_CONFIRMATION: "Full payment pending confirmation",
-  FULLY_PAID: "Fully paid",
-  PENDING_COMMISSION_CONFIRMATION: "Commission pending confirmation",
-  COMMISSION_PAID: "Commission paid",
-  CASHBACK_PAID: "Cashback paid",
-  CANCELLED: "Cancelled",
-};
+const ALL_LEAD_STATUSES: LeadStatus[] = [
+  "INTERESTED",
+  "PENDING_DEPOSIT_CONFIRMATION",
+  "DEPOSIT_PAID",
+  "PENDING_FULL_PAYMENT_CONFIRMATION",
+  "FULLY_PAID",
+  "PENDING_COMMISSION_CONFIRMATION",
+  "COMMISSION_PAID",
+  "CASHBACK_PAID",
+  "CANCELLED",
+];
 
 const VARIANT: Record<LeadStatus, "default" | "secondary" | "destructive" | "outline"> = {
   INTERESTED: "secondary",
@@ -36,9 +39,15 @@ const VARIANT: Record<LeadStatus, "default" | "secondary" | "destructive" | "out
 };
 
 export function AdminLeadStatusBadge({ status }: { status: string | undefined }) {
+  const t = useTranslations("admin.leadStatus");
   const key = (status ?? "INTERESTED") as LeadStatus;
-  return <Badge variant={VARIANT[key] ?? "outline"}>{LABEL[key] ?? status}</Badge>;
+  return <Badge variant={VARIANT[key] ?? "outline"}>{status && status in VARIANT ? t(key) : status}</Badge>;
 }
 
-export { LABEL as LEAD_STATUS_LABEL };
+export function useLeadStatusLabel() {
+  const t = useTranslations("admin.leadStatus");
+  return (status: LeadStatus) => t(status);
+}
+
+export { ALL_LEAD_STATUSES };
 export type { LeadStatus };

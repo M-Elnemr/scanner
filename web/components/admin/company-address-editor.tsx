@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ export function CompanyAddressEditor({
   onChange: (addresses: CompanyAddressInput[]) => void;
   cities: CityOption[];
 }) {
+  const t = useTranslations("admin.companies.form.addresses");
+
   function update(index: number, patch: Partial<CompanyAddressInput>) {
     onChange(addresses.map((a, i) => (i === index ? { ...a, ...patch } : a)));
   }
@@ -32,15 +35,15 @@ export function CompanyAddressEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label>Branch addresses</Label>
+        <Label>{t("label")}</Label>
         <Button type="button" variant="outline" size="sm" onClick={add}>
-          <Plus className="size-3.5" /> Add branch
+          <Plus className="size-3.5" /> {t("add")}
         </Button>
       </div>
 
       {addresses.length === 0 && (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          At least one branch address is required.
+          {t("empty")}
         </p>
       )}
 
@@ -48,10 +51,10 @@ export function CompanyAddressEditor({
         {addresses.map((address, index) => (
           <div key={index} className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[1fr_1fr_auto]">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">City</Label>
+              <Label className="text-xs text-muted-foreground">{t("cityLabel")}</Label>
               <Select value={address.cityId} onValueChange={(v) => v && update(index, { cityId: v })}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select city" />
+                  <SelectValue placeholder={t("cityPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {cities.map((c) => (
@@ -63,7 +66,7 @@ export function CompanyAddressEditor({
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Mobile number</Label>
+              <Label className="text-xs text-muted-foreground">{t("mobileLabel")}</Label>
               <Input value={address.mobileNumber} onChange={(e) => update(index, { mobileNumber: e.target.value })} />
             </div>
             <div className="flex items-end sm:col-span-1">
@@ -72,7 +75,7 @@ export function CompanyAddressEditor({
               </Button>
             </div>
             <div className="space-y-1 sm:col-span-3">
-              <Label className="text-xs text-muted-foreground">Address</Label>
+              <Label className="text-xs text-muted-foreground">{t("addressLabel")}</Label>
               <Input value={address.addressText} onChange={(e) => update(index, { addressText: e.target.value })} />
             </div>
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Ban, CheckCircle2, Coins, Loader2, MoreHorizontal, Pencil, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,8 @@ export function CompanyRowActions({
   commissionPerTraveler: number | undefined;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin.companies.actions");
+  const tCommon = useTranslations("admin.common");
   const [pending, startTransition] = useTransition();
   const [reasonMode, setReasonMode] = useState<ReasonMode>(null);
   const [reason, setReason] = useState("");
@@ -56,7 +59,7 @@ export function CompanyRowActions({
         after?.();
         router.refresh();
       } else {
-        toast.error(result.error ?? "Something went wrong.");
+        toast.error(result.error ?? tCommon("somethingWentWrong"));
       }
     });
   }
@@ -69,34 +72,34 @@ export function CompanyRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem render={<Link href={`/admin/companies/${id}`} />}>
-            <Pencil /> Edit profile
+            <Pencil /> {t("editProfile")}
           </DropdownMenuItem>
           {s === "PENDING" && (
-            <DropdownMenuItem onClick={() => run("Company approved.", () => approveCompanyAction(id))}>
-              <CheckCircle2 /> Approve
+            <DropdownMenuItem onClick={() => run(t("approvedToast"), () => approveCompanyAction(id))}>
+              <CheckCircle2 /> {t("approve")}
             </DropdownMenuItem>
           )}
           {s === "PENDING" && (
             <DropdownMenuItem onClick={() => setReasonMode("reject")}>
-              <XCircle /> Reject
+              <XCircle /> {t("reject")}
             </DropdownMenuItem>
           )}
           {s === "APPROVED" && (
             <DropdownMenuItem onClick={() => setReasonMode("suspend")}>
-              <Ban /> Suspend
+              <Ban /> {t("suspend")}
             </DropdownMenuItem>
           )}
           {s === "SUSPENDED" && (
-            <DropdownMenuItem onClick={() => run("Company reinstated.", () => reinstateCompanyAction(id))}>
-              <RotateCcw /> Reinstate
+            <DropdownMenuItem onClick={() => run(t("reinstatedToast"), () => reinstateCompanyAction(id))}>
+              <RotateCcw /> {t("reinstate")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => setCommissionOpen(true)}>
-            <Coins /> Set commission
+            <Coins /> {t("setCommission")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 /> Delete
+            <Trash2 /> {t("delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -104,20 +107,18 @@ export function CompanyRowActions({
       <Dialog open={reasonMode !== null} onOpenChange={(open) => !open && setReasonMode(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{reasonMode === "reject" ? "Reject this company?" : "Suspend this company?"}</DialogTitle>
+            <DialogTitle>{reasonMode === "reject" ? t("rejectDialogTitle") : t("suspendDialogTitle")}</DialogTitle>
             <DialogDescription>
-              {reasonMode === "suspend"
-                ? "Suspending hides it from new bookings immediately; existing leads are unaffected."
-                : "The company will be notified with this reason."}
+              {reasonMode === "suspend" ? t("suspendDialogDesc") : t("rejectDialogDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="reason">Reason</Label>
+            <Label htmlFor="reason">{t("reasonFieldLabel")}</Label>
             <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setReasonMode(null)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -125,7 +126,7 @@ export function CompanyRowActions({
               disabled={pending || !reason.trim()}
               onClick={() =>
                 run(
-                  reasonMode === "reject" ? "Company rejected." : "Company suspended.",
+                  reasonMode === "reject" ? t("rejectedToast") : t("suspendedToast"),
                   () =>
                     reasonMode === "reject"
                       ? rejectCompanyAction(id, reason.trim())
@@ -138,7 +139,7 @@ export function CompanyRowActions({
               }
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Confirm
+              {tCommon("confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -147,11 +148,11 @@ export function CompanyRowActions({
       <Dialog open={commissionOpen} onOpenChange={setCommissionOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Set commission per traveler</DialogTitle>
-            <DialogDescription>Applies to leads created after this change — existing leads keep their price.</DialogDescription>
+            <DialogTitle>{t("setCommissionTitle")}</DialogTitle>
+            <DialogDescription>{t("setCommissionDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="commission">EGP per traveler</Label>
+            <Label htmlFor="commission">{t("commissionFieldLabel")}</Label>
             <Input id="commission" type="number" min={0} value={commission} onChange={(e) => setCommission(e.target.value)} />
           </div>
           <DialogFooter>
@@ -159,11 +160,11 @@ export function CompanyRowActions({
               className="w-full"
               disabled={pending || !commission}
               onClick={() =>
-                run("Commission updated.", () => setCommissionAction(id, Number(commission)), () => setCommissionOpen(false))
+                run(t("commissionUpdatedToast"), () => setCommissionAction(id, Number(commission)), () => setCommissionOpen(false))
               }
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Save
+              {tCommon("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -172,24 +173,21 @@ export function CompanyRowActions({
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete this company?</DialogTitle>
-            <DialogDescription>
-              Refused if it has live bookings or an unsettled commission. Otherwise this soft-deletes the
-              company, its trips, and suspends the owner&apos;s account. This can&apos;t be undone from here.
-            </DialogDescription>
+            <DialogTitle>{t("deleteDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("deleteDialogDesc")}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setDeleteOpen(false)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               variant="destructive"
               className="flex-1"
               disabled={pending}
-              onClick={() => run("Company deleted.", () => deleteCompanyAction(id), () => setDeleteOpen(false))}
+              onClick={() => run(t("deletedToast"), () => deleteCompanyAction(id), () => setDeleteOpen(false))}
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Delete
+              {t("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

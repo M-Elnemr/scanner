@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,23 +17,14 @@ import type { AirportOption, CompanyOption, CurrencyOption } from "@/lib/admin/r
 import type { HotelOption } from "@/lib/admin/hotel-picker";
 
 const ROOM_TYPES: RoomPriceInput["roomType"][] = ["SINGLE", "DOUBLE", "TRIPLE", "QUAD", "CHILD", "INFANT"];
-const ROOM_LABEL: Record<RoomPriceInput["roomType"], string> = {
-  SINGLE: "Single",
-  DOUBLE: "Double",
-  TRIPLE: "Triple",
-  QUAD: "Quad",
-  CHILD: "Child",
-  INFANT: "Infant",
+const ROOM_LABEL_KEY: Record<RoomPriceInput["roomType"], "roomSingle" | "roomDouble" | "roomTriple" | "roomQuad" | "roomChild" | "roomInfant"> = {
+  SINGLE: "roomSingle",
+  DOUBLE: "roomDouble",
+  TRIPLE: "roomTriple",
+  QUAD: "roomQuad",
+  CHILD: "roomChild",
+  INFANT: "roomInfant",
 };
-
-const INCLUSIONS: { key: keyof TripDraft; label: string }[] = [
-  { key: "visaIncluded", label: "Visa included" },
-  { key: "transportationIncluded", label: "Transportation included" },
-  { key: "mealsIncluded", label: "Meals included" },
-  { key: "guideIncluded", label: "Guide included" },
-  { key: "zamzamIncluded", label: "Zamzam water included" },
-  { key: "fastTrainIncluded", label: "Haramain fast train included" },
-];
 
 interface TripDraft {
   tripCode: string;
@@ -118,10 +110,21 @@ export function TripForm({
   initial: Partial<TripDraft> & { companyId?: string };
 }) {
   const router = useRouter();
+  const t = useTranslations("admin.trips.form");
+  const tCommon = useTranslations("admin.common");
   const [pending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [companyId, setCompanyId] = useState(initial.companyId ?? "");
   const [form, setForm] = useState<TripDraft>({ ...EMPTY, ...initial });
+
+  const INCLUSIONS: { key: keyof TripDraft; label: string }[] = [
+    { key: "visaIncluded", label: t("inclusionVisa") },
+    { key: "transportationIncluded", label: t("inclusionTransportation") },
+    { key: "mealsIncluded", label: t("inclusionMeals") },
+    { key: "guideIncluded", label: t("inclusionGuide") },
+    { key: "zamzamIncluded", label: t("inclusionZamzam") },
+    { key: "fastTrainIncluded", label: t("inclusionFastTrain") },
+  ];
 
   function set<K extends keyof TripDraft>(key: K, value: TripDraft[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -174,12 +177,12 @@ export function TripForm({
 
       if (result.ok) {
         setFieldErrors({});
-        toast.success(mode === "create" ? "Trip created." : "Trip updated.");
+        toast.success(mode === "create" ? t("createdToast") : t("updatedToast"));
         router.push(mode === "create" && result.data?.id ? `/admin/trips/${result.data.id}` : "/admin/trips");
         router.refresh();
       } else {
         setFieldErrors(result.fieldErrors ?? {});
-        toast.error(result.error ?? "Something went wrong.");
+        toast.error(result.error ?? tCommon("somethingWentWrong"));
       }
     });
   }
@@ -188,10 +191,10 @@ export function TripForm({
     <form onSubmit={submit} className="space-y-6">
       {mode === "create" && (
         <div className="space-y-1.5">
-          <Label>Company</Label>
+          <Label>{t("companyLabel")}</Label>
           <Select value={companyId} onValueChange={(v) => v && setCompanyId(v)}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select the owning company" />
+              <SelectValue placeholder={t("companyPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {companies.map((c) => (
@@ -206,37 +209,37 @@ export function TripForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Basics</CardTitle>
+          <CardTitle className="font-heading text-base">{t("basicsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="tripCode">Trip code</Label>
+            <Label htmlFor="tripCode">{t("tripCodeLabel")}</Label>
             <Input id="tripCode" value={form.tripCode} onChange={(e) => set("tripCode", e.target.value)} required />
             {fieldErrors.tripCode && <p className="text-xs text-destructive">{fieldErrors.tripCode}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t("titleLabel")}</Label>
             <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} required />
             {fieldErrors.title && <p className="text-xs text-destructive">{fieldErrors.title}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Tier</Label>
+            <Label>{t("tierLabel")}</Label>
             <Select value={form.tier} onValueChange={(v) => v && set("tier", v as TripDraft["tier"])}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ECONOMIC">Economic</SelectItem>
-                <SelectItem value="PREMIUM">Premium</SelectItem>
-                <SelectItem value="VIP">VIP</SelectItem>
+                <SelectItem value="ECONOMIC">{t("tierEconomic")}</SelectItem>
+                <SelectItem value="PREMIUM">{t("tierPremium")}</SelectItem>
+                <SelectItem value="VIP">{t("tierVip")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Currency</Label>
+            <Label>{t("currencyLabel")}</Label>
             <Select value={form.currencyId} onValueChange={(v) => v && set("currencyId", v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select currency" />
+                <SelectValue placeholder={t("currencyPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {currencies.map((c) => (
@@ -248,7 +251,7 @@ export function TripForm({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="departureDate">Departure date</Label>
+            <Label htmlFor="departureDate">{t("departureDateLabel")}</Label>
             <Input
               id="departureDate"
               type="date"
@@ -258,7 +261,7 @@ export function TripForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="returnDate">Return date</Label>
+            <Label htmlFor="returnDate">{t("returnDateLabel")}</Label>
             <Input
               id="returnDate"
               type="date"
@@ -268,7 +271,7 @@ export function TripForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="availableSeats">Available seats</Label>
+            <Label htmlFor="availableSeats">{t("availableSeatsLabel")}</Label>
             <Input
               id="availableSeats"
               type="number"
@@ -278,7 +281,7 @@ export function TripForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="daysInMakkah">Days in Makkah</Label>
+            <Label htmlFor="daysInMakkah">{t("daysInMakkahLabel")}</Label>
             <Input
               id="daysInMakkah"
               type="number"
@@ -288,7 +291,7 @@ export function TripForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="daysInMadinah">Days in Madinah</Label>
+            <Label htmlFor="daysInMadinah">{t("daysInMadinahLabel")}</Label>
             <Input
               id="daysInMadinah"
               type="number"
@@ -302,15 +305,15 @@ export function TripForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Flights</CardTitle>
+          <CardTitle className="font-heading text-base">{t("flightsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="airline">Airline</Label>
+            <Label htmlFor="airline">{t("airlineLabel")}</Label>
             <Input id="airline" value={form.airline} onChange={(e) => set("airline", e.target.value)} required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="transitCount">Transit stops</Label>
+            <Label htmlFor="transitCount">{t("transitStopsLabel")}</Label>
             <Input
               id="transitCount"
               type="number"
@@ -319,19 +322,19 @@ export function TripForm({
               onChange={(e) => set("transitCount", e.target.value)}
             />
           </div>
-          <AirportField label="Outbound departure" value={form.outboundDepartureAirportId} onChange={(v) => set("outboundDepartureAirportId", v)} airports={airports} />
-          <AirportField label="Outbound arrival" value={form.outboundArrivalAirportId} onChange={(v) => set("outboundArrivalAirportId", v)} airports={airports} />
-          <AirportField label="Return departure" value={form.returnDepartureAirportId} onChange={(v) => set("returnDepartureAirportId", v)} airports={airports} />
-          <AirportField label="Return arrival" value={form.returnArrivalAirportId} onChange={(v) => set("returnArrivalAirportId", v)} airports={airports} />
+          <AirportField label={t("outboundDeparture")} value={form.outboundDepartureAirportId} onChange={(v) => set("outboundDepartureAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
+          <AirportField label={t("outboundArrival")} value={form.outboundArrivalAirportId} onChange={(v) => set("outboundArrivalAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
+          <AirportField label={t("returnDeparture")} value={form.returnDepartureAirportId} onChange={(v) => set("returnDepartureAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
+          <AirportField label={t("returnArrival")} value={form.returnArrivalAirportId} onChange={(v) => set("returnArrivalAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
           <div className="space-y-1.5">
-            <Label htmlFor="transitCity">Transit city</Label>
+            <Label htmlFor="transitCity">{t("transitCityLabel")}</Label>
             <Input id="transitCity" value={form.transitCity} onChange={(e) => set("transitCity", e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="transitDuration">Transit duration</Label>
+            <Label htmlFor="transitDuration">{t("transitDurationLabel")}</Label>
             <Input
               id="transitDuration"
-              placeholder="e.g. 2h 30m"
+              placeholder={t("transitDurationPlaceholder")}
               value={form.transitDuration}
               onChange={(e) => set("transitDuration", e.target.value)}
             />
@@ -341,7 +344,7 @@ export function TripForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Inclusions</CardTitle>
+          <CardTitle className="font-heading text-base">{t("inclusionsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
           {INCLUSIONS.map((item) => (
@@ -355,14 +358,14 @@ export function TripForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Hotels</CardTitle>
+          <CardTitle className="font-heading text-base">{t("hotelsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Makkah hotel</Label>
+            <Label>{t("makkahHotelLabel")}</Label>
             <Select value={form.makkahHotelId} onValueChange={(v) => set("makkahHotelId", v ?? "")}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder={t("hotelNone")} />
               </SelectTrigger>
               <SelectContent>
                 {makkahHotels.map((h) => (
@@ -375,15 +378,15 @@ export function TripForm({
             {form.makkahHotelId && (
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Checkbox checked={form.makkahFreeBus} onCheckedChange={(v) => set("makkahFreeBus", Boolean(v))} />
-                Free shuttle to the Haram
+                {t("makkahShuttle")}
               </label>
             )}
           </div>
           <div className="space-y-2">
-            <Label>Madinah hotel</Label>
+            <Label>{t("madinahHotelLabel")}</Label>
             <Select value={form.madinahHotelId} onValueChange={(v) => set("madinahHotelId", v ?? "")}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder={t("hotelNone")} />
               </SelectTrigger>
               <SelectContent>
                 {madinahHotels.map((h) => (
@@ -396,7 +399,7 @@ export function TripForm({
             {form.madinahHotelId && (
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Checkbox checked={form.madinahFreeBus} onCheckedChange={(v) => set("madinahFreeBus", Boolean(v))} />
-                Free shuttle to the Mosque
+                {t("madinahShuttle")}
               </label>
             )}
           </div>
@@ -405,12 +408,12 @@ export function TripForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Room prices</CardTitle>
+          <CardTitle className="font-heading text-base">{t("roomPricesTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3">
           {ROOM_TYPES.map((type) => (
             <div key={type} className="space-y-1.5">
-              <Label htmlFor={`price-${type}`}>{ROOM_LABEL[type]}</Label>
+              <Label htmlFor={`price-${type}`}>{t(ROOM_LABEL_KEY[type])}</Label>
               <Input
                 id={`price-${type}`}
                 type="number"
@@ -425,7 +428,7 @@ export function TripForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Description</CardTitle>
+          <CardTitle className="font-heading text-base">{t("descriptionTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea rows={4} value={form.description} onChange={(e) => set("description", e.target.value)} />
@@ -434,7 +437,7 @@ export function TripForm({
 
       <Button type="submit" disabled={pending || (mode === "create" && !companyId)}>
         {pending && <Loader2 className="size-4 animate-spin" />}
-        {mode === "create" ? "Create trip" : "Save changes"}
+        {mode === "create" ? t("createSubmit") : t("saveSubmit")}
       </Button>
     </form>
   );
@@ -445,18 +448,20 @@ function AirportField({
   value,
   onChange,
   airports,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   airports: AirportOption[];
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Select value={value} onValueChange={(v) => v && onChange(v)}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select airport" />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {airports.map((a) => (
