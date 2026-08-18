@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import {
   BadgeCheck,
@@ -23,13 +24,15 @@ import { FavouriteButton } from "@/components/trip/favourite-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
+/** Deduped across generateMetadata + the page body — both need the same trip in one request. */
+const getTrip = cache(async (id: string) => {
+  const api = await apiClient();
+  return api.GET("/api/v1/trips/{id}", { params: { path: { id } }, cache: "no-store" });
+});
+
 export async function generateMetadata(props: PageProps<"/trips/[id]">): Promise<Metadata> {
   const { id } = await props.params;
-  const api = await apiClient();
-  const [result, t] = await Promise.all([
-    api.GET("/api/v1/trips/{id}", { params: { path: { id } } }),
-    getTranslations("tripDetail"),
-  ]);
+  const [result, t] = await Promise.all([getTrip(id), getTranslations("tripDetail")]);
   return { title: result.data?.data?.title ?? t("metaFallbackTitle") };
 }
 
@@ -55,22 +58,25 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
 
   const TIER_LABEL: Record<string, string> = { VIP: tTiers("vip"), PREMIUM: tTiers("premium"), ECONOMIC: tTiers("economic") };
 
-  const result = await api.GET("/api/v1/trips/{id}", { params: { path: { id } }, cache: "no-store" });
+  const isCustomer = user?.role === "CUSTOMER";
+  const [result, activeResult, favResult] = await Promise.all([
+    getTrip(id),
+    isCustomer ? api.GET("/api/v1/customers/me/leads/active", { cache: "no-store" }) : Promise.resolve(null),
+    isCustomer
+      ? api.GET("/api/v1/customers/me/favourites", { params: { query: { page: 0, size: 200 } as never }, cache: "no-store" })
+      : Promise.resolve(null),
+  ]);
   const trip = result.data?.data;
   if (!trip) notFound();
 
   let activeLead: { leadId: string; tripId: string; tripTitle: string } | null = null;
   let favourited = false;
-  if (user?.role === "CUSTOMER") {
-    const [activeResult, favResult] = await Promise.all([
-      api.GET("/api/v1/customers/me/leads/active", { cache: "no-store" }),
-      api.GET("/api/v1/customers/me/favourites", { params: { query: { page: 0, size: 200 } as never }, cache: "no-store" }),
-    ]);
-    const active = activeResult.data?.data;
+  if (isCustomer) {
+    const active = activeResult?.data?.data;
     if (active?.id && active.tripId && active.tripTitle) {
       activeLead = { leadId: active.id, tripId: active.tripId, tripTitle: active.tripTitle };
     }
-    favourited = Boolean(favResult.data?.data?.content?.some((f) => f.trip?.id === id));
+    favourited = Boolean(favResult?.data?.data?.content?.some((f) => f.trip?.id === id));
   }
 
   const inclusions = [
@@ -120,12 +126,14 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
                 from={trip.outboundDepartureAirport}
                 to={trip.outboundArrivalAirport}
                 airline={trip.airline}
+                locale={locale}
               />
               <RouteLeg
                 label={t("return")}
                 from={trip.returnDepartureAirport}
                 to={trip.returnArrivalAirport}
                 airline={trip.airline}
+                locale={locale}
               />
               {trip.transitCount ? (
                 <p className="text-xs text-muted-foreground">
@@ -219,7 +227,6 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
         <div className="lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <CardContent className="space-y-4 pt-6">
-              <p className="text-sm text-muted-foreground">{t("seatsLeft", { count: trip.availableSeats ?? 0 })}</p>
               {trip.id && (
                 <PreserveFlow
                   tripId={trip.id}
@@ -252,18 +259,23 @@ function RouteLeg({
   from,
   to,
   airline,
+  locale,
 }: {
   label: string;
-  from?: { iataCode?: string; city?: string };
-  to?: { iataCode?: string; city?: string };
+  from?: { iataCode?: string; city?: string; cityAr?: string };
+  to?: { iataCode?: string; city?: string; cityAr?: string };
   airline?: string;
+  locale: "ar" | "en";
 }) {
+  const cityLabel = (airport?: { iataCode?: string; city?: string; cityAr?: string }) =>
+    (locale === "ar" && airport?.cityAr ? airport.cityAr : airport?.city) ?? airport?.iataCode;
+
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="w-16 shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
-      <span className="flex-1 text-right">{from?.city ?? from?.iataCode}</span>
+      <span className="flex-1 text-right">{cityLabel(from)}</span>
       <span className="mx-3 text-muted-foreground">✈ {airline}</span>
-      <span className="flex-1">{to?.city ?? to?.iataCode}</span>
+      <span className="flex-1">{cityLabel(to)}</span>
     </div>
   );
 }

@@ -106,7 +106,14 @@ export function HotelFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{t("cityLabel")}</Label>
-              <Select value={form.city} onValueChange={(v) => v && setForm((f) => ({ ...f, city: v as "MAKKAH" | "MADINAH" }))}>
+              <Select
+                value={form.city}
+                onValueChange={(v) => v && setForm((f) => ({ ...f, city: v as "MAKKAH" | "MADINAH" }))}
+                items={[
+                  { value: "MAKKAH", label: t("cityMakkah") },
+                  { value: "MADINAH", label: t("cityMadinah") },
+                ]}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>

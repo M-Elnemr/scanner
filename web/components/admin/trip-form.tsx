@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -193,7 +193,11 @@ export function TripForm({
       {mode === "create" && (
         <div className="space-y-1.5">
           <Label>{t("companyLabel")}</Label>
-          <Select value={companyId} onValueChange={(v) => v && setCompanyId(v)}>
+          <Select
+            value={companyId}
+            onValueChange={(v) => v && setCompanyId(v)}
+            items={companies.map((c) => ({ value: c.id, label: c.name }))}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder={t("companyPlaceholder")} />
             </SelectTrigger>
@@ -225,7 +229,15 @@ export function TripForm({
           </div>
           <div className="space-y-1.5">
             <Label>{t("tierLabel")}</Label>
-            <Select value={form.tier} onValueChange={(v) => v && set("tier", v as TripDraft["tier"])}>
+            <Select
+              value={form.tier}
+              onValueChange={(v) => v && set("tier", v as TripDraft["tier"])}
+              items={[
+                { value: "ECONOMIC", label: t("tierEconomic") },
+                { value: "PREMIUM", label: t("tierPremium") },
+                { value: "VIP", label: t("tierVip") },
+              ]}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -238,7 +250,11 @@ export function TripForm({
           </div>
           <div className="space-y-1.5">
             <Label>{t("currencyLabel")}</Label>
-            <Select value={form.currencyId} onValueChange={(v) => v && set("currencyId", v)}>
+            <Select
+              value={form.currencyId}
+              onValueChange={(v) => v && set("currencyId", v)}
+              items={currencies.map((c) => ({ value: c.id, label: `${c.code} (${c.symbol})` }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={t("currencyPlaceholder")} />
               </SelectTrigger>
@@ -366,7 +382,11 @@ export function TripForm({
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>{t("makkahHotelLabel")}</Label>
-            <Select value={form.makkahHotelId} onValueChange={(v) => set("makkahHotelId", v ?? "")}>
+            <Select
+              value={form.makkahHotelId}
+              onValueChange={(v) => set("makkahHotelId", v ?? "")}
+              items={makkahHotels.map((h) => ({ value: h.id, label: h.name }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={t("hotelNone")} />
               </SelectTrigger>
@@ -387,7 +407,11 @@ export function TripForm({
           </div>
           <div className="space-y-2">
             <Label>{t("madinahHotelLabel")}</Label>
-            <Select value={form.madinahHotelId} onValueChange={(v) => set("madinahHotelId", v ?? "")}>
+            <Select
+              value={form.madinahHotelId}
+              onValueChange={(v) => set("madinahHotelId", v ?? "")}
+              items={madinahHotels.map((h) => ({ value: h.id, label: h.name }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={t("hotelNone")} />
               </SelectTrigger>
@@ -459,17 +483,24 @@ function AirportField({
   airports: AirportOption[];
   placeholder?: string;
 }) {
+  const locale = useLocale() as "ar" | "en";
+  const airportLabel = (a: AirportOption) => {
+    const city = locale === "ar" && a.cityAr ? a.cityAr : a.city;
+    const country = locale === "ar" && a.countryNameAr ? a.countryNameAr : a.countryName;
+    return `${city} (${a.iataCode}) — ${country}`;
+  };
+
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Select value={value} onValueChange={(v) => v && onChange(v)}>
+      <Select value={value} onValueChange={(v) => v && onChange(v)} items={airports.map((a) => ({ value: a.id, label: airportLabel(a) }))}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {airports.map((a) => (
             <SelectItem key={a.id} value={a.id}>
-              {a.label}
+              {airportLabel(a)}
             </SelectItem>
           ))}
         </SelectContent>

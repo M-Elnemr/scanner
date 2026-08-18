@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { TripImage } from "@/components/trip/trip-image";
 import { CompareToggle } from "@/components/trip/compare-toggle";
@@ -49,10 +49,6 @@ export function TripCard({ trip }: { trip: TripSummary }) {
           <span className="flex items-center gap-1">
             <MapPin className="size-3.5" />
             {trip.outboundDepartureAirport?.iataCode} → {trip.outboundArrivalAirport?.iataCode}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="size-3.5" />
-            {t("seatsLeft", { count: trip.availableSeats ?? 0 })}
           </span>
         </div>
 

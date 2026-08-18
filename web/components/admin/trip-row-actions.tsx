@@ -95,7 +95,11 @@ export function TripRowActions({
           </DialogHeader>
           <div className="space-y-1.5">
             <Label>{t("newCompanyLabel")}</Label>
-            <Select value={targetCompany} onValueChange={(v) => v && setTargetCompany(v)}>
+            <Select
+              value={targetCompany}
+              onValueChange={(v) => v && setTargetCompany(v)}
+              items={companies.map((c) => ({ value: c.id, label: c.name }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={t("selectCompanyPlaceholder")} />
               </SelectTrigger>

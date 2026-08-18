@@ -56,7 +56,14 @@ export function DevSignIn({ next }: { next?: string }) {
           required
         />
         <div className="flex gap-2">
-          <Select value={role} onValueChange={(v) => setRole(v as "CUSTOMER" | "ADMIN")}>
+          <Select
+            value={role}
+            onValueChange={(v) => setRole(v as "CUSTOMER" | "ADMIN")}
+            items={[
+              { value: "CUSTOMER", label: t("roleCustomer") },
+              { value: "ADMIN", label: t("roleAdmin") },
+            ]}
+          >
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>

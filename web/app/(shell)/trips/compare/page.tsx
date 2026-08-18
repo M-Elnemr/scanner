@@ -32,7 +32,6 @@ function buildRows(
     },
     { label: t("rowMakkahNights"), render: (trip) => trip.daysInMakkah },
     { label: t("rowMadinahNights"), render: (trip) => trip.daysInMadinah },
-    { label: t("rowSeatsLeft"), render: (trip) => trip.availableSeats },
     { label: t("rowPriceFrom"), render: (trip) => formatMoney(trip.priceStartsFrom, trip.currency, locale) },
   ];
 }

@@ -11,6 +11,7 @@ import com.umrah.scanner.trip.infrastructure.RoomPriceRepository;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
 import com.umrah.scanner.trip.infrastructure.TripSpecifications;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,10 @@ public class TripQueryService {
         // who already holds a lead with a since-suspended company must keep reaching that trip by
         // its direct link, matching the same carve-out CompanyQueryService.getVisibleTo documents.
         specs.add(TripSpecifications.companyIsApproved());
+        // Same carve-out as companyIsApproved() above: only applied to browse, not to
+        // getPublicDetail, so a customer who already holds a lead can still open a now-past
+        // trip via its direct link.
+        specs.add(TripSpecifications.departureOnOrAfter(LocalDate.now()));
         if (filter.tiers() != null && !filter.tiers().isEmpty()) {
             specs.add(TripSpecifications.hasTierIn(filter.tiers()));
         }

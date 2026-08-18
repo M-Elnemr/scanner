@@ -4,7 +4,11 @@ import { pageableQuery } from "@/lib/api/pageable";
 
 export interface AirportOption {
   id: string;
-  label: string;
+  iataCode: string;
+  city: string;
+  cityAr?: string;
+  countryName: string;
+  countryNameAr?: string;
 }
 
 export interface CurrencyOption {
@@ -22,7 +26,14 @@ export async function listAirports(): Promise<AirportOption[]> {
   const result = await publicApi.GET("/api/v1/airports", { cache: "force-cache", next: { revalidate: 3600 } });
   return (result.data?.data ?? [])
     .filter((a) => a.id)
-    .map((a) => ({ id: a.id!, label: `${a.city ?? ""} (${a.iataCode ?? "?"}) — ${a.countryName ?? ""}` }));
+    .map((a) => ({
+      id: a.id!,
+      iataCode: a.iataCode ?? "?",
+      city: a.city ?? "",
+      cityAr: a.cityAr,
+      countryName: a.countryName ?? "",
+      countryNameAr: a.countryNameAr,
+    }));
 }
 
 export async function listCurrencies(): Promise<CurrencyOption[]> {

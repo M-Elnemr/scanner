@@ -6,7 +6,8 @@ import { TripGrid } from "@/components/trip/trip-grid";
 export async function FeaturedTrips() {
   const result = await publicApi.GET("/api/v1/trips", {
     params: { query: pageableQuery(0, 8) },
-    cache: "no-store",
+    cache: "force-cache",
+    next: { revalidate: 30 },
   });
   const page = unwrap(result);
 

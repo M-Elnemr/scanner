@@ -116,7 +116,16 @@ export function FilterBar() {
           <div className="flex flex-col gap-5 overflow-y-auto px-4">
             <div className="space-y-1.5">
               <Label>{t("roomSize")}</Label>
-              <Select value={draft.roomSize} onValueChange={(v) => setDraft((d) => ({ ...d, roomSize: v ?? "" }))}>
+              <Select
+                value={draft.roomSize}
+                onValueChange={(v) => setDraft((d) => ({ ...d, roomSize: v ?? "" }))}
+                items={[
+                  { value: "1", label: tRoomTypes("single") },
+                  { value: "2", label: tRoomTypes("double") },
+                  { value: "3", label: tRoomTypes("triple") },
+                  { value: "4", label: tRoomTypes("quad") },
+                ]}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={t("any")} />
                 </SelectTrigger>
