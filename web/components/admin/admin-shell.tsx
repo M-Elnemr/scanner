@@ -35,9 +35,8 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
     <div className="flex min-h-screen bg-secondary/30">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5 font-heading text-lg font-bold">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Compass className="size-4.5" />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
           {t("sidebarTitle")}
         </div>
         <nav className="flex-1 space-y-1 p-3">

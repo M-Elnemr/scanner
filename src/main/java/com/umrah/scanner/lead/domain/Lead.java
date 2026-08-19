@@ -210,17 +210,9 @@ public class Lead extends BaseEntity {
      */
     public void recordAction(LeadAction action, UUID actorUserId, Instant at) {
         switch (action) {
-            case REPORT_DEPOSIT -> {
-                depositReportedBy = actorUserId;
-                depositReportedAt = at;
-            }
             case MARK_DEPOSIT_PAID -> {
                 depositConfirmedBy = actorUserId;
                 depositConfirmedAt = at;
-            }
-            case REPORT_FULL_PAYMENT -> {
-                fullPaymentReportedBy = actorUserId;
-                fullPaymentReportedAt = at;
             }
             case MARK_FULLY_PAID -> {
                 fullPaymentConfirmedBy = actorUserId;

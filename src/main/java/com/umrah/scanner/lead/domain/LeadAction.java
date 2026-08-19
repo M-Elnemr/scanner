@@ -12,16 +12,10 @@ import com.umrah.scanner.user.domain.Role;
  */
 public enum LeadAction {
 
-    /** Customer says they paid the deposit; the company still has to confirm. */
-    REPORT_DEPOSIT(Role.CUSTOMER),
-
-    /** Company confirms the customer's deposit report, or records a deposit itself. */
+    /** Company records that the deposit was paid — the customer no longer self-reports this. */
     MARK_DEPOSIT_PAID(Role.COMPANY),
 
-    /** Customer says they paid in full; the company still has to confirm. */
-    REPORT_FULL_PAYMENT(Role.CUSTOMER),
-
-    /** Company confirms the customer's full-payment report, or records full payment itself. */
+    /** Company records that the trip was paid in full — the customer no longer self-reports this. */
     MARK_FULLY_PAID(Role.COMPANY),
 
     /** Company states it has settled the platform's commission; awaits admin confirmation. */

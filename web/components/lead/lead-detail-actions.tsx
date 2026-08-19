@@ -2,19 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { CreditCard, Loader2, Pencil, Wallet, X } from "lucide-react";
+import { Loader2, Pencil, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { TravelerPicker, useTravelerPickerState } from "@/components/trip/traveler-picker";
-import {
-  cancelLeadAction,
-  reportDepositAction,
-  reportFullPaymentAction,
-  updateTravelersAction,
-} from "@/lib/leads/actions";
+import { cancelLeadAction, updateTravelersAction } from "@/lib/leads/actions";
 
-type Action = "REPORT_DEPOSIT" | "REPORT_FULL_PAYMENT" | "CANCEL";
+type Action = "CANCEL";
 
 export function LeadDetailActions({
   leadId,
@@ -37,36 +32,8 @@ export function LeadDetailActions({
 
   const actions = new Set(availableActions as Action[]);
 
-  function run(label: string, fn: () => Promise<{ ok: boolean; error?: string }>) {
-    startTransition(async () => {
-      const result = await fn();
-      if (result.ok) toast.success(label);
-      else toast.error(result.error ?? t("genericError"));
-    });
-  }
-
   return (
     <div className="flex flex-wrap gap-2">
-      {actions.has("REPORT_DEPOSIT") && (
-        <Button
-          variant="outline"
-          disabled={pending}
-          onClick={() => run(t("depositToastSuccess"), () => reportDepositAction(leadId))}
-        >
-          {pending ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
-          {t("iPaidDeposit")}
-        </Button>
-      )}
-      {actions.has("REPORT_FULL_PAYMENT") && (
-        <Button
-          variant="outline"
-          disabled={pending}
-          onClick={() => run(t("fullPaymentToastSuccess"), () => reportFullPaymentAction(leadId))}
-        >
-          {pending ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
-          {t("iPaidInFull")}
-        </Button>
-      )}
       {travelersEditable && (
         <Button variant="outline" onClick={() => setEditOpen(true)}>
           <Pencil className="size-4" /> {t("editTravellers")}

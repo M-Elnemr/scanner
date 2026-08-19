@@ -133,30 +133,6 @@ public class LeadController {
         return ApiResponse.of(LeadResponse.forCustomer(lead));
     }
 
-    @Operation(summary = "Report that I paid the deposit",
-            description = "Moves the lead to PENDING_DEPOSIT_CONFIRMATION and asks the company to confirm.")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    @PatchMapping("/api/v1/customers/me/leads/{id}/report-deposit")
-    public ApiResponse<LeadResponse> reportDeposit(
-            @AuthenticationPrincipal AuthenticatedUser currentUser,
-            @PathVariable UUID id,
-            @RequestBody(required = false) LeadActionRequest request) {
-        return ApiResponse.of(LeadResponse.forCustomer(
-                act(id, LeadAction.REPORT_DEPOSIT, Role.CUSTOMER, currentUser, request)));
-    }
-
-    @Operation(summary = "Report that I paid in full",
-            description = "Allowed from DEPOSIT_PAID. Moves the lead to PENDING_FULL_PAYMENT_CONFIRMATION.")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    @PatchMapping("/api/v1/customers/me/leads/{id}/report-full-payment")
-    public ApiResponse<LeadResponse> reportFullPayment(
-            @AuthenticationPrincipal AuthenticatedUser currentUser,
-            @PathVariable UUID id,
-            @RequestBody(required = false) LeadActionRequest request) {
-        return ApiResponse.of(LeadResponse.forCustomer(
-                act(id, LeadAction.REPORT_FULL_PAYMENT, Role.CUSTOMER, currentUser, request)));
-    }
-
     // --- Company ---
 
     @Operation(summary = "List leads for my company")

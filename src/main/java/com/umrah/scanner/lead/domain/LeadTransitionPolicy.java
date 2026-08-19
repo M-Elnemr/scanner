@@ -26,17 +26,14 @@ public final class LeadTransitionPolicy {
     private static final Map<LeadAction, Rule> RULES = new EnumMap<>(LeadAction.class);
 
     static {
-        // Deposit: the customer reports and parks in PENDING; the company either confirms that
-        // report or records the deposit itself straight from INTERESTED.
-        rule(LeadAction.REPORT_DEPOSIT, Map.of(
-                LeadStatus.INTERESTED, LeadStatus.PENDING_DEPOSIT_CONFIRMATION));
+        // Deposit and full payment: the company records both directly — the customer no longer
+        // self-reports (that used to park the lead in a PENDING_*_CONFIRMATION status awaiting
+        // confirmation; both statuses stay defined in LeadStatus for leads already sitting there,
+        // and MARK_* still resolves them, but nothing can reach them going forward).
         rule(LeadAction.MARK_DEPOSIT_PAID, Map.of(
                 LeadStatus.INTERESTED, LeadStatus.DEPOSIT_PAID,
                 LeadStatus.PENDING_DEPOSIT_CONFIRMATION, LeadStatus.DEPOSIT_PAID));
 
-        // Full payment: same shape as the deposit.
-        rule(LeadAction.REPORT_FULL_PAYMENT, Map.of(
-                LeadStatus.DEPOSIT_PAID, LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION));
         rule(LeadAction.MARK_FULLY_PAID, Map.of(
                 LeadStatus.DEPOSIT_PAID, LeadStatus.FULLY_PAID,
                 LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION, LeadStatus.FULLY_PAID));

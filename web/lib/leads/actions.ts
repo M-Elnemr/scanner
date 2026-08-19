@@ -88,33 +88,6 @@ export async function updateTravelersAction(
   }
 }
 
-export async function reportDepositAction(leadId: string, note?: string): Promise<ActionResult> {
-  return runLeadAction(leadId, "/api/v1/customers/me/leads/{id}/report-deposit", note);
-}
-
-export async function reportFullPaymentAction(leadId: string, note?: string): Promise<ActionResult> {
-  return runLeadAction(leadId, "/api/v1/customers/me/leads/{id}/report-full-payment", note);
-}
-
-async function runLeadAction(
-  leadId: string,
-  path: "/api/v1/customers/me/leads/{id}/report-deposit" | "/api/v1/customers/me/leads/{id}/report-full-payment",
-  note?: string,
-): Promise<ActionResult> {
-  try {
-    const api = await apiClient();
-    const result = await api.PATCH(path, {
-      params: { path: { id: leadId } },
-      body: note ? { note } : undefined,
-    });
-    unwrapVoid(result);
-    revalidatePath(`/leads/${leadId}`);
-    return { ok: true };
-  } catch (error) {
-    return fail(error);
-  }
-}
-
 export async function submitRatingAction(leadId: string, stars: number, comment?: string): Promise<ActionResult> {
   try {
     const api = await apiClient();

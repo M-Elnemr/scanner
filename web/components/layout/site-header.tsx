@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass, Heart, Ticket } from "lucide-react";
+import { Heart, Ticket } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth/server";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,8 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur supports-backdrop-blur:bg-background/60">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-heading text-lg font-bold tracking-tight">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Compass className="size-4.5" />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
           {tCommon("appName")}
         </Link>
 

@@ -42,14 +42,8 @@ public class LeadNotifier {
      */
     public void actionPerformed(Lead lead, LeadAction action, LeadStatus statusBeforeAction) {
         switch (action) {
-            case REPORT_DEPOSIT -> toCompany(lead, "DEPOSIT_CONFIRMATION_REQUIRED", "Confirm a deposit",
-                    "A customer reported paying the deposit for " + lead.getTrip().getTitle() + ". Please confirm.");
-
             case MARK_DEPOSIT_PAID -> toCustomer(lead, "DEPOSIT_CONFIRMED", "Deposit confirmed",
                     "Your deposit for " + lead.getTrip().getTitle() + " has been confirmed by the company.");
-
-            case REPORT_FULL_PAYMENT -> toCompany(lead, "FULL_PAYMENT_CONFIRMATION_REQUIRED", "Confirm a full payment",
-                    "A customer reported paying in full for " + lead.getTrip().getTitle() + ". Please confirm.");
 
             case MARK_FULLY_PAID -> toCustomer(lead, "FULL_PAYMENT_CONFIRMED", "Full payment confirmed",
                     "Your full payment for " + lead.getTrip().getTitle() + " has been confirmed by the company.");
