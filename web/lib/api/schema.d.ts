@@ -396,6 +396,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/hotels/{id}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/companies": {
         parameters: {
             query?: never;
@@ -1194,7 +1210,7 @@ export interface components {
         UpdateCustomerProfileRequest: {
             fullName: string;
             phone: string;
-            cashbackWalletNumber: string;
+            cashbackWalletNumber?: string;
             /** @enum {string} */
             walletType?: "VODAFONE_CASH" | "ETISALAT_CASH" | "INSTA_PAY";
         };
@@ -1476,6 +1492,15 @@ export interface components {
             /** @description Whether that distance is walkable — an admin judgement, not a computed threshold */
             canWalk?: boolean;
             locationUrl?: string;
+            /** @description Null until an admin uploads one */
+            photoUrl?: string;
+            /**
+             * Format: double
+             * @description Decimal degrees; null until an admin sets it
+             */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
             /** @description false once retired from the picker; trips already using it are unaffected */
             active?: boolean;
         };
@@ -1557,6 +1582,10 @@ export interface components {
             distanceToHaramM?: number;
             canWalk?: boolean;
             locationUrl?: string;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
             active?: boolean;
         };
         ApiResponseHotel: {
@@ -1647,6 +1676,8 @@ export interface components {
             /** @enum {string} */
             tier?: "VIP" | "PREMIUM" | "ECONOMIC";
             priceStartsFrom?: number;
+            makkahHotelPhotoUrl?: string;
+            madinahHotelPhotoUrl?: string;
         };
         RegisterCompanyRequest: {
             companyName: string;
@@ -1778,6 +1809,10 @@ export interface components {
             distanceToHaramM?: number;
             canWalk?: boolean;
             locationUrl?: string;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
             active?: boolean;
         };
         AdminCreateCompanyRequest: {
@@ -2956,6 +2991,35 @@ export interface operations {
         responses: {
             /** @description Created */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseHotel"];
+                };
+            };
+        };
+    };
+    uploadPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

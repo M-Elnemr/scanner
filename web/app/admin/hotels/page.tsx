@@ -88,6 +88,9 @@ export default async function AdminHotelsPage() {
                         distanceToHaramM: h.distanceToHaramM != null ? String(h.distanceToHaramM) : "",
                         canWalk: h.canWalk ?? false,
                         locationUrl: h.locationUrl ?? "",
+                        latitude: h.latitude != null ? String(h.latitude) : "",
+                        longitude: h.longitude != null ? String(h.longitude) : "",
+                        photoUrl: h.photoUrl ?? "",
                         active: h.active ?? true,
                       }}
                       trigger={

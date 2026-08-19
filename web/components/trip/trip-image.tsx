@@ -1,19 +1,36 @@
 import { Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Neither Trip nor Hotel has a photo field on the backend yet (only a company logo and a hotel's
- * Maps link — see docs/admin-dashboard-brief.md). Rather than hotlink stock photography (a fragile
- * external dependency for a production app), every trip card gets a tier-keyed gradient + a simple
- * landmark motif. Swap this for real photos later without touching any caller.
- */
+/** Falls back to a tier-keyed gradient + landmark motif when a trip's hotels have no photo yet. */
 const TIER_GRADIENTS: Record<string, string> = {
   VIP: "from-amber-500 via-amber-600 to-primary",
   PREMIUM: "from-teal-500 via-primary to-teal-800",
   ECONOMIC: "from-slate-500 via-slate-600 to-slate-800",
 };
 
-export function TripImage({ tier, className }: { tier?: string; className?: string }) {
+export function TripImage({
+  tier,
+  makkahPhotoUrl,
+  madinahPhotoUrl,
+  className,
+}: {
+  tier?: string;
+  makkahPhotoUrl?: string | null;
+  madinahPhotoUrl?: string | null;
+  className?: string;
+}) {
+  const photos = [makkahPhotoUrl, madinahPhotoUrl].filter((url): url is string => Boolean(url));
+  if (photos.length > 0) {
+    return (
+      <div className={cn("relative flex overflow-hidden", className)}>
+        {photos.map((url, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={i} src={url} alt="" className={cn("h-full object-cover", photos.length === 2 ? "w-1/2" : "w-full")} />
+        ))}
+      </div>
+    );
+  }
+
   const gradient = TIER_GRADIENTS[tier ?? "ECONOMIC"] ?? TIER_GRADIENTS.ECONOMIC;
   return (
     <div

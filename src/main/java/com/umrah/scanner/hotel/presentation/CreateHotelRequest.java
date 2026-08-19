@@ -16,5 +16,7 @@ public record CreateHotelRequest(
         @PositiveOrZero Integer distanceToHaramM,
         boolean canWalk,
         String locationUrl,
+        Double latitude,
+        Double longitude,
         boolean active) {
 }

@@ -14,5 +14,7 @@ public record UpdateHotelRequest(
         @PositiveOrZero Integer distanceToHaramM,
         boolean canWalk,
         String locationUrl,
+        Double latitude,
+        Double longitude,
         boolean active) {
 }

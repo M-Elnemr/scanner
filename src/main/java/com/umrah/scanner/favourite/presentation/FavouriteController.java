@@ -6,6 +6,7 @@ import com.umrah.scanner.common.security.AuthenticatedUser;
 import com.umrah.scanner.customer.application.EnsureCustomerProfileUseCase;
 import com.umrah.scanner.favourite.application.FavouriteService;
 import com.umrah.scanner.favourite.domain.Favourite;
+import com.umrah.scanner.trip.application.TripHotelPhotos;
 import com.umrah.scanner.trip.application.TripQueryService;
 import java.math.BigDecimal;
 import java.util.List;
@@ -48,7 +49,8 @@ public class FavouriteController {
         UUID customerId = ensureCustomerProfileUseCase.execute(currentUser.userId());
         Favourite favourite = favouriteService.addFavourite(customerId, tripId);
         BigDecimal priceStartsFrom = tripQueryService.priceStartsFrom(List.of(tripId)).get(tripId);
-        return ApiResponse.of(FavouriteResponse.from(favourite, priceStartsFrom));
+        TripHotelPhotos hotelPhotos = tripQueryService.hotelPhotos(List.of(tripId)).getOrDefault(tripId, TripHotelPhotos.EMPTY);
+        return ApiResponse.of(FavouriteResponse.from(favourite, priceStartsFrom, hotelPhotos));
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -64,6 +66,8 @@ public class FavouriteController {
         Page<Favourite> favourites = favouriteService.listFavourites(customerId, pageable);
         List<UUID> tripIds = favourites.getContent().stream().map(f -> f.getTrip().getId()).toList();
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds);
-        return ApiResponse.of(PageResponse.of(favourites, f -> FavouriteResponse.from(f, priceStartsFrom.get(f.getTrip().getId()))));
+        Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds);
+        return ApiResponse.of(PageResponse.of(favourites, f -> FavouriteResponse.from(
+                f, priceStartsFrom.get(f.getTrip().getId()), hotelPhotos.getOrDefault(f.getTrip().getId(), TripHotelPhotos.EMPTY))));
     }
 }

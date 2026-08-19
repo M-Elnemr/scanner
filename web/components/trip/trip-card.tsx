@@ -26,7 +26,12 @@ export function TripCard({ trip }: { trip: TripSummary }) {
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-1 hover:shadow-lg"
     >
       <div className="relative h-40">
-        <TripImage tier={trip.tier} className="h-full w-full" />
+        <TripImage
+          tier={trip.tier}
+          makkahPhotoUrl={trip.makkahHotelPhotoUrl}
+          madinahPhotoUrl={trip.madinahHotelPhotoUrl}
+          className="h-full w-full"
+        />
         {trip.tier && (
           <Badge className="absolute top-3 left-3 bg-white/90 text-foreground shadow-sm" variant="secondary">
             {TIER_LABEL[trip.tier] ?? trip.tier}

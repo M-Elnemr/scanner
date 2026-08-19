@@ -1,18 +1,22 @@
 package com.umrah.scanner.trip.application;
 
 import com.umrah.scanner.common.exception.NotFoundException;
+import com.umrah.scanner.hotel.domain.HotelCity;
 import com.umrah.scanner.lead.infrastructure.LeadRepository;
 import com.umrah.scanner.pricing.application.LeadPricingService;
 import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
+import com.umrah.scanner.trip.domain.TripHotel;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.infrastructure.RoomPriceRepository;
+import com.umrah.scanner.trip.infrastructure.TripHotelRepository;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
 import com.umrah.scanner.trip.infrastructure.TripSpecifications;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,17 +34,47 @@ public class TripQueryService {
     private final TripRepository tripRepository;
     private final LeadRepository leadRepository;
     private final RoomPriceRepository roomPriceRepository;
+    private final TripHotelRepository tripHotelRepository;
     private final LeadPricingService leadPricingService;
 
     public TripQueryService(
             TripRepository tripRepository,
             LeadRepository leadRepository,
             RoomPriceRepository roomPriceRepository,
+            TripHotelRepository tripHotelRepository,
             LeadPricingService leadPricingService) {
         this.tripRepository = tripRepository;
         this.leadRepository = leadRepository;
         this.roomPriceRepository = roomPriceRepository;
+        this.tripHotelRepository = tripHotelRepository;
         this.leadPricingService = leadPricingService;
+    }
+
+    /** One photo per city for the browse-list card — batched so N trips cost one query, not N. */
+    @Transactional(readOnly = true)
+    public Map<UUID, TripHotelPhotos> hotelPhotos(List<UUID> tripIds) {
+        if (tripIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> makkah = new HashMap<>();
+        Map<UUID, String> madinah = new HashMap<>();
+        for (TripHotel th : tripHotelRepository.findAllByTripIdInWithHotel(tripIds)) {
+            String photoUrl = th.getHotel().getPhotoUrl();
+            if (photoUrl == null) {
+                continue;
+            }
+            UUID tripId = th.getTrip().getId();
+            if (th.getCity() == HotelCity.MAKKAH) {
+                makkah.put(tripId, photoUrl);
+            } else {
+                madinah.put(tripId, photoUrl);
+            }
+        }
+        Map<UUID, TripHotelPhotos> result = new HashMap<>();
+        for (UUID id : tripIds) {
+            result.put(id, new TripHotelPhotos(makkah.get(id), madinah.get(id)));
+        }
+        return result;
     }
 
     /** "Price starts from" — the QUAD (4-bed) room price is the cheapest per-person rate we sell. */

@@ -15,11 +15,15 @@ public record HotelResponse(
         @Schema(description = "Distance to the Haram (Makkah) or the Prophet's Mosque (Madinah)") Integer distanceToHaramM,
         @Schema(description = "Whether that distance is walkable — an admin judgement, not a computed threshold") boolean canWalk,
         String locationUrl,
+        @Schema(description = "Null until an admin uploads one") String photoUrl,
+        @Schema(description = "Decimal degrees; null until an admin sets it") Double latitude,
+        Double longitude,
         @Schema(description = "false once retired from the picker; trips already using it are unaffected") boolean active) {
 
     public static HotelResponse from(Hotel hotel) {
         return new HotelResponse(
                 hotel.getId(), hotel.getCity(), hotel.getName(), hotel.getNameAr(), hotel.getStars(),
-                hotel.getDistanceToHaramM(), hotel.isCanWalk(), hotel.getLocationUrl(), hotel.isActive());
+                hotel.getDistanceToHaramM(), hotel.isCanWalk(), hotel.getLocationUrl(), hotel.getPhotoUrl(),
+                hotel.getLatitude(), hotel.getLongitude(), hotel.isActive());
     }
 }
