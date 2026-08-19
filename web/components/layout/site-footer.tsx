@@ -15,6 +15,9 @@ export async function SiteFooter() {
           <Link href="/login" className="hover:text-foreground">
             {t("nav.signIn")}
           </Link>
+          <Link href="/privacy" className="hover:text-foreground">
+            {t("footer.privacy")}
+          </Link>
         </div>
       </div>
     </footer>

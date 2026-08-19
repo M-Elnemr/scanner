@@ -17,7 +17,53 @@
     "signOut": "Sign out"
   },
   "footer": {
-    "rights": "© {year} {appName}. All your Umrah trips, one place."
+    "rights": "© {year} {appName}. All your Umrah trips, one place.",
+    "privacy": "Privacy Policy"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: {date}",
+    "intro": "This Privacy Policy explains how {appName} collects, uses and protects your information, and clarifies our role as an advertising and marketing intermediary, not a travel provider.",
+    "sections": [
+      {
+        "title": "Who we are",
+        "body": "{appName} is an advertising and marketing platform that helps you discover and compare Umrah trip packages offered by independent, third-party travel companies. We are an intermediary only: we are not a travel agency or tour operator, we do not organize, operate or deliver any Umrah trip ourselves, and we have no ownership, partnership or agency relationship with the companies whose trips appear on the platform."
+      },
+      {
+        "title": "Information we collect",
+        "body": "When you sign in with Google, we receive your name, email address and profile photo. When you submit a booking inquiry ('lead') on a trip, we collect the details you provide, such as traveler count, preferred dates and contact information. We also collect basic usage data (device, browser, pages viewed) to keep the platform working reliably, plus anything you add to your profile."
+      },
+      {
+        "title": "How we use your information",
+        "body": "We use this information to run your account, route your inquiries to the relevant travel company, show you relevant trips, keep you updated on your requests, and improve the platform. We do not use your data to make travel arrangements ourselves, since we do not provide travel services."
+      },
+      {
+        "title": "Sharing with travel companies",
+        "body": "When you submit an inquiry on a trip, we share the contact and request details you provided with the specific travel company you contacted, so they can respond to you directly. From that point, any communication, booking, payment and delivery of the Umrah service happens directly between you and that company. We do not sell your personal information to third parties for their own marketing."
+      },
+      {
+        "title": "Our role as an intermediary",
+        "body": "Because {appName} is strictly an advertising and comparison intermediary, we are not responsible for the accuracy of listings, the pricing, licensing, conduct or performance of any travel company, or the outcome of any trip you book through a company you found on the platform. We encourage you to independently verify a company's license and terms before booking. Any dispute regarding a trip is between you and the travel company, not {appName}."
+      },
+      {
+        "title": "Cookies",
+        "body": "We use essential cookies to keep you signed in and to remember your language preference. We do not use these cookies for third-party advertising tracking."
+      },
+      {
+        "title": "Data retention and security",
+        "body": "We retain your information for as long as your account is active or as needed to provide the service, and apply reasonable technical and organizational measures to protect it. No method of transmission or storage is completely secure, so we cannot guarantee absolute security."
+      },
+      {
+        "title": "Your rights",
+        "body": "You may request access to, correction of, or deletion of your personal information at any time by contacting us using the details below."
+      },
+      {
+        "title": "Changes to this policy",
+        "body": "We may update this Privacy Policy from time to time. Material changes will be reflected on this page with an updated 'last updated' date."
+      }
+    ],
+    "contactTitle": "Contact us",
+    "contactBody": "If you have questions about this Privacy Policy or how your information is handled, contact us at {email}."
   },
   "pagination": {
     "label": "Pagination",
