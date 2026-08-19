@@ -5,6 +5,7 @@ import com.umrah.scanner.common.response.PageResponse;
 import com.umrah.scanner.common.security.AuthenticatedUser;
 import com.umrah.scanner.company.application.CompanyQueryService;
 import com.umrah.scanner.customer.application.CustomerQueryService;
+import com.umrah.scanner.trip.application.TripHotelPhotos;
 import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.trip.application.ChangeTripStatusUseCase;
 import com.umrah.scanner.trip.application.CompareTripsUseCase;
@@ -127,7 +128,9 @@ public class TripController {
         UUID companyId = companyQueryService.getByUserId(currentUser.userId()).getId();
         Page<Trip> trips = tripQueryService.listForCompany(companyId, pageable);
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
-        return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))));
+        Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds(trips));
+        return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(
+                trip, priceStartsFrom.get(trip.getId()), hotelPhotos.getOrDefault(trip.getId(), TripHotelPhotos.EMPTY))));
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -154,7 +157,9 @@ public class TripController {
                 tiers, roomTypeForSize(roomSize), minPrice, maxPrice, minDays, maxDays, departureFrom, departureTo);
         Page<Trip> trips = tripQueryService.browsePublished(filter, pageable);
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
-        return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))));
+        Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds(trips));
+        return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(
+                trip, priceStartsFrom.get(trip.getId()), hotelPhotos.getOrDefault(trip.getId(), TripHotelPhotos.EMPTY))));
     }
 
     // "Room size" is the customer-facing term for how many people the room sleeps; null defaults
@@ -183,8 +188,11 @@ public class TripController {
     @GetMapping("/api/v1/trips/compare")
     public ApiResponse<List<TripSummaryResponse>> compare(@RequestParam List<UUID> ids) {
         List<Trip> trips = compareTripsUseCase.execute(ids);
-        Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(trips.stream().map(Trip::getId).toList());
-        return ApiResponse.of(trips.stream().map(trip -> TripSummaryResponse.from(trip, priceStartsFrom.get(trip.getId()))).toList());
+        List<UUID> ids2 = trips.stream().map(Trip::getId).toList();
+        Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(ids2);
+        Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(ids2);
+        return ApiResponse.of(trips.stream().map(trip -> TripSummaryResponse.from(
+                trip, priceStartsFrom.get(trip.getId()), hotelPhotos.getOrDefault(trip.getId(), TripHotelPhotos.EMPTY))).toList());
     }
 
     private List<UUID> tripIds(Page<Trip> trips) {

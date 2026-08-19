@@ -8,6 +8,7 @@ import com.umrah.scanner.hotel.application.HotelCommand;
 import com.umrah.scanner.hotel.application.HotelQueryService;
 import com.umrah.scanner.hotel.application.UpdateHotelCommand;
 import com.umrah.scanner.hotel.application.UpdateHotelUseCase;
+import com.umrah.scanner.hotel.application.UploadHotelPhotoUseCase;
 import com.umrah.scanner.hotel.domain.HotelCity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +16,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Hotels", description = "The Makkah/Madinah hotel catalogue a trip picks from.")
 @RestController
@@ -35,16 +38,19 @@ public class HotelController {
     private final CreateHotelUseCase createHotelUseCase;
     private final UpdateHotelUseCase updateHotelUseCase;
     private final DeleteHotelUseCase deleteHotelUseCase;
+    private final UploadHotelPhotoUseCase uploadHotelPhotoUseCase;
 
     public HotelController(
             HotelQueryService hotelQueryService,
             CreateHotelUseCase createHotelUseCase,
             UpdateHotelUseCase updateHotelUseCase,
-            DeleteHotelUseCase deleteHotelUseCase) {
+            DeleteHotelUseCase deleteHotelUseCase,
+            UploadHotelPhotoUseCase uploadHotelPhotoUseCase) {
         this.hotelQueryService = hotelQueryService;
         this.createHotelUseCase = createHotelUseCase;
         this.updateHotelUseCase = updateHotelUseCase;
         this.deleteHotelUseCase = deleteHotelUseCase;
+        this.uploadHotelPhotoUseCase = uploadHotelPhotoUseCase;
     }
 
     @Operation(summary = "List hotels", description = "Public. Active hotels only — the trip form's picker. "
@@ -68,7 +74,7 @@ public class HotelController {
             @AuthenticationPrincipal AuthenticatedUser admin, @Valid @RequestBody CreateHotelRequest request) {
         var command = new HotelCommand(
                 request.city(), request.name(), request.nameAr(), request.stars(), request.distanceToHaramM(),
-                request.canWalk(), request.locationUrl(), request.active());
+                request.canWalk(), request.locationUrl(), request.latitude(), request.longitude(), request.active());
         return ApiResponse.of(HotelResponse.from(createHotelUseCase.execute(admin.userId(), command)));
     }
 
@@ -78,8 +84,14 @@ public class HotelController {
             @AuthenticationPrincipal AuthenticatedUser admin, @PathVariable UUID id, @Valid @RequestBody UpdateHotelRequest request) {
         var command = new UpdateHotelCommand(
                 request.name(), request.nameAr(), request.stars(), request.distanceToHaramM(),
-                request.canWalk(), request.locationUrl(), request.active());
+                request.canWalk(), request.locationUrl(), request.latitude(), request.longitude(), request.active());
         return ApiResponse.of(HotelResponse.from(updateHotelUseCase.execute(admin.userId(), id, command)));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/api/v1/admin/hotels/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<HotelResponse> uploadPhoto(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
+        return ApiResponse.of(HotelResponse.from(uploadHotelPhotoUseCase.execute(id, file)));
     }
 
     @Operation(summary = "Delete a hotel", description = "Refuses with 409 while any trip still uses it — "

@@ -6,8 +6,6 @@ import { CreditCard, Loader2, Pencil, Wallet, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { TravelerPicker, useTravelerPickerState } from "@/components/trip/traveler-picker";
 import {
   cancelLeadAction,
@@ -34,7 +32,6 @@ export function LeadDetailActions({
   const [pending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
   const [counts, setCounts] = useTravelerPickerState(initialCounts);
   const t = useTranslations("leadActions");
 
@@ -117,16 +114,6 @@ export function LeadDetailActions({
             <DialogTitle>{t("cancelDialogTitle")}</DialogTitle>
             <DialogDescription>{t("cancelDialogDescription")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="cancel-reason-lead">{t("reasonLabel")}</Label>
-            <Textarea
-              id="cancel-reason-lead"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder={t("reasonPlaceholder")}
-              rows={3}
-            />
-          </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setCancelOpen(false)}>
               {t("keepIt")}
@@ -134,10 +121,10 @@ export function LeadDetailActions({
             <Button
               variant="destructive"
               className="flex-1"
-              disabled={pending || !cancelReason.trim()}
+              disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await cancelLeadAction(leadId, cancelReason.trim(), tripId);
+                  const result = await cancelLeadAction(leadId, undefined, tripId);
                   if (result.ok) {
                     toast.success(t("journeyCancelled"));
                     setCancelOpen(false);

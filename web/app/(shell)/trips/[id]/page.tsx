@@ -6,6 +6,7 @@ import {
   Bus,
   CalendarDays,
   Car,
+  LocateFixed,
   MapPin,
   ShieldCheck,
   Soup,
@@ -88,12 +89,23 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
     { active: trip.fastTrainIncluded, icon: TrainFront, label: t("inclusionHaramainTrain") },
   ].filter((i) => i.active);
 
+  // Makkah first — the more important leg of the journey, so it sits on the reading-start side
+  // (the right in Arabic) rather than wherever the backend happened to return it.
+  const sortedHotels = [...(trip.hotels ?? [])].sort((a, b) => (a.city === "MAKKAH" ? -1 : b.city === "MAKKAH" ? 1 : 0));
+  const makkahPhotoUrl = sortedHotels.find((th) => th.city === "MAKKAH")?.hotel?.photoUrl;
+  const madinahPhotoUrl = sortedHotels.find((th) => th.city === "MADINAH")?.hotel?.photoUrl;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
           <div className="relative h-56 overflow-hidden rounded-2xl sm:h-72">
-            <TripImage tier={trip.tier} className="h-full w-full" />
+            <TripImage
+              tier={trip.tier}
+              makkahPhotoUrl={makkahPhotoUrl}
+              madinahPhotoUrl={madinahPhotoUrl}
+              className="h-full w-full"
+            />
             {trip.tier && (
               <Badge className="absolute top-4 left-4 bg-white/90 text-foreground" variant="secondary">
                 {TIER_LABEL[trip.tier] ?? trip.tier}
@@ -161,14 +173,14 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
             </div>
           )}
 
-          {trip.hotels?.length ? (
+          {sortedHotels.length ? (
             <div>
               <h2 className="mb-3 font-heading text-lg font-semibold">{t("hotels")}</h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {trip.hotels.map((th, i) => (
+                {sortedHotels.map((th, i) => (
                   <Card key={i}>
                     <CardContent className="space-y-1.5 pt-6">
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      <p className="text-xs font-bold tracking-wide text-foreground uppercase">
                         {th.city === "MAKKAH" ? t("makkah") : t("madinah")}
                       </p>
                       <p className="font-heading font-semibold">{th.hotel?.name}</p>
@@ -178,13 +190,24 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
                         ))}
                       </div>
                       {th.hotel?.distanceToHaramM != null && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+                          <MapPin className="size-3.5 shrink-0" />
                           {t("distanceFrom", {
                             distance: th.hotel.distanceToHaramM,
                             place: th.city === "MAKKAH" ? t("haram") : t("prophetsMosque"),
                           })}
                           {th.hotel.canWalk ? t("walkableSuffix") : ""}
                         </p>
+                      )}
+                      {mapUrl(th.hotel, th.city) && (
+                        <a
+                          href={mapUrl(th.hotel, th.city)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-sm text-primary hover:underline"
+                        >
+                          <LocateFixed className="size-3.5" /> {t("viewOnMap")}
+                        </a>
                       )}
                       {th.freeBusIncluded && (
                         <p className="flex items-center gap-1 text-sm text-primary">
@@ -242,6 +265,28 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
       </div>
     </div>
   );
+}
+
+// Fixed landmark coordinates, used as the reference point on the hotel's "view on map" link.
+const KAABA = { lat: 21.4225, lng: 39.8262 };
+const PROPHETS_MOSQUE = { lat: 24.4672, lng: 39.6112 };
+
+/** A pasted maps link, if the admin set one, always wins over coordinates — it's whatever they
+ * intended people to see, which a generated directions link can't guarantee to match. */
+function mapUrl(
+  hotel: { locationUrl?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined,
+  city: string | undefined,
+): string | undefined {
+  if (!hotel) return undefined;
+  if (hotel.locationUrl) return hotel.locationUrl;
+  if (hotel.latitude == null || hotel.longitude == null) return undefined;
+  const reference = city === "MADINAH" ? PROPHETS_MOSQUE : KAABA;
+  const params = new URLSearchParams({
+    api: "1",
+    origin: `${hotel.latitude},${hotel.longitude}`,
+    destination: `${reference.lat},${reference.lng}`,
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
 const ROOM_TYPE_ORDER: Record<string, number> = { DOUBLE: 0, TRIPLE: 1, QUAD: 2, CHILD: 3, INFANT: 4, SINGLE: 5 };

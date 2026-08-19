@@ -6,7 +6,6 @@ import com.umrah.scanner.commission.application.CommissionLedgerService;
 import com.umrah.scanner.common.exception.ConflictException;
 import com.umrah.scanner.common.exception.ForbiddenException;
 import com.umrah.scanner.common.exception.NotFoundException;
-import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadAction;
 import com.umrah.scanner.lead.domain.LeadStatus;
@@ -69,13 +68,6 @@ public class ExecuteLeadActionUseCase {
         LeadStatus current = lead.getStatus();
         LeadStatus target = LeadTransitionPolicy.targetOf(action, current)
                 .orElseThrow(() -> new ConflictException(action + " is not available while the lead is " + current));
-
-        // A cancellation is the one step that destroys rather than advances, and the history note is
-        // the only record of why. Insisting on it here rather than with bean validation keeps the
-        // rule attached to the action instead of to one request shape.
-        if (action == LeadAction.CANCEL && (note == null || note.isBlank())) {
-            throw new ValidationException("Tell us why you are cancelling this journey");
-        }
 
         Instant now = Instant.now();
         applyMoneySideEffects(lead, action, actorUserId, now);

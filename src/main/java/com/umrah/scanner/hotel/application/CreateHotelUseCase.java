@@ -58,6 +58,8 @@ public class CreateHotelUseCase {
         hotel.setDistanceToHaramM(command.distanceToHaramM());
         hotel.setCanWalk(command.canWalk());
         hotel.setLocationUrl(command.locationUrl());
+        hotel.setLatitude(command.latitude());
+        hotel.setLongitude(command.longitude());
         hotel.setActive(command.active());
     }
 }

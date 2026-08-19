@@ -92,12 +92,11 @@ public class LeadController {
     @Operation(summary = "Cancel my preserved journey",
             description = "Frees the customer's single preserved-trip slot. Allowed from every status except "
                     + "CASHBACK_PAID — read the lead's availableActions rather than comparing statuses. A note "
-                    + "explaining why is required. Any commission the company owed on this lead is voided; money "
+                    + "explaining why is optional. Any commission the company owed on this lead is voided; money "
                     + "already paid to the company is not refunded by the platform.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Journey cancelled"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Already cancelled, or the cashback has been paid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "No reason given")})
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Already cancelled, or the cashback has been paid")})
     @PreAuthorize("hasRole('CUSTOMER')")
     @PatchMapping("/api/v1/customers/me/leads/{id}/cancel")
     public ApiResponse<LeadResponse> cancel(

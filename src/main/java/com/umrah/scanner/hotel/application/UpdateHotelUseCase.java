@@ -45,6 +45,8 @@ public class UpdateHotelUseCase {
         hotel.setDistanceToHaramM(command.distanceToHaramM());
         hotel.setCanWalk(command.canWalk());
         hotel.setLocationUrl(command.locationUrl());
+        hotel.setLatitude(command.latitude());
+        hotel.setLongitude(command.longitude());
         hotel.setActive(command.active());
 
         auditLogService.record(adminUserId, "HOTEL_UPDATED", "Hotel", hotel.getId(), previousName, hotel.getName());

@@ -51,12 +51,12 @@ export async function preserveTripAction(
   }
 }
 
-export async function cancelLeadAction(leadId: string, reason: string, tripId?: string): Promise<ActionResult> {
+export async function cancelLeadAction(leadId: string, reason: string | undefined, tripId?: string): Promise<ActionResult> {
   try {
     const api = await apiClient();
     const result = await api.PATCH("/api/v1/customers/me/leads/{id}/cancel", {
       params: { path: { id: leadId } },
-      body: { note: reason },
+      body: reason ? { note: reason } : {},
     });
     unwrapVoid(result);
     revalidatePath(`/leads/${leadId}`);

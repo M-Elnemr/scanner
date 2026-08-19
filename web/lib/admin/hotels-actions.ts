@@ -14,6 +14,8 @@ export interface HotelInput {
   distanceToHaramM?: number;
   canWalk?: boolean;
   locationUrl?: string;
+  latitude?: number;
+  longitude?: number;
   active?: boolean;
 }
 
@@ -40,6 +42,24 @@ export async function updateHotelAction(id: string, input: HotelInput): Promise<
   } catch (error) {
     if (error instanceof ApiError) return { ok: false, error: error.message, fieldErrors: error.fieldErrors };
     return { ok: false, error: "Could not update hotel." };
+  }
+}
+
+export async function uploadHotelPhotoAction(id: string, formData: FormData): Promise<ActionResult> {
+  try {
+    const api = await apiClient();
+    // openapi-fetch passes a FormData body through untouched (no JSON.stringify, no Content-Type
+    // override), letting fetch set the multipart boundary itself.
+    const result = await api.POST("/api/v1/admin/hotels/{id}/photo", {
+      params: { path: { id } },
+      body: formData as never,
+    });
+    unwrapVoid(result);
+    revalidatePath("/admin/hotels");
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, error: error.message };
+    return { ok: false, error: "Could not upload photo." };
   }
 }
 

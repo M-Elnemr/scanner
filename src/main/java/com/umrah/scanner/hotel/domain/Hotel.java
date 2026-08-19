@@ -53,6 +53,15 @@ public class Hotel extends SoftDeletableEntity {
     @Column(name = "location_url", length = 500)
     private String locationUrl;
 
+    @Column(name = "photo_url", length = 500)
+    private String photoUrl;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
     /** false retires the hotel from the picker for new trips without touching trips already using it. */
     @Column(name = "active", nullable = false)
     private boolean active = true;

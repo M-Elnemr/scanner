@@ -19,7 +19,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { createHotelAction, updateHotelAction, type HotelInput } from "@/lib/admin/hotels-actions";
+import { createHotelAction, updateHotelAction, uploadHotelPhotoAction, type HotelInput } from "@/lib/admin/hotels-actions";
 
 interface HotelDraft {
   city: "MAKKAH" | "MADINAH";
@@ -29,6 +29,9 @@ interface HotelDraft {
   distanceToHaramM: string;
   canWalk: boolean;
   locationUrl: string;
+  latitude: string;
+  longitude: string;
+  photoUrl: string;
   active: boolean;
 }
 
@@ -40,6 +43,9 @@ const EMPTY: HotelDraft = {
   distanceToHaramM: "",
   canWalk: false,
   locationUrl: "",
+  latitude: "",
+  longitude: "",
+  photoUrl: "",
   active: true,
 };
 
@@ -59,6 +65,7 @@ export function HotelFormDialog({
   const tCommon = useTranslations("admin.common");
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [photoPending, startPhotoTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<HotelDraft>({ ...EMPTY, ...initial });
 
@@ -72,6 +79,8 @@ export function HotelFormDialog({
       distanceToHaramM: form.distanceToHaramM ? Number(form.distanceToHaramM) : undefined,
       canWalk: form.canWalk,
       locationUrl: form.locationUrl || undefined,
+      latitude: form.latitude ? Number(form.latitude) : undefined,
+      longitude: form.longitude ? Number(form.longitude) : undefined,
       active: form.active,
     };
     startTransition(async () => {
@@ -83,6 +92,21 @@ export function HotelFormDialog({
         router.refresh();
       } else {
         setFieldErrors(result.fieldErrors ?? {});
+        toast.error(result.error ?? tCommon("somethingWentWrong"));
+      }
+    });
+  }
+
+  function uploadPhoto(file: File) {
+    if (!hotelId) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    startPhotoTransition(async () => {
+      const result = await uploadHotelPhotoAction(hotelId, formData);
+      if (result.ok) {
+        toast.success(t("photoUploadedToast"));
+        router.refresh();
+      } else {
         toast.error(result.error ?? tCommon("somethingWentWrong"));
       }
     });
@@ -174,6 +198,52 @@ export function HotelFormDialog({
               onChange={(e) => setForm((f) => ({ ...f, locationUrl: e.target.value }))}
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="latitude">{t("latitudeLabel")}</Label>
+              <Input
+                id="latitude"
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}
+                placeholder="21.4225"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="longitude">{t("longitudeLabel")}</Label>
+              <Input
+                id="longitude"
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))}
+                placeholder="39.8262"
+              />
+            </div>
+          </div>
+
+          {mode === "edit" && hotelId && (
+            <div className="space-y-1.5">
+              <Label htmlFor="hotelPhoto">{t("photoLabel")}</Label>
+              {form.photoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.photoUrl} alt="" className="h-24 w-full rounded-lg object-cover" />
+              )}
+              <Input
+                id="hotelPhoto"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={photoPending}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadPhoto(file);
+                }}
+              />
+              {photoPending && <p className="text-xs text-muted-foreground">{t("photoUploading")}</p>}
+            </div>
+          )}
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>

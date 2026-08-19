@@ -8,8 +8,6 @@ import { CheckCircle2, Compass, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { TravelerPicker, useTravelerPickerState } from "@/components/trip/traveler-picker";
 import { cancelLeadAction, preserveTripAction } from "@/lib/leads/actions";
 
@@ -38,7 +36,6 @@ export function PreserveFlow({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [blockedBy, setBlockedBy] = useState<ActiveLeadSummary | null>(null);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
   const [counts, setCounts] = useTravelerPickerState();
   const [pending, startTransition] = useTransition();
 
@@ -106,19 +103,15 @@ export function PreserveFlow({
   }
 
   function cancelAndContinue() {
-    if (!blockedBy || !cancelReason.trim()) {
-      toast.error(t("toastTellUsWhy"));
-      return;
-    }
+    if (!blockedBy) return;
     startTransition(async () => {
-      const result = await cancelLeadAction(blockedBy.leadId, cancelReason.trim(), blockedBy.tripId);
+      const result = await cancelLeadAction(blockedBy.leadId, undefined, blockedBy.tripId);
       if (!result.ok) {
         toast.error(result.error ?? t("toastCouldNotCancel"));
         return;
       }
       toast.success(t("toastCancelled", { title: blockedBy.tripTitle }));
       setBlockedBy(null);
-      setCancelReason("");
       setPickerOpen(true);
     });
   }
@@ -157,16 +150,6 @@ export function PreserveFlow({
               })}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="cancel-reason">{t("reasonLabel")}</Label>
-            <Textarea
-              id="cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder={t("reasonPlaceholder")}
-              rows={3}
-            />
-          </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setBlockedBy(null)}>
               {t("keepCurrent")}
