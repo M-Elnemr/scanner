@@ -38,7 +38,7 @@ public class WhatsAppLeadMessageService {
     @Transactional(readOnly = true)
     public WhatsAppMessage tripMessage(UUID leadId, WhatsAppLanguage lang) {
         Lead lead = leadQueryService.getForAdmin(leadId);
-        Trip trip = tripQueryService.ownedDetail(lead.getTrip().getId()).trip();
+        Trip trip = tripQueryService.ownedDetail(lead.getTripId()).trip();
         String message = composer.composeTripMessage(
                 trip,
                 lead.getCustomer().getFullName(),
@@ -52,7 +52,7 @@ public class WhatsAppLeadMessageService {
     @Transactional(readOnly = true)
     public WhatsAppMessage companyMessage(UUID leadId, WhatsAppLanguage lang) {
         Lead lead = leadQueryService.getForAdmin(leadId);
-        CompanyProfile company = companyQueryService.getById(lead.getCompany().getId());
+        CompanyProfile company = companyQueryService.getById(lead.getCompanyId());
         String message = composer.composeCompanyMessage(company, lead.getCustomer().getFullName(), lang);
         return toMessage(lead, message);
     }

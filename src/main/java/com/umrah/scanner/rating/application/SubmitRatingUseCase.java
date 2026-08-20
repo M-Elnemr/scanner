@@ -51,6 +51,9 @@ public class SubmitRatingUseCase {
         if (ratingRepository.existsByLeadId(leadId)) {
             throw new ConflictException("This lead has already been rated");
         }
+        if (lead.getTrip() == null || lead.getCompany() == null) {
+            throw new ConflictException("This trip or company has been deleted and can no longer be rated");
+        }
 
         Rating rating = new Rating();
         rating.setLead(lead);

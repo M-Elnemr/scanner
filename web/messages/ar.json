@@ -1,8 +1,8 @@
 {
   "common": {
-    "appName": "سكانر العمرة",
+    "appName": "عمرة سكانر",
     "tagline": "قارن رحلات العمرة واحفظها وأدرها بسهولة.",
-    "titleTemplate": "{page} · سكانر العمرة",
+    "titleTemplate": "{page} · عمرة سكانر",
     "switchLanguage": "تغيير اللغة"
   },
   "nav": {

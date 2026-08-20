@@ -4,6 +4,7 @@ import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadStatus;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.util.List;
@@ -35,11 +36,11 @@ public final class LeadSpecifications {
     }
 
     public static Specification<Lead> hasCompanyId(UUID companyId) {
-        return (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId);
+        return (root, query, cb) -> cb.equal(root.get("companyId"), companyId);
     }
 
     public static Specification<Lead> hasTripId(UUID tripId) {
-        return (root, query, cb) -> cb.equal(root.get("trip").get("id"), tripId);
+        return (root, query, cb) -> cb.equal(root.get("tripId"), tripId);
     }
 
     public static Specification<Lead> hasCustomerId(UUID customerId) {
@@ -76,15 +77,38 @@ public final class LeadSpecifications {
         };
     }
 
-    /** Matches the customer's name or phone, or the trip's title or code — the admin console's free-text box. */
+    /**
+     * Matches the customer's name or phone, or the trip's title or code — the admin console's
+     * free-text box. The trip fields read {@link Lead#getTripTitle()}/{@link Lead#getTripCode()}
+     * rather than joining through {@code trip} itself, so a search is never affected by whether the
+     * trip a match belongs to has since been soft-deleted.
+     */
     public static Specification<Lead> search(String search) {
         String pattern = "%" + search.toLowerCase() + "%";
         return (root, query, cb) -> {
             Predicate byCustomerName = cb.like(cb.lower(root.get("customer").get("fullName")), pattern);
             Predicate byCustomerPhone = cb.like(cb.lower(root.get("customer").get("phone")), pattern);
-            Predicate byTripTitle = cb.like(cb.lower(root.get("trip").get("title")), pattern);
-            Predicate byTripCode = cb.like(cb.lower(root.get("trip").get("tripCode")), pattern);
+            Predicate byTripTitle = cb.like(cb.lower(root.get("tripTitle")), pattern);
+            Predicate byTripCode = cb.like(cb.lower(root.get("tripCode")), pattern);
             return cb.or(byCustomerName, byCustomerPhone, byTripTitle, byTripCode);
+        };
+    }
+
+    /**
+     * Left-join-fetches every to-one association {@link com.umrah.scanner.lead.presentation.LeadResponse}
+     * needs, so the admin console's {@code findAll(Specification, Pageable)} query does not leave them
+     * lazy (open-in-view is off — they must be initialized before the transaction closes) and does not
+     * silently drop a lead whose trip or company has been soft-deleted, the way an inner join would.
+     * {@code distinct} is unnecessary: every fetch here is to-one, so no row multiplication to collapse.
+     */
+    public static Specification<Lead> fetchDetails() {
+        return (root, query, cb) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("trip", JoinType.LEFT);
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("customer", JoinType.LEFT);
+            }
+            return cb.conjunction();
         };
     }
 }

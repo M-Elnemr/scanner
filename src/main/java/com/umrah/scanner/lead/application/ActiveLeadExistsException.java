@@ -27,8 +27,8 @@ public class ActiveLeadExistsException extends ConflictException {
     private static Map<String, Object> describe(Lead lead) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("leadId", lead.getId());
-        summary.put("tripId", lead.getTrip().getId());
-        summary.put("tripTitle", lead.getTrip().getTitle());
+        summary.put("tripId", lead.getTripId());
+        summary.put("tripTitle", lead.getTripTitle());
         summary.put("status", lead.getStatus());
         return summary;
     }

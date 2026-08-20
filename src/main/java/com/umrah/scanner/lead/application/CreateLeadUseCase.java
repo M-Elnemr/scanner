@@ -91,7 +91,7 @@ public class CreateLeadUseCase {
      */
     private void requireNoOtherActiveLead(UUID customerId, UUID tripId) {
         leadRepository.findActiveByCustomerId(customerId)
-                .filter(active -> !active.getTrip().getId().equals(tripId))
+                .filter(active -> !active.getTripId().equals(tripId))
                 .ifPresent(active -> {
                     throw new ActiveLeadExistsException(active);
                 });
@@ -109,7 +109,10 @@ public class CreateLeadUseCase {
         Lead lead = new Lead();
         lead.setCustomer(customer);
         lead.setTrip(trip);
+        lead.setTripTitle(trip.getTitle());
+        lead.setTripCode(trip.getTripCode());
         lead.setCompany(trip.getCompany());
+        lead.setCompanyName(trip.getCompany().getCompanyName());
         lead.setStatus(LeadStatus.INTERESTED);
         lead.changeTravelers(travelers);
         lead.applyPricing(leadPricingService.price(new PricingRequest(

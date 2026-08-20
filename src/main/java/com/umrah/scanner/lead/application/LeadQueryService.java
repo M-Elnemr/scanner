@@ -77,6 +77,7 @@ public class LeadQueryService {
     @Transactional(readOnly = true)
     public Page<Lead> listForAdmin(AdminLeadFilter filter, Pageable pageable) {
         List<Specification<Lead>> specs = new ArrayList<>();
+        specs.add(LeadSpecifications.fetchDetails());
         if (filter.status() != null) {
             specs.add(LeadSpecifications.hasStatus(filter.status()));
         }
@@ -133,7 +134,7 @@ public class LeadQueryService {
     private void requireVisibility(Lead lead, UUID callerUserId, boolean isAdmin) {
         boolean owns = isAdmin
                 || lead.getCustomer().getUser().getId().equals(callerUserId)
-                || lead.getCompany().getUser().getId().equals(callerUserId);
+                || (lead.getCompany() != null && lead.getCompany().getUser().getId().equals(callerUserId));
         if (!owns) {
             throw new ForbiddenException("This lead does not belong to the caller");
         }

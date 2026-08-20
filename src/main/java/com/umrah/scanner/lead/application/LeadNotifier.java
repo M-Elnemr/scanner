@@ -30,7 +30,7 @@ public class LeadNotifier {
     /** A customer has just contacted the company about a trip. */
     public void leadCreated(Lead lead) {
         toCompany(lead, "NEW_LEAD", "New interested customer",
-                "A customer is interested in " + lead.getTrip().getTitle() + " for "
+                "A customer is interested in " + lead.getTripTitle() + " for "
                         + lead.getTravelerCount() + " traveler(s).");
     }
 
@@ -43,10 +43,10 @@ public class LeadNotifier {
     public void actionPerformed(Lead lead, LeadAction action, LeadStatus statusBeforeAction) {
         switch (action) {
             case MARK_DEPOSIT_PAID -> toCustomer(lead, "DEPOSIT_CONFIRMED", "Deposit confirmed",
-                    "Your deposit for " + lead.getTrip().getTitle() + " has been confirmed by the company.");
+                    "Your deposit for " + lead.getTripTitle() + " has been confirmed by the company.");
 
             case MARK_FULLY_PAID -> toCustomer(lead, "FULL_PAYMENT_CONFIRMED", "Full payment confirmed",
-                    "Your full payment for " + lead.getTrip().getTitle() + " has been confirmed by the company.");
+                    "Your full payment for " + lead.getTripTitle() + " has been confirmed by the company.");
 
             case REPORT_COMMISSION_PAID -> toAdmins(lead, "COMMISSION_CONFIRMATION_REQUIRED", "Confirm a commission payment",
                     "A company reported paying its commission. Please confirm so cashback can be released.");
@@ -68,11 +68,11 @@ public class LeadNotifier {
      */
     private void leadCancelled(Lead lead, LeadStatus statusBeforeCancel) {
         toCompany(lead, "LEAD_CANCELLED", "A customer cancelled",
-                "A customer cancelled their booking for " + lead.getTrip().getTitle() + ".");
+                "A customer cancelled their booking for " + lead.getTripTitle() + ".");
 
         if (statusBeforeCancel.isAtLeast(LeadStatus.DEPOSIT_PAID)) {
             toAdmins(lead, "PAID_LEAD_CANCELLED", "A paid booking was cancelled",
-                    "A customer cancelled " + lead.getTrip().getTitle() + " after paying. "
+                    "A customer cancelled " + lead.getTripTitle() + " after paying. "
                             + "The commission has been voided; the refund needs following up.");
         }
     }
@@ -84,7 +84,7 @@ public class LeadNotifier {
      */
     public void statusOverridden(Lead lead, LeadStatus previous, LeadStatus target, String reason) {
         String body = "An administrator changed this booking's status from " + previous + " to " + target
-                + " for " + lead.getTrip().getTitle() + ". Reason: " + reason;
+                + " for " + lead.getTripTitle() + ". Reason: " + reason;
         toCustomer(lead, "LEAD_STATUS_OVERRIDDEN", "Your booking status was updated by an administrator", body);
         toCompany(lead, "LEAD_STATUS_OVERRIDDEN", "A booking status was updated by an administrator", body);
     }
@@ -104,7 +104,7 @@ public class LeadNotifier {
     }
 
     private Map<String, Object> payload(Lead lead) {
-        UUID tripId = lead.getTrip().getId();
+        UUID tripId = lead.getTripId();
         return Map.of("leadId", lead.getId().toString(), "tripId", tripId.toString());
     }
 }

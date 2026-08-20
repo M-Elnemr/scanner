@@ -81,13 +81,19 @@ public class AdminLeadController {
     }
 
     @Operation(summary = "Get a lead with its trip and company detail embedded",
-            description = "Also see the trip he preserved and the trip's company in one call, rather than three.")
+            description = "Also see the trip he preserved and the trip's company in one call, rather than three. "
+                    + "trip/company are null if since deleted — the lead's own tripId/tripTitle/companyId/"
+                    + "companyName still identify what was booked and with whom.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/api/v1/admin/leads/{id}")
     public ApiResponse<AdminLeadDetailResponse> getOne(@PathVariable UUID id) {
         Lead lead = leadQueryService.getForAdmin(id);
-        TripDetailResponse trip = TripDetailResponse.from(tripQueryService.ownedDetail(lead.getTrip().getId()));
-        CompanyResponse company = CompanyResponse.from(companyQueryService.getById(lead.getCompany().getId()));
+        TripDetailResponse trip = lead.getTrip() == null
+                ? null
+                : TripDetailResponse.from(tripQueryService.ownedDetail(lead.getTripId()));
+        CompanyResponse company = lead.getCompany() == null
+                ? null
+                : CompanyResponse.from(companyQueryService.getById(lead.getCompanyId()));
         return ApiResponse.of(new AdminLeadDetailResponse(LeadResponse.forAdmin(lead), trip, company));
     }
 

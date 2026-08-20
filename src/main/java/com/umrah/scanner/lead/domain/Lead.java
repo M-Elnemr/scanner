@@ -23,6 +23,8 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -51,13 +53,52 @@ public class Lead extends BaseEntity {
     @JoinColumn(name = "customer_id", nullable = false)
     private CustomerProfile customer;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    /**
+     * {@code optional = true} despite the join column being {@code NOT NULL} in the database: Trip
+     * carries {@code @SQLRestriction("deleted_at is null")}, so once a trip is soft-deleted this
+     * association genuinely can come back null. Getting there needs all three of: every query that
+     * fetches it saying {@code left join fetch} explicitly (see {@code LeadRepository}'s class
+     * Javadoc for why {@code @EntityGraph} could not be trusted to do that on its own), {@code
+     * optional = true} here, and {@code @NotFound(IGNORE)} — without the last one, Hibernate still
+     * throws {@code FetchNotFoundException} for a left-joined row that fails the target's own
+     * restriction, treating a {@code NOT NULL} join column as a promise the row must resolve to a
+     * live entity. Callers that only need the id or a display title should prefer {@link #tripId} /
+     * {@link #tripTitle} — both read straight off this row and stay correct even once {@code trip}
+     * goes null.
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "trip_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
     private Trip trip;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    /** Read-only shadow of the {@code trip} association's FK — safe to read even when a deleted trip makes {@link #trip} null. */
+    @Column(name = "trip_id", insertable = false, updatable = false)
+    private UUID tripId;
+
+    /**
+     * The trip's title and code as they were when this lead was created. Same reasoning as the
+     * commission/cashback snapshot below: a trip can be renamed or deleted later, but a lead's own
+     * record of what the customer booked should not silently change or disappear because of that.
+     */
+    @Column(name = "trip_title", nullable = false)
+    private String tripTitle;
+
+    @Column(name = "trip_code", nullable = false)
+    private String tripCode;
+
+    /** Same reasoning and same three annotations as {@link #trip} — CompanyProfile is soft-deletable too. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "company_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
     private CompanyProfile company;
+
+    /** Read-only shadow of the {@code company} association's FK — same reasoning as {@link #tripId}: CompanyProfile is soft-deletable too. */
+    @Column(name = "company_id", insertable = false, updatable = false)
+    private UUID companyId;
+
+    /** The company's name as it was when this lead was created — same reasoning as {@link #tripTitle}. */
+    @Column(name = "company_name", nullable = false)
+    private String companyName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
