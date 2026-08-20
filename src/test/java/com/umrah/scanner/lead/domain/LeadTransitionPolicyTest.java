@@ -15,24 +15,45 @@ import org.junit.jupiter.api.Test;
 class LeadTransitionPolicyTest {
 
     @Nested
+    @DisplayName("contact")
+    class Contact {
+
+        @Test
+        void adminMarksAContactedLeadFromInterested() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_CONTACTED, LeadStatus.INTERESTED))
+                    .contains(LeadStatus.CONTACTED);
+        }
+
+        @Test
+        void cannotBeDoneTwice() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_CONTACTED, LeadStatus.CONTACTED)).isEmpty();
+        }
+
+        @Test
+        void belongsToTheAdminAlone() {
+            assertThat(LeadTransitionPolicy.actorOf(LeadAction.MARK_CONTACTED)).isEqualTo(Role.ADMIN);
+            assertThat(LeadTransitionPolicy.isAllowed(LeadAction.MARK_CONTACTED, LeadStatus.INTERESTED, Role.CUSTOMER))
+                    .isFalse();
+            assertThat(LeadTransitionPolicy.isAllowed(LeadAction.MARK_CONTACTED, LeadStatus.INTERESTED, Role.COMPANY))
+                    .isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("deposit")
     class Deposit {
 
         @Test
-        void customerReportParksAwaitingCompanyConfirmation() {
-            assertThat(LeadTransitionPolicy.targetOf(LeadAction.REPORT_DEPOSIT, LeadStatus.INTERESTED))
-                    .contains(LeadStatus.PENDING_DEPOSIT_CONFIRMATION);
+        void companyConfirmsFromInterestedOrContacted() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.INTERESTED))
+                    .contains(LeadStatus.DEPOSIT_PAID);
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.CONTACTED))
+                    .contains(LeadStatus.DEPOSIT_PAID);
         }
 
         @Test
         void companyConfirmsAReportedDeposit() {
             assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.PENDING_DEPOSIT_CONFIRMATION))
-                    .contains(LeadStatus.DEPOSIT_PAID);
-        }
-
-        @Test
-        void companyReportingFirstNeedsNoCustomerConfirmation() {
-            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.INTERESTED))
                     .contains(LeadStatus.DEPOSIT_PAID);
         }
     }
@@ -42,20 +63,14 @@ class LeadTransitionPolicyTest {
     class FullPayment {
 
         @Test
-        void customerReportParksAwaitingCompanyConfirmation() {
-            assertThat(LeadTransitionPolicy.targetOf(LeadAction.REPORT_FULL_PAYMENT, LeadStatus.DEPOSIT_PAID))
-                    .contains(LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION);
-        }
-
-        @Test
         void companyReportingFirstNeedsNoCustomerConfirmation() {
             assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_FULLY_PAID, LeadStatus.DEPOSIT_PAID))
                     .contains(LeadStatus.FULLY_PAID);
         }
 
         @Test
-        void fullPaymentCannotBeReportedBeforeTheDepositIsSettled() {
-            assertThat(LeadTransitionPolicy.targetOf(LeadAction.REPORT_FULL_PAYMENT, LeadStatus.INTERESTED)).isEmpty();
+        void fullPaymentCannotBeMarkedBeforeTheDepositIsSettled() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_FULLY_PAID, LeadStatus.INTERESTED)).isEmpty();
         }
     }
 
@@ -193,10 +208,11 @@ class LeadTransitionPolicyTest {
         @Test
         void availableActionsAreScopedToTheAskingRole() {
             assertThat(LeadTransitionPolicy.availableActions(LeadStatus.INTERESTED, Role.CUSTOMER))
-                    .containsExactlyInAnyOrder(LeadAction.REPORT_DEPOSIT, LeadAction.CANCEL);
+                    .containsExactly(LeadAction.CANCEL);
             assertThat(LeadTransitionPolicy.availableActions(LeadStatus.INTERESTED, Role.COMPANY))
                     .containsExactly(LeadAction.MARK_DEPOSIT_PAID);
-            assertThat(LeadTransitionPolicy.availableActions(LeadStatus.INTERESTED, Role.ADMIN)).isEmpty();
+            assertThat(LeadTransitionPolicy.availableActions(LeadStatus.INTERESTED, Role.ADMIN))
+                    .containsExactly(LeadAction.MARK_CONTACTED);
         }
     }
 }

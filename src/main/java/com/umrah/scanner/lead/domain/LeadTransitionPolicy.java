@@ -26,12 +26,19 @@ public final class LeadTransitionPolicy {
     private static final Map<LeadAction, Rule> RULES = new EnumMap<>(LeadAction.class);
 
     static {
+        // Admin sends the customer the trip details over WhatsApp. Only legal once, straight off
+        // the initial state — a lead that has moved on (deposit recorded, etc.) has obviously
+        // already been contacted in substance, so there is nothing to re-mark.
+        rule(LeadAction.MARK_CONTACTED, Map.of(
+                LeadStatus.INTERESTED, LeadStatus.CONTACTED));
+
         // Deposit and full payment: the company records both directly — the customer no longer
         // self-reports (that used to park the lead in a PENDING_*_CONFIRMATION status awaiting
         // confirmation; both statuses stay defined in LeadStatus for leads already sitting there,
         // and MARK_* still resolves them, but nothing can reach them going forward).
         rule(LeadAction.MARK_DEPOSIT_PAID, Map.of(
                 LeadStatus.INTERESTED, LeadStatus.DEPOSIT_PAID,
+                LeadStatus.CONTACTED, LeadStatus.DEPOSIT_PAID,
                 LeadStatus.PENDING_DEPOSIT_CONFIRMATION, LeadStatus.DEPOSIT_PAID));
 
         rule(LeadAction.MARK_FULLY_PAID, Map.of(
@@ -60,6 +67,7 @@ public final class LeadTransitionPolicy {
         // matter between them and the company.
         rule(LeadAction.CANCEL, Map.of(
                 LeadStatus.INTERESTED, LeadStatus.CANCELLED,
+                LeadStatus.CONTACTED, LeadStatus.CANCELLED,
                 LeadStatus.PENDING_DEPOSIT_CONFIRMATION, LeadStatus.CANCELLED,
                 LeadStatus.DEPOSIT_PAID, LeadStatus.CANCELLED,
                 LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION, LeadStatus.CANCELLED,

@@ -10,16 +10,40 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { composeCompanyWhatsAppAction, composeTripWhatsAppAction, type WhatsAppMessage } from "@/lib/admin/whatsapp-actions";
+import { markContactedAction } from "@/lib/admin/leads-actions";
 
 type Kind = "trip" | "company";
 
-export function WhatsAppButtons({ leadId, compact = false }: { leadId: string; compact?: boolean }) {
+export function WhatsAppButtons({
+  leadId,
+  compact = false,
+  canMarkContacted = false,
+}: {
+  leadId: string;
+  compact?: boolean;
+  /** Whether MARK_CONTACTED is in this lead's availableActions — only true right after INTERESTED. */
+  canMarkContacted?: boolean;
+}) {
   const t = useTranslations("admin.whatsapp");
+  const tActions = useTranslations("admin.leads.actions");
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<"ar" | "en">("ar");
   const [kind, setKind] = useState<Kind>("trip");
   const [preview, setPreview] = useState<WhatsAppMessage | null>(null);
+
+  // Opening the trip message in WhatsApp is treated as "the admin has now contacted the customer" —
+  // there is no delivery receipt WhatsApp's click-to-chat link can give us, so this fires the moment
+  // the admin follows the link rather than waiting for a confirmation that can't exist.
+  function handleOpenInWhatsapp() {
+    if (kind === "trip" && canMarkContacted) {
+      startTransition(async () => {
+        const result = await markContactedAction(leadId);
+        if (result.ok) toast.success(tActions("contactedToast"));
+        else toast.error(result.error);
+      });
+    }
+  }
 
   function compose(nextKind: Kind, nextLang: "ar" | "en" = lang) {
     setKind(nextKind);
@@ -120,7 +144,12 @@ export function WhatsAppButtons({ leadId, compact = false }: { leadId: string; c
           <Textarea readOnly rows={8} value={preview?.message ?? ""} dir={lang === "ar" ? "rtl" : "ltr"} />
 
           <DialogFooter>
-            <Button className="w-full" disabled={!preview?.link} render={<a href={preview?.link} target="_blank" rel="noreferrer" />}>
+            <Button
+              className="w-full"
+              disabled={!preview?.link}
+              onClick={handleOpenInWhatsapp}
+              render={<a href={preview?.link} target="_blank" rel="noreferrer" />}
+            >
               <ExternalLink className="size-4" /> {t("openInWhatsapp")}
             </Button>
           </DialogFooter>

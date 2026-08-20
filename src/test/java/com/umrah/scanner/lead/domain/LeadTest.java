@@ -53,7 +53,8 @@ class LeadTest {
 
         @ParameterizedTest
         @EnumSource(value = LeadStatus.class, names = {
-                "INTERESTED", "PENDING_DEPOSIT_CONFIRMATION", "DEPOSIT_PAID", "PENDING_FULL_PAYMENT_CONFIRMATION"})
+                "INTERESTED", "CONTACTED", "PENDING_DEPOSIT_CONFIRMATION", "DEPOSIT_PAID",
+                "PENDING_FULL_PAYMENT_CONFIRMATION"})
         void editableWhileMoneyIsStillMoving(LeadStatus status) {
             Lead lead = leadAt(status);
             assertThat(lead.areTravelersEditable()).isTrue();
@@ -142,15 +143,15 @@ class LeadTest {
         @Test
         void eachActionStampsItsOwnPair() {
             Lead lead = leadAt(LeadStatus.INTERESTED);
-            var customer = java.util.UUID.randomUUID();
+            var admin = java.util.UUID.randomUUID();
             var company = java.util.UUID.randomUUID();
             var at = java.time.Instant.parse("2026-07-20T08:00:00Z");
 
-            lead.recordAction(LeadAction.REPORT_DEPOSIT, customer, at);
+            lead.recordAction(LeadAction.MARK_CONTACTED, admin, at);
             lead.recordAction(LeadAction.MARK_DEPOSIT_PAID, company, at.plusSeconds(60));
 
-            assertThat(lead.getDepositReportedBy()).isEqualTo(customer);
-            assertThat(lead.getDepositReportedAt()).isEqualTo(at);
+            assertThat(lead.getContactedBy()).isEqualTo(admin);
+            assertThat(lead.getContactedAt()).isEqualTo(at);
             assertThat(lead.getDepositConfirmedBy()).isEqualTo(company);
             assertThat(lead.getDepositConfirmedAt()).isEqualTo(at.plusSeconds(60));
 

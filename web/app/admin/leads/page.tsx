@@ -28,6 +28,7 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
   const STATUS_OPTIONS = (
     [
       "INTERESTED",
+      "CONTACTED",
       "PENDING_DEPOSIT_CONFIRMATION",
       "DEPOSIT_PAID",
       "PENDING_FULL_PAYMENT_CONFIRMATION",
@@ -47,6 +48,7 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
           ? {
               status: status as
                 | "INTERESTED"
+                | "CONTACTED"
                 | "PENDING_DEPOSIT_CONFIRMATION"
                 | "DEPOSIT_PAID"
                 | "PENDING_FULL_PAYMENT_CONFIRMATION"
@@ -115,7 +117,13 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
                 <TableCell className="text-muted-foreground">{formatDate(l.createdAt, undefined, locale)}</TableCell>
                 <TableCell>
                   <p className="text-xs text-muted-foreground">{l.customer?.phone}</p>
-                  {l.id && <WhatsAppButtons leadId={l.id} compact />}
+                  {l.id && (
+                    <WhatsAppButtons
+                      leadId={l.id}
+                      compact
+                      canMarkContacted={(l.availableActions ?? []).includes("MARK_CONTACTED")}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))}

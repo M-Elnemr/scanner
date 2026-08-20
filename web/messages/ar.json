@@ -357,6 +357,7 @@
     },
     "leadStatus": {
       "INTERESTED": "مهتم",
+      "CONTACTED": "تم التواصل",
       "PENDING_DEPOSIT_CONFIRMATION": "بانتظار تأكيد العربون",
       "DEPOSIT_PAID": "تم دفع العربون",
       "PENDING_FULL_PAYMENT_CONFIRMATION": "بانتظار تأكيد السداد الكامل",
@@ -526,6 +527,7 @@
       "whatsappTitle": "واتساب",
       "historyTitle": "السجل",
       "actions": {
+        "contactedToast": "تم تسجيل التواصل مع العميل.",
         "confirmCommission": "تأكيد العمولة",
         "confirmedToast": "تم تأكيد العمولة.",
         "payCashback": "دفع الكاش باك",

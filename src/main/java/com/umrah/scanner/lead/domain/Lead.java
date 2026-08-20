@@ -99,6 +99,12 @@ public class Lead extends BaseEntity {
 
     // --- Who did what, and when ---
 
+    @Column(name = "contacted_by")
+    private UUID contactedBy;
+
+    @Column(name = "contacted_at")
+    private Instant contactedAt;
+
     @Column(name = "deposit_reported_by")
     private UUID depositReportedBy;
 
@@ -210,6 +216,10 @@ public class Lead extends BaseEntity {
      */
     public void recordAction(LeadAction action, UUID actorUserId, Instant at) {
         switch (action) {
+            case MARK_CONTACTED -> {
+                contactedBy = actorUserId;
+                contactedAt = at;
+            }
             case MARK_DEPOSIT_PAID -> {
                 depositConfirmedBy = actorUserId;
                 depositConfirmedAt = at;

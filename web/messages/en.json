@@ -357,6 +357,7 @@
     },
     "leadStatus": {
       "INTERESTED": "Interested",
+      "CONTACTED": "Contacted",
       "PENDING_DEPOSIT_CONFIRMATION": "Deposit pending confirmation",
       "DEPOSIT_PAID": "Deposit paid",
       "PENDING_FULL_PAYMENT_CONFIRMATION": "Full payment pending confirmation",
@@ -526,6 +527,7 @@
       "whatsappTitle": "WhatsApp",
       "historyTitle": "History",
       "actions": {
+        "contactedToast": "Marked as contacted.",
         "confirmCommission": "Confirm commission",
         "confirmedToast": "Commission confirmed.",
         "payCashback": "Pay cashback",

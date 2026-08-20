@@ -452,46 +452,6 @@ export interface paths {
         patch: operations["markRead"];
         trace?: never;
     };
-    "/api/v1/customers/me/leads/{id}/report-full-payment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Report that I paid in full
-         * @description Allowed from DEPOSIT_PAID. Moves the lead to PENDING_FULL_PAYMENT_CONFIRMATION.
-         */
-        patch: operations["reportFullPayment"];
-        trace?: never;
-    };
-    "/api/v1/customers/me/leads/{id}/report-deposit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Report that I paid the deposit
-         * @description Moves the lead to PENDING_DEPOSIT_CONFIRMATION and asks the company to confirm.
-         */
-        patch: operations["reportDeposit"];
-        trace?: never;
-    };
     "/api/v1/customers/me/leads/{id}/cancel": {
         parameters: {
             query?: never;
@@ -507,7 +467,7 @@ export interface paths {
         head?: never;
         /**
          * Cancel my preserved journey
-         * @description Frees the customer's single preserved-trip slot. Allowed from every status except CASHBACK_PAID — read the lead's availableActions rather than comparing statuses. A note explaining why is required. Any commission the company owed on this lead is voided; money already paid to the company is not refunded by the platform.
+         * @description Frees the customer's single preserved-trip slot. Allowed from every status except CASHBACK_PAID — read the lead's availableActions rather than comparing statuses. A note explaining why is optional. Any commission the company owed on this lead is voided; money already paid to the company is not refunded by the platform.
          */
         patch: operations["cancel"];
         trace?: never;
@@ -662,6 +622,26 @@ export interface paths {
          * @description Allowed only from COMMISSION_PAID. Requires a wallet on the customer's profile.
          */
         patch: operations["payCashback"];
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/mark-contacted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mark the customer as contacted over WhatsApp
+         * @description Admin sent the customer the trip details over WhatsApp. Allowed only from INTERESTED.
+         */
+        patch: operations["markContacted"];
         trace?: never;
     };
     "/api/v1/admin/leads/{id}/confirm-commission": {
@@ -1254,7 +1234,7 @@ export interface components {
             /** @description Who is travelling. The company needs this to serve the booking; it never includes the payout wallet. */
             customer?: components["schemas"]["LeadCustomer"];
             /** @enum {string} */
-            status?: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             /**
              * Format: int32
              * @description Adults on the booking; always at least 1
@@ -1281,7 +1261,7 @@ export interface components {
             confirmedRoomType?: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "CHILD" | "INFANT";
             confirmedPrice?: number;
             /** @description Exactly the actions this caller may perform on this lead right now */
-            availableActions?: ("REPORT_DEPOSIT" | "MARK_DEPOSIT_PAID" | "REPORT_FULL_PAYMENT" | "MARK_FULLY_PAID" | "REPORT_COMMISSION_PAID" | "CONFIRM_COMMISSION_PAID" | "PAY_CASHBACK" | "CANCEL")[];
+            availableActions?: ("MARK_CONTACTED" | "MARK_DEPOSIT_PAID" | "MARK_FULLY_PAID" | "REPORT_COMMISSION_PAID" | "CONFIRM_COMMISSION_PAID" | "PAY_CASHBACK" | "CANCEL")[];
             audit?: components["schemas"]["LeadAudit"];
             /** Format: date-time */
             createdAt?: string;
@@ -1855,7 +1835,7 @@ export interface components {
         };
         OverrideLeadStatusRequest: {
             /** @enum {string} */
-            status: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            status: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             reason: string;
         };
         CompanyDecisionRequest: {
@@ -1933,9 +1913,9 @@ export interface components {
         };
         LeadStatusHistoryResponse: {
             /** @enum {string} */
-            fromStatus?: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            fromStatus?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             /** @enum {string} */
-            toStatus?: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            toStatus?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             /** Format: uuid */
             changedBy?: string;
             /** Format: date-time */
@@ -3099,58 +3079,6 @@ export interface operations {
             };
         };
     };
-    reportFullPayment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["LeadActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseLead"];
-                };
-            };
-        };
-    };
-    reportDeposit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["LeadActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseLead"];
-                };
-            };
-        };
-    };
     cancel: {
         parameters: {
             query?: never;
@@ -3177,15 +3105,6 @@ export interface operations {
             };
             /** @description Already cancelled, or the cashback has been paid */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseLead"];
-                };
-            };
-            /** @description No reason given */
-            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3378,6 +3297,32 @@ export interface operations {
         };
     };
     payCashback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LeadActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLead"];
+                };
+            };
+        };
+    };
+    markContacted: {
         parameters: {
             query?: never;
             header?: never;
@@ -3760,7 +3705,7 @@ export interface operations {
     listMineAsCustomer: {
         parameters: {
             query: {
-                status?: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+                status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -3920,7 +3865,7 @@ export interface operations {
     listMineAsCompany: {
         parameters: {
             query: {
-                status?: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+                status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -3985,7 +3930,7 @@ export interface operations {
     list_8: {
         parameters: {
             query: {
-                status?: "INTERESTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+                status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
                 companyId?: string;
                 tripId?: string;
                 customerId?: string;

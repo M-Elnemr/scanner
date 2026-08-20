@@ -12,6 +12,9 @@ import com.umrah.scanner.user.domain.Role;
  */
 public enum LeadAction {
 
+    /** Admin sent the customer the trip details over WhatsApp. */
+    MARK_CONTACTED(Role.ADMIN),
+
     /** Company records that the deposit was paid — the customer no longer self-reports this. */
     MARK_DEPOSIT_PAID(Role.COMPANY),
 

@@ -18,13 +18,17 @@ package com.umrah.scanner.lead.domain;
 public enum LeadStatus {
 
     INTERESTED(0),
-    PENDING_DEPOSIT_CONFIRMATION(1),
-    DEPOSIT_PAID(2),
-    PENDING_FULL_PAYMENT_CONFIRMATION(3),
-    FULLY_PAID(4),
-    PENDING_COMMISSION_CONFIRMATION(5),
-    COMMISSION_PAID(6),
-    CASHBACK_PAID(7),
+
+    /** Admin sent the customer the trip details over WhatsApp. */
+    CONTACTED(1),
+
+    PENDING_DEPOSIT_CONFIRMATION(2),
+    DEPOSIT_PAID(3),
+    PENDING_FULL_PAYMENT_CONFIRMATION(4),
+    FULLY_PAID(5),
+    PENDING_COMMISSION_CONFIRMATION(6),
+    COMMISSION_PAID(7),
+    CASHBACK_PAID(8),
 
     /** The customer withdrew. Off the ladder — see the class comment before comparing stages. */
     CANCELLED(-1);

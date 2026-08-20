@@ -186,6 +186,18 @@ public class LeadController {
     // Listing, detail-with-trip-and-company, and the status override live on AdminLeadController —
     // they need TripQueryService and CompanyQueryService, which the actions below do not.
 
+    @Operation(summary = "Mark the customer as contacted over WhatsApp",
+            description = "Admin sent the customer the trip details over WhatsApp. Allowed only from INTERESTED.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/api/v1/admin/leads/{id}/mark-contacted")
+    public ApiResponse<LeadResponse> markContacted(
+            @AuthenticationPrincipal AuthenticatedUser admin,
+            @PathVariable UUID id,
+            @RequestBody(required = false) LeadActionRequest request) {
+        return ApiResponse.of(LeadResponse.forAdmin(
+                act(id, LeadAction.MARK_CONTACTED, Role.ADMIN, admin, request)));
+    }
+
     @Operation(summary = "Confirm the company's commission payment",
             description = "Accepts a company's report, or records the payment directly from FULLY_PAID. "
                     + "Cashback becomes payable only after this.")

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 
 type LeadStatus =
   | "INTERESTED"
+  | "CONTACTED"
   | "PENDING_DEPOSIT_CONFIRMATION"
   | "DEPOSIT_PAID"
   | "PENDING_FULL_PAYMENT_CONFIRMATION"
@@ -16,6 +17,7 @@ type LeadStatus =
 
 const ALL_LEAD_STATUSES: LeadStatus[] = [
   "INTERESTED",
+  "CONTACTED",
   "PENDING_DEPOSIT_CONFIRMATION",
   "DEPOSIT_PAID",
   "PENDING_FULL_PAYMENT_CONFIRMATION",
@@ -28,6 +30,7 @@ const ALL_LEAD_STATUSES: LeadStatus[] = [
 
 const VARIANT: Record<LeadStatus, "default" | "secondary" | "destructive" | "outline"> = {
   INTERESTED: "secondary",
+  CONTACTED: "secondary",
   PENDING_DEPOSIT_CONFIRMATION: "secondary",
   DEPOSIT_PAID: "outline",
   PENDING_FULL_PAYMENT_CONFIRMATION: "secondary",

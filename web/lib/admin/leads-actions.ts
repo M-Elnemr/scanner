@@ -8,6 +8,7 @@ import type { ActionResult } from "@/lib/leads/actions";
 
 type LeadStatus =
   | "INTERESTED"
+  | "CONTACTED"
   | "PENDING_DEPOSIT_CONFIRMATION"
   | "DEPOSIT_PAID"
   | "PENDING_FULL_PAYMENT_CONFIRMATION"
@@ -32,6 +33,22 @@ export async function overrideLeadStatusAction(id: string, status: LeadStatus, r
   } catch (error) {
     if (error instanceof ApiError) return { ok: false, error: error.message };
     return { ok: false, error: "Could not override this lead's status." };
+  }
+}
+
+export async function markContactedAction(id: string, note?: string): Promise<ActionResult> {
+  try {
+    const api = await apiClient();
+    const result = await api.PATCH("/api/v1/admin/leads/{id}/mark-contacted", {
+      params: { path: { id } },
+      body: note ? { note } : undefined,
+    });
+    unwrapVoid(result);
+    revalidateLead(id);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, error: error.message };
+    return { ok: false, error: "Could not mark this lead as contacted." };
   }
 }
 
