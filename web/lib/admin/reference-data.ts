@@ -22,6 +22,24 @@ export interface CompanyOption {
   name: string;
 }
 
+export interface TripOption {
+  id: string;
+  title: string;
+  tripCode: string;
+}
+
+/** Every trip (any status, any company) for the admin lead console's trip filter — optionally scoped to one company. */
+export async function listTrips(companyId?: string): Promise<TripOption[]> {
+  const api = await apiClient();
+  const result = await api.GET("/api/v1/admin/trips", {
+    params: { query: { ...(companyId ? { companyId } : {}), ...pageableQuery(0, 500, "title,asc") } },
+    cache: "no-store",
+  });
+  return (result.data?.data?.content ?? [])
+    .filter((t) => t.id)
+    .map((t) => ({ id: t.id!, title: t.title ?? "", tripCode: t.tripCode ?? "" }));
+}
+
 export async function listAirports(): Promise<AirportOption[]> {
   const result = await publicApi.GET("/api/v1/airports", { cache: "force-cache", next: { revalidate: 3600 } });
   return (result.data?.data ?? [])

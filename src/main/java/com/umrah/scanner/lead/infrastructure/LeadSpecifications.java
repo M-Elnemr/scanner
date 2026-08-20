@@ -2,13 +2,30 @@ package com.umrah.scanner.lead.infrastructure;
 
 import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadStatus;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 /** Dynamic filter predicates for the admin lead console, in the same style as {@code TripSpecifications}. */
 public final class LeadSpecifications {
+
+    /**
+     * The admin console's "by state" order: lifecycle stage rather than the raw status name (which
+     * would sort alphabetically and scatter INTERESTED, CONTACTED, DEPOSIT_PAID... in no useful
+     * order). Deliberately distinct from {@link LeadStatus#stage()} only in where CANCELLED lands —
+     * {@code stage()} keeps it off the ladder (negative) for {@code isAtLeast} comparisons, but here
+     * it belongs at the end next to the other terminal status, not at the front.
+     */
+    private static final List<LeadStatus> STATUS_DISPLAY_ORDER = List.of(
+            LeadStatus.INTERESTED, LeadStatus.CONTACTED, LeadStatus.PENDING_DEPOSIT_CONFIRMATION,
+            LeadStatus.DEPOSIT_PAID, LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION, LeadStatus.FULLY_PAID,
+            LeadStatus.PENDING_COMMISSION_CONFIRMATION, LeadStatus.COMMISSION_PAID, LeadStatus.CASHBACK_PAID,
+            LeadStatus.CANCELLED);
 
     private LeadSpecifications() {
     }
@@ -38,6 +55,24 @@ public final class LeadSpecifications {
                 return cb.greaterThanOrEqualTo(root.get("createdAt"), from);
             }
             return cb.lessThanOrEqualTo(root.get("createdAt"), to);
+        };
+    }
+
+    /**
+     * Sets the query's ORDER BY directly rather than returning a predicate that filters anything —
+     * the {@code true}-returning {@code cb.conjunction()} is a no-op filter, present only because a
+     * {@link Specification} must return a {@link Predicate}. Must be combined with a {@link Pageable}
+     * that carries no sort of its own, or Spring Data overwrites this ordering right back out.
+     */
+    public static Specification<Lead> orderByStatusRank(boolean ascending) {
+        return (root, query, cb) -> {
+            CriteriaBuilder.Case<Integer> rank = cb.selectCase();
+            for (int i = 0; i < STATUS_DISPLAY_ORDER.size(); i++) {
+                rank = rank.when(cb.equal(root.get("status"), STATUS_DISPLAY_ORDER.get(i)), i);
+            }
+            Expression<Integer> rankExpr = rank.otherwise(STATUS_DISPLAY_ORDER.size());
+            query.orderBy(ascending ? cb.asc(rankExpr) : cb.desc(rankExpr));
+            return cb.conjunction();
         };
     }
 

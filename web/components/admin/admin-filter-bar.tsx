@@ -7,23 +7,28 @@ import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 export function AdminFilterBar({
   statusOptions,
   companyOptions,
+  tripOptions,
   searchPlaceholder,
 }: {
   statusOptions: { value: string; label: string }[];
   companyOptions?: { value: string; label: string }[];
+  tripOptions?: { value: string; label: string }[];
   searchPlaceholder?: string;
 }) {
   const t = useTranslations("admin.common");
+  const tLeads = useTranslations("admin.leads");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const status = searchParams.get("status") ?? "";
   const companyId = searchParams.get("companyId") ?? "";
+  const tripId = searchParams.get("tripId") ?? "";
 
   function pushParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
@@ -40,7 +45,7 @@ export function AdminFilterBar({
     });
   }
 
-  const hasFilters = Boolean(status || companyId || searchParams.get("search"));
+  const hasFilters = Boolean(status || companyId || tripId || searchParams.get("search"));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -74,7 +79,14 @@ export function AdminFilterBar({
       {companyOptions && (
         <Select
           value={companyId}
-          onValueChange={(v) => pushParams((params) => (v ? params.set("companyId", v) : params.delete("companyId")))}
+          onValueChange={(v) =>
+            pushParams((params) => {
+              if (v) params.set("companyId", v);
+              else params.delete("companyId");
+              // A trip picked under the old company may not belong to the new one.
+              params.delete("tripId");
+            })
+          }
           items={companyOptions}
         >
           <SelectTrigger className="w-44">
@@ -88,6 +100,17 @@ export function AdminFilterBar({
             ))}
           </SelectContent>
         </Select>
+      )}
+
+      {tripOptions && (
+        <Combobox
+          value={tripId}
+          onValueChange={(v) => pushParams((params) => (v ? params.set("tripId", v) : params.delete("tripId")))}
+          options={tripOptions}
+          placeholder={tLeads("allTrips")}
+          searchPlaceholder={tLeads("tripSearchPlaceholder")}
+          emptyText={tLeads("noTripsFound")}
+        />
       )}
 
       {hasFilters && (

@@ -101,7 +101,9 @@
     "title": "حجوزاتي",
     "customersOnly": "الحجوزات متاحة لحسابات العملاء فقط.",
     "emptyText": "لم تقم بحفظ أي رحلة بعد.",
-    "preservedOn": "تم الحفظ في {date}"
+    "preservedOn": "تم الحفظ في {date}",
+    "noActiveBooking": "لا يوجد لديك حجز نشط حاليًا.",
+    "pastBookings": "الحجوزات السابقة ({count})"
   },
   "leadStatus": {
     "preserved": "محفوظة",
@@ -512,6 +514,9 @@
       "colCreated": "تاريخ الإنشاء",
       "colWhatsapp": "واتساب",
       "empty": "لا توجد حجوزات مطابقة لهذه الفلاتر.",
+      "allTrips": "كل الرحلات",
+      "tripSearchPlaceholder": "ابحث عن رحلة…",
+      "noTripsFound": "لا توجد رحلات مطابقة.",
       "backLink": "الحجوزات",
       "travelersTitle": "المسافرون",
       "travelersAdults": "{count, plural, zero {# بالغ} one {بالغ واحد} two {بالغان} few {# بالغين} many {# بالغًا} other {# بالغ}}",

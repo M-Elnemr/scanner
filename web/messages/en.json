@@ -101,7 +101,9 @@
     "title": "My bookings",
     "customersOnly": "Bookings are available to customer accounts.",
     "emptyText": "You haven't preserved a journey yet.",
-    "preservedOn": "Preserved {date}"
+    "preservedOn": "Preserved {date}",
+    "noActiveBooking": "You have no active booking right now.",
+    "pastBookings": "Past bookings ({count})"
   },
   "leadStatus": {
     "preserved": "Preserved",
@@ -512,6 +514,9 @@
       "colCreated": "Created",
       "colWhatsapp": "WhatsApp",
       "empty": "No leads match these filters.",
+      "allTrips": "All trips",
+      "tripSearchPlaceholder": "Search trips…",
+      "noTripsFound": "No trips found.",
       "backLink": "Leads",
       "travelersTitle": "Travelers",
       "travelersAdults": "{count, plural, zero {# adults} one {# adult} other {# adults}}",

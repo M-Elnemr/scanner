@@ -15,7 +15,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,6 +95,17 @@ public class LeadQueryService {
         if (filter.search() != null && !filter.search().isBlank()) {
             specs.add(LeadSpecifications.search(filter.search()));
         }
+
+        // "status" isn't a real ORDER BY column here — sorting by the raw enum name would scatter
+        // INTERESTED/CONTACTED/DEPOSIT_PAID alphabetically. Swap it for the lifecycle-stage
+        // ordering, and drop the sort from the Pageable so Spring Data doesn't overwrite it.
+        Sort.Order statusOrder = pageable.getSort().getOrderFor("status");
+        if (statusOrder != null) {
+            specs.add(LeadSpecifications.orderByStatusRank(statusOrder.isAscending()));
+            Pageable withoutStatusSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return leadRepository.findAll(Specification.allOf(specs), withoutStatusSort);
+        }
+
         return leadRepository.findAll(Specification.allOf(specs), pageable);
     }
 

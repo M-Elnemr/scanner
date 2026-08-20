@@ -5,9 +5,35 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient, requireUser } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
 import { LeadStatusBadge } from "@/components/lead/lead-status-badge";
+import { simplifyLeadStatus } from "@/lib/leads/status";
 import { formatDate } from "@/lib/format/date";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import type { components } from "@/lib/api/schema";
+
+type Lead = components["schemas"]["Lead"];
+
+function LeadCard({ lead, locale, t }: { lead: Lead; locale: "ar" | "en"; t: Awaited<ReturnType<typeof getTranslations>> }) {
+  return (
+    <Link href={`/leads/${lead.id}`}>
+      <Card className="transition-shadow hover:shadow-md">
+        <CardContent className="flex items-center justify-between gap-4 py-4">
+          <div>
+            <p className="font-heading font-semibold">{lead.tripTitle}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("preservedOn", { date: formatDate(lead.createdAt, "d MMM yyyy", locale) })}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <LeadStatusBadge status={lead.status} />
+            <ArrowRight className="size-4 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("leads");
@@ -34,6 +60,8 @@ export default async function LeadsPage() {
     cache: "no-store",
   });
   const leads = result.data?.data?.content ?? [];
+  const openLeads = leads.filter((lead) => simplifyLeadStatus(lead.status) === "preserved");
+  const closedLeads = leads.filter((lead) => simplifyLeadStatus(lead.status) !== "preserved");
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -46,25 +74,31 @@ export default async function LeadsPage() {
           <Button render={<Link href="/trips" />}>{tNav("browseTrips")}</Button>
         </div>
       ) : (
-        <div className="space-y-3">
-          {leads.map((lead) => (
-            <Link key={lead.id} href={`/leads/${lead.id}`}>
-              <Card className="transition-shadow hover:shadow-md">
-                <CardContent className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="font-heading font-semibold">{lead.tripTitle}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("preservedOn", { date: formatDate(lead.createdAt, "d MMM yyyy", locale) })}
-                    </p>
+        <div className="space-y-6">
+          {openLeads.length > 0 ? (
+            <div className="space-y-3">
+              {openLeads.map((lead) => (
+                <LeadCard key={lead.id} lead={lead} locale={locale} t={t} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("noActiveBooking")}</p>
+          )}
+
+          {closedLeads.length > 0 && (
+            <Accordion>
+              <AccordionItem value="closed">
+                <AccordionTrigger>{t("pastBookings", { count: closedLeads.length })}</AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    {closedLeads.map((lead) => (
+                      <LeadCard key={lead.id} lead={lead} locale={locale} t={t} />
+                    ))}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <LeadStatusBadge status={lead.status} />
-                    <ArrowRight className="size-4 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
         </div>
       )}
     </div>

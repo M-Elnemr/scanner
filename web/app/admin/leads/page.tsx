@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
+import { listApprovedCompanies, listTrips } from "@/lib/admin/reference-data";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { AdminLeadStatusBadge } from "@/components/admin/admin-lead-status-badge";
 import { AdminFilterBar } from "@/components/admin/admin-filter-bar";
@@ -10,6 +12,38 @@ import { TablePagination } from "@/components/admin/table-pagination";
 import { WhatsAppButtons } from "@/components/admin/whatsapp-buttons";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
+
+type SortField = "status" | "createdAt";
+
+function SortableHead({
+  field,
+  label,
+  sortBy,
+  sortDir,
+  baseParams,
+}: {
+  field: SortField;
+  label: string;
+  sortBy: SortField;
+  sortDir: "asc" | "desc";
+  baseParams: URLSearchParams;
+}) {
+  const isActive = sortBy === field;
+  const nextDir = isActive && sortDir === "asc" ? "desc" : "asc";
+  const params = new URLSearchParams(baseParams);
+  params.set("sortBy", field);
+  params.set("sortDir", nextDir);
+  const Icon = isActive ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+  return (
+    <TableHead>
+      <Link href={`?${params.toString()}`} className="inline-flex items-center gap-1 hover:text-foreground">
+        {label}
+        <Icon className={`size-3.5 ${isActive ? "" : "text-muted-foreground/50"}`} />
+      </Link>
+    </TableHead>
+  );
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.pageTitle");
@@ -20,7 +54,18 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
   const searchParams = await props.searchParams;
   const status = typeof searchParams.status === "string" ? searchParams.status : undefined;
   const search = typeof searchParams.search === "string" ? searchParams.search : undefined;
+  const companyId = typeof searchParams.companyId === "string" ? searchParams.companyId : undefined;
+  const tripId = typeof searchParams.tripId === "string" ? searchParams.tripId : undefined;
   const page = typeof searchParams.page === "string" ? Number(searchParams.page) : 0;
+  const sortBy: SortField = searchParams.sortBy === "createdAt" ? "createdAt" : "status";
+  const sortDir: "asc" | "desc" = searchParams.sortDir === "desc" ? "desc" : "asc";
+
+  // Preserves every filter/sort param except pagination when a header link or filter is followed.
+  const baseParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (key === "page" || typeof value !== "string") continue;
+    baseParams.set(key, value);
+  }
 
   const t = await getTranslations("admin.leads");
   const tStatus = await getTranslations("admin.leadStatus");
@@ -41,30 +86,36 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
   ).map((value) => ({ value, label: tStatus(value) }));
 
   const api = await apiClient();
-  const result = await api.GET("/api/v1/admin/leads", {
-    params: {
-      query: {
-        ...(status
-          ? {
-              status: status as
-                | "INTERESTED"
-                | "CONTACTED"
-                | "PENDING_DEPOSIT_CONFIRMATION"
-                | "DEPOSIT_PAID"
-                | "PENDING_FULL_PAYMENT_CONFIRMATION"
-                | "FULLY_PAID"
-                | "PENDING_COMMISSION_CONFIRMATION"
-                | "COMMISSION_PAID"
-                | "CASHBACK_PAID"
-                | "CANCELLED",
-            }
-          : {}),
-        ...(search ? { search } : {}),
-        ...pageableQuery(page, 20, "createdAt,desc"),
+  const [result, companies, trips] = await Promise.all([
+    api.GET("/api/v1/admin/leads", {
+      params: {
+        query: {
+          ...(status
+            ? {
+                status: status as
+                  | "INTERESTED"
+                  | "CONTACTED"
+                  | "PENDING_DEPOSIT_CONFIRMATION"
+                  | "DEPOSIT_PAID"
+                  | "PENDING_FULL_PAYMENT_CONFIRMATION"
+                  | "FULLY_PAID"
+                  | "PENDING_COMMISSION_CONFIRMATION"
+                  | "COMMISSION_PAID"
+                  | "CASHBACK_PAID"
+                  | "CANCELLED",
+              }
+            : {}),
+          ...(search ? { search } : {}),
+          ...(companyId ? { companyId } : {}),
+          ...(tripId ? { tripId } : {}),
+          ...pageableQuery(page, 20, `${sortBy},${sortDir}`),
+        },
       },
-    },
-    cache: "no-store",
-  });
+      cache: "no-store",
+    }),
+    listApprovedCompanies(),
+    listTrips(companyId),
+  ]);
   const pageData = result.data?.data;
   const leads = pageData?.content ?? [];
 
@@ -75,7 +126,12 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
         <p className="text-sm text-muted-foreground">{t("total", { count: pageData?.totalElements ?? 0 })}</p>
       </div>
 
-      <AdminFilterBar statusOptions={STATUS_OPTIONS} searchPlaceholder={t("searchPlaceholder")} />
+      <AdminFilterBar
+        statusOptions={STATUS_OPTIONS}
+        searchPlaceholder={t("searchPlaceholder")}
+        companyOptions={companies.map((c) => ({ value: c.id, label: c.name }))}
+        tripOptions={trips.map((trip) => ({ value: trip.id, label: `${trip.title} · ${trip.tripCode}` }))}
+      />
 
       <div className="overflow-hidden rounded-xl border border-border bg-background">
         <Table>
@@ -85,8 +141,8 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
               <TableHead>{t("colTrip")}</TableHead>
               <TableHead>{t("colCompany")}</TableHead>
               <TableHead>{t("colCommission")}</TableHead>
-              <TableHead>{t("colStatus")}</TableHead>
-              <TableHead>{t("colCreated")}</TableHead>
+              <SortableHead field="status" label={t("colStatus")} sortBy={sortBy} sortDir={sortDir} baseParams={baseParams} />
+              <SortableHead field="createdAt" label={t("colCreated")} sortBy={sortBy} sortDir={sortDir} baseParams={baseParams} />
               <TableHead>{t("colWhatsapp")}</TableHead>
             </TableRow>
           </TableHeader>
