@@ -32,21 +32,29 @@ public class UpdateTripUseCase {
 
     @Transactional
     public Trip executeAsCompany(UUID companyUserId, UUID tripId, UpdateTripCommand command) {
-        return update(tripOwnershipGuard.findOwnedTrip(companyUserId, tripId), command);
+        return update(tripOwnershipGuard.findOwnedTrip(companyUserId, tripId), command, false);
     }
 
     /** Admin bypasses ownership only — every data-integrity rule below still applies. */
     @Transactional
     public Trip executeAsAdmin(UUID adminUserId, UUID tripId, UpdateTripCommand command) {
-        return update(tripOwnershipGuard.findAnyTrip(tripId), command);
+        return update(tripOwnershipGuard.findAnyTrip(tripId), command, true);
     }
 
-    private Trip update(Trip trip, UpdateTripCommand command) {
+    /**
+     * {@code allowCommissionOverride} is false on the company's own path — same reasoning as
+     * {@link CreateTripUseCase}: a company that could edit its own trip's commission override would
+     * be able to undercut the platform's rate at will.
+     */
+    private Trip update(Trip trip, UpdateTripCommand command, boolean allowCommissionOverride) {
         if (trip.getStatus() == TripStatus.CLOSED) {
             throw new ValidationException("A closed trip can no longer be edited");
         }
         if (!command.returnDate().isAfter(command.departureDate())) {
             throw new ValidationException("Return date must be after the departure date");
+        }
+        if (!allowCommissionOverride && command.commissionPerTraveler() != null) {
+            throw new ValidationException("Only an admin can set a trip's commission override");
         }
 
         trip.setTitle(command.title());
@@ -76,7 +84,12 @@ public class UpdateTripUseCase {
         trip.setDescription(command.description());
         trip.setAvailableSeats(command.availableSeats());
         trip.setTier(command.tier());
-        trip.setCommissionPerTraveler(command.commissionPerTraveler());
+        // A company's own update never carries this field (the guard above already rejected it if
+        // it tried to) — leave whatever an admin last set completely alone, rather than nulling it
+        // out just because the company's request understandably omitted it.
+        if (allowCommissionOverride) {
+            trip.setCommissionPerTraveler(command.commissionPerTraveler());
+        }
         trip.setLastUpdate(Instant.now());
 
         if (command.hotels() != null) {

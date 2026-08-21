@@ -44,7 +44,7 @@ public class CreateTripUseCase {
     public Trip executeAsCompany(UUID companyUserId, CreateTripCommand command) {
         CompanyProfile company = companyProfileRepository.findByUserId(companyUserId)
                 .orElseThrow(() -> NotFoundException.of("CompanyProfile", companyUserId));
-        return create(company, companyUserId, command);
+        return create(company, companyUserId, command, false);
     }
 
     /** An admin creating a trip on behalf of any approved company. */
@@ -55,20 +55,28 @@ public class CreateTripUseCase {
         if (company.getStatus() != CompanyStatus.APPROVED) {
             throw new ValidationException("Trips can only be created for an approved company");
         }
-        return create(company, adminUserId, command);
+        return create(company, adminUserId, command, true);
     }
 
     /**
      * Unchanged body of what used to be the single {@code execute} method, minus resolving the
      * company — {@code actorUserId} is who the audit log attributes the trip to, which is what
      * makes an admin-created trip correctly show the admin, not the company, as its author.
+     *
+     * <p>{@code allowCommissionOverride} is false on the company's own path: a company setting its
+     * own commission discount on a trip it creates would let it undercut the platform's rate at
+     * will, so a company-submitted {@code commissionPerTraveler} is rejected outright rather than
+     * silently ignored.
      */
-    private Trip create(CompanyProfile company, UUID actorUserId, CreateTripCommand command) {
+    private Trip create(CompanyProfile company, UUID actorUserId, CreateTripCommand command, boolean allowCommissionOverride) {
         if (tripRepository.existsByTripCode(command.tripCode())) {
             throw new ConflictException("Trip code already in use: " + command.tripCode());
         }
         if (!command.returnDate().isAfter(command.departureDate())) {
             throw new ValidationException("Return date must be after the departure date");
+        }
+        if (!allowCommissionOverride && command.commissionPerTraveler() != null) {
+            throw new ValidationException("Only an admin can set a trip's commission override");
         }
 
         Trip trip = new Trip();
