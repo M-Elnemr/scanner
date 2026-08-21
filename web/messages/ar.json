@@ -252,6 +252,7 @@
     "prophetsMosque": "المسجد النبوي",
     "walkableSuffix": " · يمكن الوصول سيرًا",
     "viewOnMap": "عرض المكان على الخريطة",
+    "viewOnMapVia": "الاتجاهات عبر {gate}",
     "freeShuttle": "يشمل خدمة نقل مجانية",
     "someShuttle": "بعض الفنادق تشمل خدمة نقل مجانية",
     "orSeparator": "أو",

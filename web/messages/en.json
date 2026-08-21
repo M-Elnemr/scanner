@@ -252,6 +252,7 @@
     "prophetsMosque": "Prophet's Mosque",
     "walkableSuffix": " · walkable",
     "viewOnMap": "View location on map",
+    "viewOnMapVia": "Directions via {gate}",
     "freeShuttle": "Free shuttle included",
     "someShuttle": "Some hotels include a free shuttle",
     "orSeparator": "or",

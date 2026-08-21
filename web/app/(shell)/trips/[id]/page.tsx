@@ -171,8 +171,8 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
             <div>
               <h2 className="mb-3 font-heading text-lg font-semibold">{t("hotels")}</h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {makkahGroup.length > 0 && <HotelCityCard city="MAKKAH" hotels={makkahGroup} t={t} />}
-                {madinahGroup.length > 0 && <HotelCityCard city="MADINAH" hotels={madinahGroup} t={t} />}
+                {makkahGroup.length > 0 && <HotelCityCard city="MAKKAH" hotels={makkahGroup} t={t} locale={locale} />}
+                {madinahGroup.length > 0 && <HotelCityCard city="MADINAH" hotels={madinahGroup} t={t} locale={locale} />}
               </div>
             </div>
           ) : null}
@@ -223,9 +223,45 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   );
 }
 
-// Fixed landmark coordinates, used as the reference point on the hotel's "view on map" link.
-const KAABA = { lat: 21.4225, lng: 39.8262 };
+// Fixed landmark, used as the reference point on a Madinah hotel's "view on map" link.
 const PROPHETS_MOSQUE = { lat: 24.4672, lng: 39.6112 };
+
+/**
+ * Makkah's Masjid al-Haram is large enough that routing every hotel to the Kaaba's own coordinates
+ * produces a misleading walking route — a hotel east of the mosque sends guests to an eastern gate
+ * in real life, not to the geometric center. These 11 major gates (OpenStreetMap `entrance` nodes,
+ * cross-checked against their well-known gate numbers: 1 = King Abdul Aziz, 79 = King Fahd,
+ * 100 = King Abdullah, 40 = Umrah Gate) span the full perimeter, so picking whichever is nearest a
+ * given hotel and routing there instead gives Google's own directions a realistic starting point.
+ */
+const HARAM_GATES = [
+  { name: "King Abdul Aziz Gate", nameAr: "بوابة الملك عبدالعزيز", lat: 21.4210447, lng: 39.8258406 },
+  { name: "King Fahd Gate", nameAr: "بوابة الملك فهد", lat: 21.421232, lng: 39.8240461 },
+  { name: "King Abdullah Gate", nameAr: "بوابة الملك عبدالله", lat: 21.4253914, lng: 39.824132 },
+  { name: "Umrah Gate", nameAr: "بوابة العمرة", lat: 21.4228378, lng: 39.8245696 },
+  { name: "Al Fath Gate", nameAr: "بوابة الفتح", lat: 21.4240151, lng: 39.8265147 },
+  { name: "Bab Al Marwah", nameAr: "باب المروة", lat: 21.4253183, lng: 39.8273872 },
+  { name: "Ajyad Gate", nameAr: "بوابة أجياد", lat: 21.4213059, lng: 39.8268532 },
+  { name: "Al Quds Gate", nameAr: "بوابة القدس", lat: 21.4238175, lng: 39.8252692 },
+  { name: "Bab Al Salam", nameAr: "باب السلام", lat: 21.4230322, lng: 39.8275662 },
+  { name: "Al Nabi Gate", nameAr: "بوابة النبي", lat: 21.4222008, lng: 39.8276781 },
+  { name: "Bab Ali", nameAr: "باب علي", lat: 21.4229524, lng: 39.8275792 },
+] as const;
+
+function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function nearestGate(lat: number, lng: number) {
+  return HARAM_GATES.reduce((closest, gate) =>
+    distanceMeters(lat, lng, gate.lat, gate.lng) < distanceMeters(lat, lng, closest.lat, closest.lng) ? gate : closest,
+  );
+}
 
 /** A pasted maps link, if the admin set one, always wins over coordinates — it's whatever they
  * intended people to see, which a generated directions link can't guarantee to match. */
@@ -236,13 +272,29 @@ function mapUrl(
   if (!hotel) return undefined;
   if (hotel.locationUrl) return hotel.locationUrl;
   if (hotel.latitude == null || hotel.longitude == null) return undefined;
-  const reference = city === "MADINAH" ? PROPHETS_MOSQUE : KAABA;
+  const reference = city === "MADINAH" ? PROPHETS_MOSQUE : nearestGate(hotel.latitude, hotel.longitude);
   const params = new URLSearchParams({
     api: "1",
     origin: `${hotel.latitude},${hotel.longitude}`,
     destination: `${reference.lat},${reference.lng}`,
   });
   return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+/** Names the specific gate being routed to for a Makkah hotel with real coordinates; the generic
+ * label otherwise (Madinah, or whenever a pasted locationUrl/missing coordinates make the
+ * destination something other than a computed nearest gate). */
+function mapLinkLabel(
+  hotel: { locationUrl?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined,
+  city: string | undefined,
+  locale: "ar" | "en",
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
+  if (city === "MAKKAH" && !hotel?.locationUrl && hotel?.latitude != null && hotel?.longitude != null) {
+    const gate = nearestGate(hotel.latitude, hotel.longitude);
+    return t("viewOnMapVia", { gate: locale === "ar" ? gate.nameAr : gate.name });
+  }
+  return t("viewOnMap");
 }
 
 type TripHotelItem = {
@@ -271,10 +323,12 @@ function HotelCityCard({
   city,
   hotels,
   t,
+  locale,
 }: {
   city: "MAKKAH" | "MADINAH";
   hotels: TripHotelItem[];
   t: (key: string, values?: Record<string, string | number>) => string;
+  locale: "ar" | "en";
 }) {
   const cityLabel = city === "MAKKAH" ? t("makkah") : t("madinah");
   const withShuttle = hotels.filter((h) => h.hotel?.freeBusIncluded).length;
@@ -302,7 +356,7 @@ function HotelCityCard({
           )}
           {mapUrl(hotel, city) && (
             <a href={mapUrl(hotel, city)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
-              <LocateFixed className="size-3.5" /> {t("viewOnMap")}
+              <LocateFixed className="size-3.5" /> {mapLinkLabel(hotel, city, locale, t)}
             </a>
           )}
           {shuttleLine && (
