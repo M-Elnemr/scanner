@@ -25,18 +25,21 @@ public class CreateTripUseCase {
     private final TripRouteResolver tripRouteResolver;
     private final TripHotelResolver tripHotelResolver;
     private final AuditLogService auditLogService;
+    private final TripNotifier tripNotifier;
 
     public CreateTripUseCase(
             TripRepository tripRepository,
             CompanyProfileRepository companyProfileRepository,
             TripRouteResolver tripRouteResolver,
             TripHotelResolver tripHotelResolver,
-            AuditLogService auditLogService) {
+            AuditLogService auditLogService,
+            TripNotifier tripNotifier) {
         this.tripRepository = tripRepository;
         this.companyProfileRepository = companyProfileRepository;
         this.tripRouteResolver = tripRouteResolver;
         this.tripHotelResolver = tripHotelResolver;
         this.auditLogService = auditLogService;
+        this.tripNotifier = tripNotifier;
     }
 
     /** The company's own trips — resolves the owning company from the authenticated user. */
@@ -133,6 +136,9 @@ public class CreateTripUseCase {
 
         trip = tripRepository.save(trip);
         auditLogService.record(actorUserId, "TRIP_CREATED", "Trip", trip.getId(), null, trip.getStatus());
+        if (trip.getStatus() == TripStatus.PUBLISHED) {
+            tripNotifier.tripPublished(trip);
+        }
         return trip;
     }
 }

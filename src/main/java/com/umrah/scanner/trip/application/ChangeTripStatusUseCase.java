@@ -13,9 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChangeTripStatusUseCase {
 
     private final TripOwnershipGuard tripOwnershipGuard;
+    private final TripNotifier tripNotifier;
 
-    public ChangeTripStatusUseCase(TripOwnershipGuard tripOwnershipGuard) {
+    public ChangeTripStatusUseCase(TripOwnershipGuard tripOwnershipGuard, TripNotifier tripNotifier) {
         this.tripOwnershipGuard = tripOwnershipGuard;
+        this.tripNotifier = tripNotifier;
     }
 
     @Transactional
@@ -40,6 +42,11 @@ public class ChangeTripStatusUseCase {
         // The controller maps the response after this transaction/session closes (open-in-view is
         // off), so any lazy collection it touches must be force-initialized here first.
         TripCollectionsInitializer.initialize(trip);
+        // Reaching here with target == PUBLISHED only ever happens via the DRAFT -> PUBLISHED branch
+        // above (the other branch only allows PUBLISHED -> CLOSED), so this is exactly "just published".
+        if (target == TripStatus.PUBLISHED) {
+            tripNotifier.tripPublished(trip);
+        }
         return trip;
     }
 
