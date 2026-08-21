@@ -47,11 +47,11 @@ public class TripHotelResolver {
             if (!seenHotelIds.add(input.hotelId())) {
                 throw new ValidationException("\"" + hotel.getName() + "\" is listed more than once");
             }
-            resolved.add(new ResolvedTripHotel(hotel, input.freeBusIncluded()));
+            resolved.add(new ResolvedTripHotel(hotel));
         }
         return resolved;
     }
 
-    public record ResolvedTripHotel(Hotel hotel, boolean freeBusIncluded) {
+    public record ResolvedTripHotel(Hotel hotel) {
     }
 }

@@ -50,6 +50,10 @@ public class Hotel extends SoftDeletableEntity {
     @Column(name = "can_walk", nullable = false)
     private boolean canWalk;
 
+    /** Whether this hotel runs a free shuttle to the Haram/Mosque — the same shuttle serves every trip staying here. */
+    @Column(name = "free_bus_included", nullable = false)
+    private boolean freeBusIncluded;
+
     @Column(name = "location_url", length = 500)
     private String locationUrl;
 

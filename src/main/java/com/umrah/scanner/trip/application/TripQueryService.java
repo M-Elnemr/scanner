@@ -51,9 +51,10 @@ public class TripQueryService {
     }
 
     /**
-     * One photo per city for the browse-list card — batched so N trips cost one query, not N. A
-     * trip may list several hotels for the same city; the first one (per the repository query's
-     * {@code city, id} ordering) wins rather than whichever happened to be iterated last.
+     * A trip's hotel photos for the browse-list card — batched so N trips cost one query, not N.
+     * {@code makkahPhotoUrl}/{@code madinahPhotoUrl} collapse to the first hotel per city (per the
+     * repository query's {@code city, id} ordering); {@code photos} instead carries every hotel that
+     * has a photo, Makkah first then Madinah, for a gallery that wants to show them all.
      */
     @Transactional(readOnly = true)
     public Map<UUID, TripHotelPhotos> hotelPhotos(List<UUID> tripIds) {
@@ -62,18 +63,25 @@ public class TripQueryService {
         }
         Map<UUID, String> makkah = new HashMap<>();
         Map<UUID, String> madinah = new HashMap<>();
+        Map<UUID, List<TripHotelPhotos.HotelPhoto>> makkahPhotos = new HashMap<>();
+        Map<UUID, List<TripHotelPhotos.HotelPhoto>> madinahPhotos = new HashMap<>();
         for (TripHotel th : tripHotelRepository.findAllByTripIdInWithHotel(tripIds)) {
             String photoUrl = th.getHotel().getPhotoUrl();
             if (photoUrl == null) {
                 continue;
             }
             UUID tripId = th.getTrip().getId();
-            Map<UUID, String> target = th.getCity() == HotelCity.MAKKAH ? makkah : madinah;
-            target.putIfAbsent(tripId, photoUrl);
+            boolean isMakkah = th.getCity() == HotelCity.MAKKAH;
+            (isMakkah ? makkah : madinah).putIfAbsent(tripId, photoUrl);
+            var photo = new TripHotelPhotos.HotelPhoto(
+                    th.getCity(), th.getHotel().getName(), th.getHotel().getNameAr(), photoUrl);
+            (isMakkah ? makkahPhotos : madinahPhotos).computeIfAbsent(tripId, k -> new ArrayList<>()).add(photo);
         }
         Map<UUID, TripHotelPhotos> result = new HashMap<>();
         for (UUID id : tripIds) {
-            result.put(id, new TripHotelPhotos(makkah.get(id), madinah.get(id)));
+            List<TripHotelPhotos.HotelPhoto> photos = new ArrayList<>(makkahPhotos.getOrDefault(id, List.of()));
+            photos.addAll(madinahPhotos.getOrDefault(id, List.of()));
+            result.put(id, new TripHotelPhotos(makkah.get(id), madinah.get(id), photos));
         }
         return result;
     }

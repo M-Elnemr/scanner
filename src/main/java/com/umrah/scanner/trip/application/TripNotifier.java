@@ -41,8 +41,8 @@ public class TripNotifier {
         data.put("tripId", trip.getId().toString());
         resolveImageUrl(trip).ifPresent(url -> data.put("imageUrl", url));
 
-        String title = "New trip available";
-        String body = "A new trip, \"" + trip.getTitle() + "\", was just added — check it out!";
+        String title = "رحلة جديدة متاحة";
+        String body = "تمت إضافة رحلة جديدة \"" + trip.getTitle() + "\" — تصفحها الآن!";
 
         for (User customer : userRepository.findAllByRole(Role.CUSTOMER)) {
             notificationDispatcher.dispatch(customer.getId(), "NEW_TRIP", title, body, data);

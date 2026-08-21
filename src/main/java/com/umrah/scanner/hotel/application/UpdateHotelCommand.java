@@ -13,6 +13,7 @@ public record UpdateHotelCommand(
         short stars,
         Integer distanceToHaramM,
         boolean canWalk,
+        boolean freeBusIncluded,
         String locationUrl,
         Double latitude,
         Double longitude,

@@ -74,7 +74,8 @@ public class HotelController {
             @AuthenticationPrincipal AuthenticatedUser admin, @Valid @RequestBody CreateHotelRequest request) {
         var command = new HotelCommand(
                 request.city(), request.name(), request.nameAr(), request.stars(), request.distanceToHaramM(),
-                request.canWalk(), request.locationUrl(), request.latitude(), request.longitude(), request.active());
+                request.canWalk(), request.freeBusIncluded(), request.locationUrl(), request.latitude(),
+                request.longitude(), request.active());
         return ApiResponse.of(HotelResponse.from(createHotelUseCase.execute(admin.userId(), command)));
     }
 
@@ -84,7 +85,8 @@ public class HotelController {
             @AuthenticationPrincipal AuthenticatedUser admin, @PathVariable UUID id, @Valid @RequestBody UpdateHotelRequest request) {
         var command = new UpdateHotelCommand(
                 request.name(), request.nameAr(), request.stars(), request.distanceToHaramM(),
-                request.canWalk(), request.locationUrl(), request.latitude(), request.longitude(), request.active());
+                request.canWalk(), request.freeBusIncluded(), request.locationUrl(), request.latitude(),
+                request.longitude(), request.active());
         return ApiResponse.of(HotelResponse.from(updateHotelUseCase.execute(admin.userId(), id, command)));
     }
 

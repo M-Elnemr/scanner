@@ -98,9 +98,6 @@ public class CreateTripUseCase {
         trip.setReturnArrivalAirport(route.returnArrival());
         trip.setCurrency(tripRouteResolver.resolveCurrency(command.currencyId()));
         trip.setAirline(command.airline());
-        trip.setTransitCount(command.transitCount());
-        trip.setTransitCity(command.transitCity());
-        trip.setTransitDuration(command.transitDuration());
         trip.setDaysInMakkah(command.daysInMakkah());
         trip.setDaysInMadinah(command.daysInMadinah());
         trip.setVisaIncluded(command.visaIncluded());
@@ -121,7 +118,6 @@ public class CreateTripUseCase {
                 TripHotel tripHotel = new TripHotel();
                 tripHotel.setHotel(resolved.hotel());
                 tripHotel.setCity(resolved.hotel().getCity());
-                tripHotel.setFreeBusIncluded(resolved.freeBusIncluded());
                 trip.addHotel(tripHotel);
             }
         }

@@ -213,7 +213,7 @@ public class WhatsAppMessageComposer {
 
     /** Says once, for the whole city line, whether the free shuttle applies to all, some, or none of the listed hotels. */
     private String shuttleSuffix(List<TripHotel> tripHotels, boolean ar) {
-        long withShuttle = tripHotels.stream().filter(TripHotel::isFreeBusIncluded).count();
+        long withShuttle = tripHotels.stream().filter(th -> th.getHotel().isFreeBusIncluded()).count();
         if (withShuttle == 0) {
             return "";
         }

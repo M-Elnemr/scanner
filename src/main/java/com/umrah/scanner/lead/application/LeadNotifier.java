@@ -1,5 +1,6 @@
 package com.umrah.scanner.lead.application;
 
+import com.umrah.scanner.customer.domain.WalletType;
 import com.umrah.scanner.lead.domain.Lead;
 import com.umrah.scanner.lead.domain.LeadAction;
 import com.umrah.scanner.lead.domain.LeadStatus;
@@ -15,6 +16,10 @@ import org.springframework.stereotype.Service;
  * Turns a lead lifecycle event into the notification the other party needs to see. Kept apart from
  * the use case that moves the lead so the state machine stays about state, and so adding or
  * retargeting a message never touches transition logic.
+ *
+ * <p>Every user-facing title/body here is Arabic — the app's only audience language. {@code type}
+ * and the {@code data} payload stay English identifiers; clients route/deep-link on those, they are
+ * never rendered to a user.
  */
 @Service
 public class LeadNotifier {
@@ -29,9 +34,8 @@ public class LeadNotifier {
 
     /** A customer has just contacted the company about a trip. */
     public void leadCreated(Lead lead) {
-        toCompany(lead, "NEW_LEAD", "New interested customer",
-                "A customer is interested in " + lead.getTripTitle() + " for "
-                        + lead.getTravelerCount() + " traveler(s).");
+        toCompany(lead, "NEW_LEAD", "عميل جديد مهتم",
+                "يوجد عميل مهتم برحلة " + lead.getTripTitle() + " لعدد " + lead.getTravelerCount() + " من المسافرين.");
     }
 
     /**
@@ -42,20 +46,20 @@ public class LeadNotifier {
      */
     public void actionPerformed(Lead lead, LeadAction action, LeadStatus statusBeforeAction) {
         switch (action) {
-            case MARK_DEPOSIT_PAID -> toCustomer(lead, "DEPOSIT_CONFIRMED", "Deposit confirmed",
-                    "Your deposit for " + lead.getTripTitle() + " has been confirmed by the company.");
+            case MARK_DEPOSIT_PAID -> toCustomer(lead, "DEPOSIT_CONFIRMED", "تم تأكيد العربون",
+                    "تم تأكيد عربونك الخاص برحلة " + lead.getTripTitle() + " من قبل الشركة.");
 
-            case MARK_FULLY_PAID -> toCustomer(lead, "FULL_PAYMENT_CONFIRMED", "Full payment confirmed",
-                    "Your full payment for " + lead.getTripTitle() + " has been confirmed by the company.");
+            case MARK_FULLY_PAID -> toCustomer(lead, "FULL_PAYMENT_CONFIRMED", "تم تأكيد السداد الكامل",
+                    "تم تأكيد سدادك الكامل لرحلة " + lead.getTripTitle() + " من قبل الشركة.");
 
-            case REPORT_COMMISSION_PAID -> toAdmins(lead, "COMMISSION_CONFIRMATION_REQUIRED", "Confirm a commission payment",
-                    "A company reported paying its commission. Please confirm so cashback can be released.");
+            case REPORT_COMMISSION_PAID -> toAdmins(lead, "COMMISSION_CONFIRMATION_REQUIRED", "تأكيد دفع عمولة",
+                    "أبلغت إحدى الشركات عن دفع عمولتها. الرجاء التأكيد حتى يتم صرف الكاش باك.");
 
-            case CONFIRM_COMMISSION_PAID -> toCompany(lead, "COMMISSION_PAID", "Commission confirmed",
-                    "Your commission payment has been confirmed by the platform.");
+            case CONFIRM_COMMISSION_PAID -> toCompany(lead, "COMMISSION_PAID", "تم تأكيد العمولة",
+                    "تم تأكيد دفع عمولتكم من قبل المنصة.");
 
-            case PAY_CASHBACK -> toCustomer(lead, "CASHBACK_PAID", "Cashback sent",
-                    "Your cashback has been sent to your " + lead.getCustomer().getWalletType() + " wallet.");
+            case PAY_CASHBACK -> toCustomer(lead, "CASHBACK_PAID", "تم إرسال الكاش باك",
+                    "تم إرسال الكاش باك الخاص بك إلى محفظة " + walletLabel(lead.getCustomer().getWalletType()) + ".");
 
             case CANCEL -> leadCancelled(lead, statusBeforeAction);
         }
@@ -67,13 +71,13 @@ public class LeadNotifier {
      * changed hands and someone has to sort out the refund.
      */
     private void leadCancelled(Lead lead, LeadStatus statusBeforeCancel) {
-        toCompany(lead, "LEAD_CANCELLED", "A customer cancelled",
-                "A customer cancelled their booking for " + lead.getTripTitle() + ".");
+        toCompany(lead, "LEAD_CANCELLED", "قام عميل بالإلغاء",
+                "قام أحد العملاء بإلغاء حجزه لرحلة " + lead.getTripTitle() + ".");
 
         if (statusBeforeCancel.isAtLeast(LeadStatus.DEPOSIT_PAID)) {
-            toAdmins(lead, "PAID_LEAD_CANCELLED", "A paid booking was cancelled",
-                    "A customer cancelled " + lead.getTripTitle() + " after paying. "
-                            + "The commission has been voided; the refund needs following up.");
+            toAdmins(lead, "PAID_LEAD_CANCELLED", "تم إلغاء حجز مدفوع",
+                    "قام عميل بإلغاء رحلة " + lead.getTripTitle() + " بعد الدفع. "
+                            + "تم إلغاء العمولة، ويجب متابعة عملية الاسترداد.");
         }
     }
 
@@ -83,10 +87,10 @@ public class LeadNotifier {
      * surprised by a status that neither of them produced.
      */
     public void statusOverridden(Lead lead, LeadStatus previous, LeadStatus target, String reason) {
-        String body = "An administrator changed this booking's status from " + previous + " to " + target
-                + " for " + lead.getTripTitle() + ". Reason: " + reason;
-        toCustomer(lead, "LEAD_STATUS_OVERRIDDEN", "Your booking status was updated by an administrator", body);
-        toCompany(lead, "LEAD_STATUS_OVERRIDDEN", "A booking status was updated by an administrator", body);
+        String body = "قام أحد المسؤولين بتغيير حالة هذا الحجز من \"" + statusLabel(previous) + "\" إلى \""
+                + statusLabel(target) + "\" لرحلة " + lead.getTripTitle() + ". السبب: " + reason;
+        toCustomer(lead, "LEAD_STATUS_OVERRIDDEN", "تم تحديث حالة حجزك من قبل المسؤول", body);
+        toCompany(lead, "LEAD_STATUS_OVERRIDDEN", "تم تحديث حالة أحد الحجوزات من قبل المسؤول", body);
     }
 
     private void toCompany(Lead lead, String type, String title, String body) {
@@ -106,5 +110,29 @@ public class LeadNotifier {
     private Map<String, Object> payload(Lead lead) {
         UUID tripId = lead.getTripId();
         return Map.of("leadId", lead.getId().toString(), "tripId", tripId.toString());
+    }
+
+    private static String statusLabel(LeadStatus status) {
+        return switch (status) {
+            case INTERESTED -> "مهتم";
+            case CONTACTED -> "تم التواصل";
+            case CONFIRMED -> "مؤكد";
+            case PENDING_DEPOSIT_CONFIRMATION -> "بانتظار تأكيد العربون";
+            case DEPOSIT_PAID -> "تم دفع العربون";
+            case PENDING_FULL_PAYMENT_CONFIRMATION -> "بانتظار تأكيد السداد الكامل";
+            case FULLY_PAID -> "تم السداد الكامل";
+            case PENDING_COMMISSION_CONFIRMATION -> "بانتظار تأكيد العمولة";
+            case COMMISSION_PAID -> "تم دفع العمولة";
+            case CASHBACK_PAID -> "تم صرف الكاش باك";
+            case CANCELLED -> "ملغي";
+        };
+    }
+
+    private static String walletLabel(WalletType walletType) {
+        return switch (walletType) {
+            case VODAFONE_CASH -> "فودافون كاش";
+            case ETISALAT_CASH -> "اتصالات كاش";
+            case INSTA_PAY -> "إنستاباي";
+        };
     }
 }

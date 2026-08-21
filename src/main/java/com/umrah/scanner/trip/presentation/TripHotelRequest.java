@@ -8,5 +8,5 @@ import java.util.UUID;
  * in Madinah. {@link com.umrah.scanner.trip.application.TripHotelResolver} enforces one hotel per
  * city and that the hotel is active.
  */
-public record TripHotelRequest(@NotNull UUID hotelId, boolean freeBusIncluded) {
+public record TripHotelRequest(@NotNull UUID hotelId) {
 }

@@ -29,7 +29,6 @@ const ROOM_LABEL_KEY: Record<RoomPriceInput["roomType"], "roomSingle" | "roomDou
 
 interface HotelRow {
   hotelId: string;
-  freeBusIncluded: boolean;
 }
 
 interface TripDraft {
@@ -42,9 +41,6 @@ interface TripDraft {
   returnDepartureAirportId: string;
   returnArrivalAirportId: string;
   airline: string;
-  transitCount: string;
-  transitCity: string;
-  transitDuration: string;
   daysInMakkah: string;
   daysInMadinah: string;
   visaIncluded: boolean;
@@ -73,9 +69,6 @@ const EMPTY: TripDraft = {
   returnDepartureAirportId: "",
   returnArrivalAirportId: "",
   airline: "",
-  transitCount: "",
-  transitCity: "",
-  transitDuration: "",
   daysInMakkah: "",
   daysInMadinah: "",
   visaIncluded: false,
@@ -175,7 +168,7 @@ export function TripForm({
 
     const hotels: TripInput["hotels"] = [...form.makkahHotelRows, ...form.madinahHotelRows]
       .filter((h) => h.hotelId)
-      .map((h) => ({ hotelId: h.hotelId, freeBusIncluded: h.freeBusIncluded }));
+      .map((h) => ({ hotelId: h.hotelId }));
 
     const prices: RoomPriceInput[] = ROOM_TYPES.filter((t) => form.prices[t]).map((t) => ({
       roomType: t,
@@ -192,9 +185,6 @@ export function TripForm({
       returnDepartureAirportId: form.returnDepartureAirportId,
       returnArrivalAirportId: form.returnArrivalAirportId,
       airline: form.airline,
-      transitCount: form.transitCount ? Number(form.transitCount) : undefined,
-      transitCity: form.transitCity || undefined,
-      transitDuration: form.transitDuration || undefined,
       daysInMakkah: form.daysInMakkah ? Number(form.daysInMakkah) : undefined,
       daysInMadinah: form.daysInMadinah ? Number(form.daysInMadinah) : undefined,
       visaIncluded: form.visaIncluded,
@@ -386,35 +376,10 @@ export function TripForm({
             <Label htmlFor="airline">{t("airlineLabel")}</Label>
             <Input id="airline" value={form.airline} onChange={(e) => set("airline", e.target.value)} required />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="transitCount">{t("transitStopsLabel")}</Label>
-            <Input
-              id="transitCount"
-              type="number"
-              min={0}
-              value={form.transitCount}
-              onChange={(e) => set("transitCount", e.target.value)}
-              required
-            />
-          </div>
           <AirportField label={t("outboundDeparture")} value={form.outboundDepartureAirportId} onChange={(v) => set("outboundDepartureAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
           <AirportField label={t("outboundArrival")} value={form.outboundArrivalAirportId} onChange={(v) => set("outboundArrivalAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
           <AirportField label={t("returnDeparture")} value={form.returnDepartureAirportId} onChange={(v) => set("returnDepartureAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
           <AirportField label={t("returnArrival")} value={form.returnArrivalAirportId} onChange={(v) => set("returnArrivalAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
-          <div className="space-y-1.5">
-            <Label htmlFor="transitCity">{t("transitCityLabel")}</Label>
-            <Input id="transitCity" value={form.transitCity} onChange={(e) => set("transitCity", e.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="transitDuration">{t("transitDurationLabel")}</Label>
-            <Input
-              id="transitDuration"
-              placeholder={t("transitDurationPlaceholder")}
-              value={form.transitDuration}
-              onChange={(e) => set("transitDuration", e.target.value)}
-              required
-            />
-          </div>
         </CardContent>
       </Card>
 
@@ -445,7 +410,6 @@ export function TripForm({
               options={makkahHotels}
               addLabel={t("addHotel")}
               noneLabel={t("hotelNone")}
-              shuttleLabel={t("makkahShuttle")}
             />
           </div>
           <div className="space-y-2">
@@ -456,7 +420,6 @@ export function TripForm({
               options={madinahHotels}
               addLabel={t("addHotel")}
               noneLabel={t("hotelNone")}
-              shuttleLabel={t("madinahShuttle")}
             />
           </div>
         </CardContent>
@@ -519,14 +482,12 @@ function HotelRowsEditor({
   options,
   addLabel,
   noneLabel,
-  shuttleLabel,
 }: {
   rows: HotelRow[];
   onChange: (rows: HotelRow[]) => void;
   options: HotelOption[];
   addLabel: string;
   noneLabel: string;
-  shuttleLabel: string;
 }) {
   function update(index: number, patch: Partial<HotelRow>) {
     onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
@@ -537,7 +498,7 @@ function HotelRowsEditor({
   }
 
   function add() {
-    onChange([...rows, { hotelId: "", freeBusIncluded: false }]);
+    onChange([...rows, { hotelId: "" }]);
   }
 
   return (
@@ -566,15 +527,6 @@ function HotelRowsEditor({
                   ))}
                 </SelectContent>
               </Select>
-              {row.hotelId && (
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={row.freeBusIncluded}
-                    onCheckedChange={(v) => update(index, { freeBusIncluded: Boolean(v) })}
-                  />
-                  {shuttleLabel}
-                </label>
-              )}
             </div>
             <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(index)}>
               <Trash2 className="size-4" />

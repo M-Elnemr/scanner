@@ -96,15 +96,6 @@ public class Trip extends SoftDeletableEntity {
     @Column(name = "airline", nullable = false, length = 100)
     private String airline;
 
-    @Column(name = "transit_count", nullable = false)
-    private short transitCount;
-
-    @Column(name = "transit_city", length = 100)
-    private String transitCity;
-
-    @Column(name = "transit_duration", length = 50)
-    private String transitDuration;
-
     @Column(name = "days_in_makkah", nullable = false)
     private short daysInMakkah;
 

@@ -1382,7 +1382,6 @@ export interface components {
         TripHotelRequest: {
             /** Format: uuid */
             hotelId: string;
-            freeBusIncluded?: boolean;
         };
         UpdateTripRequest: {
             title: string;
@@ -1399,10 +1398,6 @@ export interface components {
             /** Format: uuid */
             returnArrivalAirportId: string;
             airline: string;
-            /** Format: int32 */
-            transitCount?: number;
-            transitCity?: string;
-            transitDuration?: string;
             /** Format: int32 */
             daysInMakkah?: number;
             /** Format: int32 */
@@ -1490,6 +1485,8 @@ export interface components {
             distanceToHaramM?: number;
             /** @description Whether that distance is walkable — an admin judgement, not a computed threshold */
             canWalk?: boolean;
+            /** @description Whether this hotel provides a free shuttle to the Haram/Mosque */
+            freeBusIncluded?: boolean;
             locationUrl?: string;
             /** @description Null until an admin uploads one */
             photoUrl?: string;
@@ -1528,10 +1525,6 @@ export interface components {
             returnArrivalAirport?: components["schemas"]["Airport"];
             airline?: string;
             /** Format: int32 */
-            transitCount?: number;
-            transitCity?: string;
-            transitDuration?: string;
-            /** Format: int32 */
             daysInMakkah?: number;
             /** Format: int32 */
             daysInMadinah?: number;
@@ -1563,13 +1556,11 @@ export interface components {
             roomPrices?: components["schemas"]["RoomPriceResponse"][];
             company?: components["schemas"]["CompanyContact"];
         };
-        /** @description The catalogue hotel this trip uses in one city, plus what this company offers around it. */
+        /** @description The catalogue hotel this trip uses in one city. */
         TripHotel: {
             /** @enum {string} */
             city?: "MAKKAH" | "MADINAH";
             hotel?: components["schemas"]["Hotel"];
-            /** @description Whether THIS company runs a free shuttle to the Haram/Mosque on THIS package */
-            freeBusIncluded?: boolean;
         };
         RoomPricesRequest: {
             prices: components["schemas"]["RoomPriceRequest"][];
@@ -1582,6 +1573,7 @@ export interface components {
             /** Format: int32 */
             distanceToHaramM?: number;
             canWalk?: boolean;
+            freeBusIncluded?: boolean;
             locationUrl?: string;
             /** Format: double */
             latitude?: number;
@@ -1678,6 +1670,16 @@ export interface components {
             priceStartsFrom?: number;
             makkahHotelPhotoUrl?: string;
             madinahHotelPhotoUrl?: string;
+            /** @description One entry per hotel with a photo, Makkah first then Madinah — backs a swipeable gallery. */
+            hotelPhotos?: components["schemas"]["HotelPhoto"][];
+        };
+        /** @description One entry per hotel with a photo, Makkah first then Madinah — backs a swipeable gallery. */
+        HotelPhoto: {
+            /** @enum {string} */
+            city?: "MAKKAH" | "MADINAH";
+            hotelName?: string;
+            hotelNameAr?: string;
+            photoUrl?: string;
         };
         RegisterCompanyRequest: {
             companyName: string;
@@ -1702,10 +1704,6 @@ export interface components {
             /** Format: uuid */
             returnArrivalAirportId: string;
             airline: string;
-            /** Format: int32 */
-            transitCount?: number;
-            transitCity?: string;
-            transitDuration?: string;
             /** Format: int32 */
             daysInMakkah?: number;
             /** Format: int32 */
@@ -1808,6 +1806,7 @@ export interface components {
             /** Format: int32 */
             distanceToHaramM?: number;
             canWalk?: boolean;
+            freeBusIncluded?: boolean;
             locationUrl?: string;
             /** Format: double */
             latitude?: number;

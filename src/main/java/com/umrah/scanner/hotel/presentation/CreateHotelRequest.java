@@ -15,6 +15,7 @@ public record CreateHotelRequest(
         @Min(1) @Max(5) short stars,
         @PositiveOrZero Integer distanceToHaramM,
         boolean canWalk,
+        boolean freeBusIncluded,
         String locationUrl,
         Double latitude,
         Double longitude,

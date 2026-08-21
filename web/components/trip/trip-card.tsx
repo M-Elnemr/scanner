@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { TripImage } from "@/components/trip/trip-image";
+import { HotelPhotoCarousel } from "@/components/trip/hotel-photo-carousel";
 import { CompareToggle } from "@/components/trip/compare-toggle";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, tripDurationNights } from "@/lib/format/date";
@@ -26,10 +26,11 @@ export function TripCard({ trip }: { trip: TripSummary }) {
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-1 hover:shadow-lg"
     >
       <div className="relative h-40">
-        <TripImage
+        <HotelPhotoCarousel
+          photos={trip.hotelPhotos ?? []}
           tier={trip.tier}
-          makkahPhotoUrl={trip.makkahHotelPhotoUrl}
-          madinahPhotoUrl={trip.madinahHotelPhotoUrl}
+          locale={locale}
+          variant="card"
           className="h-full w-full"
         />
         {trip.tier && (

@@ -67,6 +67,7 @@ export default async function AdminHotelsPage() {
                     <span className="inline-flex items-center gap-1">
                       <MapPin className="size-3" /> {t("distanceValue", { distance: h.distanceToHaramM })}
                       {h.canWalk ? t("walkableSuffix") : ""}
+                      {h.freeBusIncluded ? t("freeBusSuffix") : ""}
                     </span>
                   ) : (
                     "—"
@@ -87,6 +88,7 @@ export default async function AdminHotelsPage() {
                         stars: h.stars != null ? String(h.stars) : "",
                         distanceToHaramM: h.distanceToHaramM != null ? String(h.distanceToHaramM) : "",
                         canWalk: h.canWalk ?? false,
+                        freeBusIncluded: h.freeBusIncluded ?? false,
                         locationUrl: h.locationUrl ?? "",
                         latitude: h.latitude != null ? String(h.latitude) : "",
                         longitude: h.longitude != null ? String(h.longitude) : "",

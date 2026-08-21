@@ -13,6 +13,7 @@ export interface HotelInput {
   stars?: number;
   distanceToHaramM?: number;
   canWalk?: boolean;
+  freeBusIncluded?: boolean;
   locationUrl?: string;
   latitude?: number;
   longitude?: number;

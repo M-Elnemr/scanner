@@ -17,8 +17,7 @@ final class TripRequestMapper {
                 r.tripCode(), r.title(), r.departureDate(), r.returnDate(),
                 r.outboundDepartureAirportId(), r.outboundArrivalAirportId(),
                 r.returnDepartureAirportId(), r.returnArrivalAirportId(),
-                r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
-                r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
+                r.airline(), r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
                 r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
                 r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier(),
                 r.commissionPerTraveler());
@@ -29,8 +28,7 @@ final class TripRequestMapper {
                 r.title(), r.departureDate(), r.returnDate(),
                 r.outboundDepartureAirportId(), r.outboundArrivalAirportId(),
                 r.returnDepartureAirportId(), r.returnArrivalAirportId(),
-                r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
-                r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
+                r.airline(), r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
                 r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
                 r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier(),
                 r.commissionPerTraveler());
@@ -41,7 +39,7 @@ final class TripRequestMapper {
         if (hotels == null) {
             return null;
         }
-        return hotels.stream().map(h -> new TripHotelInput(h.hotelId(), h.freeBusIncluded())).toList();
+        return hotels.stream().map(h -> new TripHotelInput(h.hotelId())).toList();
     }
 
     // null means "omitted" (leave untouched on update); an empty list is an explicit clear.

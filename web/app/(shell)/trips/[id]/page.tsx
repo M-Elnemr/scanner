@@ -19,7 +19,7 @@ import { apiClient } from "@/lib/auth/server";
 import { getCurrentUser } from "@/lib/auth/server";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
-import { TripImage } from "@/components/trip/trip-image";
+import { HotelPhotoCarousel } from "@/components/trip/hotel-photo-carousel";
 import { PreserveFlow } from "@/components/trip/preserve-flow";
 import { FavouriteButton } from "@/components/trip/favourite-button";
 import { Badge } from "@/components/ui/badge";
@@ -92,20 +92,21 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   // Makkah first — the more important leg of the journey, so it sits on the reading-start side
   // (the right in Arabic) rather than wherever the backend happened to return it.
   const sortedHotels = [...(trip.hotels ?? [])].sort((a, b) => (a.city === "MAKKAH" ? -1 : b.city === "MAKKAH" ? 1 : 0));
-  const makkahPhotoUrl = sortedHotels.find((th) => th.city === "MAKKAH")?.hotel?.photoUrl;
-  const madinahPhotoUrl = sortedHotels.find((th) => th.city === "MADINAH")?.hotel?.photoUrl;
+  const hotelPhotos = sortedHotels.map((th) => ({
+    city: th.city,
+    hotelName: th.hotel?.name,
+    hotelNameAr: th.hotel?.nameAr,
+    photoUrl: th.hotel?.photoUrl,
+  }));
+  const makkahGroup = sortedHotels.filter((th) => th.city === "MAKKAH");
+  const madinahGroup = sortedHotels.filter((th) => th.city === "MADINAH");
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
           <div className="relative h-56 overflow-hidden rounded-2xl sm:h-72">
-            <TripImage
-              tier={trip.tier}
-              makkahPhotoUrl={makkahPhotoUrl}
-              madinahPhotoUrl={madinahPhotoUrl}
-              className="h-full w-full"
-            />
+            <HotelPhotoCarousel photos={hotelPhotos} tier={trip.tier} locale={locale} variant="detail" className="h-full w-full" />
             {trip.tier && (
               <Badge className="absolute top-4 left-4 bg-white/90 text-foreground" variant="secondary">
                 {TIER_LABEL[trip.tier] ?? trip.tier}
@@ -147,13 +148,6 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
                 airline={trip.airline}
                 locale={locale}
               />
-              {trip.transitCount ? (
-                <p className="text-xs text-muted-foreground">
-                  {t("stopsCount", { count: trip.transitCount })}
-                  {trip.transitCity ? t("viaCity", { city: trip.transitCity }) : ""}
-                  {trip.transitDuration ? ` (${trip.transitDuration})` : ""}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
 
@@ -177,46 +171,8 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
             <div>
               <h2 className="mb-3 font-heading text-lg font-semibold">{t("hotels")}</h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                {sortedHotels.map((th, i) => (
-                  <Card key={i}>
-                    <CardContent className="space-y-1.5 pt-6">
-                      <p className="text-xs font-bold tracking-wide text-foreground uppercase">
-                        {th.city === "MAKKAH" ? t("makkah") : t("madinah")}
-                      </p>
-                      <p className="font-heading font-semibold">{th.hotel?.name}</p>
-                      <div className="flex items-center gap-1 text-amber-500">
-                        {Array.from({ length: th.hotel?.stars ?? 0 }).map((_, j) => (
-                          <BadgeCheck key={j} className="size-3.5" />
-                        ))}
-                      </div>
-                      {th.hotel?.distanceToHaramM != null && (
-                        <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-                          <MapPin className="size-3.5 shrink-0" />
-                          {t("distanceFrom", {
-                            distance: th.hotel.distanceToHaramM,
-                            place: th.city === "MAKKAH" ? t("haram") : t("prophetsMosque"),
-                          })}
-                          {th.hotel.canWalk ? t("walkableSuffix") : ""}
-                        </p>
-                      )}
-                      {mapUrl(th.hotel, th.city) && (
-                        <a
-                          href={mapUrl(th.hotel, th.city)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          <LocateFixed className="size-3.5" /> {t("viewOnMap")}
-                        </a>
-                      )}
-                      {th.freeBusIncluded && (
-                        <p className="flex items-center gap-1 text-sm text-primary">
-                          <Bus className="size-3.5" /> {t("freeShuttle")}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                {makkahGroup.length > 0 && <HotelCityCard city="MAKKAH" hotels={makkahGroup} t={t} />}
+                {madinahGroup.length > 0 && <HotelCityCard city="MADINAH" hotels={madinahGroup} t={t} />}
               </div>
             </div>
           ) : null}
@@ -287,6 +243,107 @@ function mapUrl(
     destination: `${reference.lat},${reference.lng}`,
   });
   return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+type TripHotelItem = {
+  city?: string;
+  hotel?: {
+    name?: string;
+    nameAr?: string;
+    stars?: number;
+    distanceToHaramM?: number | null;
+    canWalk?: boolean;
+    freeBusIncluded?: boolean;
+    locationUrl?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+};
+
+/**
+ * One card per city. A single hotel keeps the full detail (stars, distance, walkability, map link,
+ * free shuttle). Several alternatives for the same city collapse to their names joined with "or" —
+ * distance-to-haram and the map link don't merge cleanly across an "or", so those are dropped rather
+ * than shown for (and misattributed to) whichever hotel happened to be listed first. Mirrors the
+ * grouping WhatsAppMessageComposer already does for the company/customer WhatsApp messages.
+ */
+function HotelCityCard({
+  city,
+  hotels,
+  t,
+}: {
+  city: "MAKKAH" | "MADINAH";
+  hotels: TripHotelItem[];
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const cityLabel = city === "MAKKAH" ? t("makkah") : t("madinah");
+  const withShuttle = hotels.filter((h) => h.hotel?.freeBusIncluded).length;
+  const shuttleLine =
+    withShuttle === 0 ? null : withShuttle === hotels.length ? t("freeShuttle") : t("someShuttle");
+
+  if (hotels.length === 1) {
+    const hotel = hotels[0].hotel;
+    return (
+      <Card>
+        <CardContent className="space-y-1.5 pt-6">
+          <CityBadge label={cityLabel} />
+          <p className="font-heading font-semibold">{hotel?.name}</p>
+          <div className="flex items-center gap-1 text-amber-500">
+            {Array.from({ length: hotel?.stars ?? 0 }).map((_, j) => (
+              <BadgeCheck key={j} className="size-3.5" />
+            ))}
+          </div>
+          {hotel?.distanceToHaramM != null && (
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+              <MapPin className="size-3.5 shrink-0" />
+              {t("distanceFrom", { distance: hotel.distanceToHaramM, place: city === "MAKKAH" ? t("haram") : t("prophetsMosque") })}
+              {hotel.canWalk ? t("walkableSuffix") : ""}
+            </p>
+          )}
+          {mapUrl(hotel, city) && (
+            <a href={mapUrl(hotel, city)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+              <LocateFixed className="size-3.5" /> {t("viewOnMap")}
+            </a>
+          )}
+          {shuttleLine && (
+            <p className="flex items-center gap-1 text-sm text-primary">
+              <Bus className="size-3.5" /> {shuttleLine}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-2 pt-6">
+        <CityBadge label={cityLabel} />
+        <p className="font-heading font-semibold">
+          {hotels.map((h, i) => (
+            <span key={i}>
+              {i > 0 && <span className="mx-1 font-normal text-muted-foreground">{t("orSeparator")}</span>}
+              {h.hotel?.name}
+              {h.hotel?.stars ? <span className="ms-1 text-xs font-normal text-amber-500">{"★".repeat(h.hotel.stars)}</span> : null}
+            </span>
+          ))}
+        </p>
+        {shuttleLine && (
+          <p className="flex items-center gap-1 text-sm text-primary">
+            <Bus className="size-3.5" /> {shuttleLine}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CityBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-block rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold tracking-wide text-primary uppercase">
+      {label}
+    </span>
+  );
 }
 
 const ROOM_TYPE_ORDER: Record<string, number> = { DOUBLE: 0, TRIPLE: 1, QUAD: 2, CHILD: 3, INFANT: 4, SINGLE: 5 };

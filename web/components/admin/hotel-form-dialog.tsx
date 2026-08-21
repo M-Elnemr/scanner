@@ -28,6 +28,7 @@ interface HotelDraft {
   stars: string;
   distanceToHaramM: string;
   canWalk: boolean;
+  freeBusIncluded: boolean;
   locationUrl: string;
   latitude: string;
   longitude: string;
@@ -42,6 +43,7 @@ const EMPTY: HotelDraft = {
   stars: "",
   distanceToHaramM: "",
   canWalk: false,
+  freeBusIncluded: false,
   locationUrl: "",
   latitude: "",
   longitude: "",
@@ -78,6 +80,7 @@ export function HotelFormDialog({
       stars: form.stars ? Number(form.stars) : undefined,
       distanceToHaramM: form.distanceToHaramM ? Number(form.distanceToHaramM) : undefined,
       canWalk: form.canWalk,
+      freeBusIncluded: form.freeBusIncluded,
       locationUrl: form.locationUrl || undefined,
       latitude: form.latitude ? Number(form.latitude) : undefined,
       longitude: form.longitude ? Number(form.longitude) : undefined,
@@ -190,6 +193,17 @@ export function HotelFormDialog({
               </Label>
               <Switch id="canWalk" checked={form.canWalk} onCheckedChange={(v) => setForm((f) => ({ ...f, canWalk: v }))} />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <Label htmlFor="freeBusIncluded" className="text-sm">
+              {t("freeBusLabel")}
+            </Label>
+            <Switch
+              id="freeBusIncluded"
+              checked={form.freeBusIncluded}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, freeBusIncluded: v }))}
+            />
           </div>
 
           <div className="space-y-1.5">

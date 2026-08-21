@@ -8,7 +8,6 @@ import type { ActionResult } from "@/lib/leads/actions";
 
 export interface TripHotelInput {
   hotelId: string;
-  freeBusIncluded?: boolean;
 }
 
 export interface RoomPriceInput {
@@ -26,9 +25,6 @@ export interface TripInput {
   returnDepartureAirportId: string;
   returnArrivalAirportId: string;
   airline: string;
-  transitCount?: number;
-  transitCity?: string;
-  transitDuration?: string;
   daysInMakkah?: number;
   daysInMadinah?: number;
   visaIncluded?: boolean;

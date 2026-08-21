@@ -7,18 +7,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * BREAKING vs. the pre-catalogue shape: the hotel's own facts (name, stars, distance, walkability,
- * map link) are now nested under {@code hotel} instead of sitting flat on this record. Only
- * {@code city} and {@code freeBusIncluded} remain here, because they are the two things that are
- * still genuinely about this trip rather than about the hotel.
+ * free shuttle, map link) are now nested entirely under {@code hotel}. {@code city} is the only
+ * thing left here, kept for convenience even though it always matches {@code hotel.city}.
  */
-@Schema(name = "TripHotel", description = "The catalogue hotel this trip uses in one city, plus what this company offers around it.")
-public record TripHotelResponse(
-        HotelCity city,
-        HotelResponse hotel,
-        @Schema(description = "Whether THIS company runs a free shuttle to the Haram/Mosque on THIS package")
-        boolean freeBusIncluded) {
+@Schema(name = "TripHotel", description = "The catalogue hotel this trip uses in one city.")
+public record TripHotelResponse(HotelCity city, HotelResponse hotel) {
 
     public static TripHotelResponse from(TripHotel tripHotel) {
-        return new TripHotelResponse(tripHotel.getCity(), HotelResponse.from(tripHotel.getHotel()), tripHotel.isFreeBusIncluded());
+        return new TripHotelResponse(tripHotel.getCity(), HotelResponse.from(tripHotel.getHotel()));
     }
 }

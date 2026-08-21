@@ -21,9 +21,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
- * Which catalogue {@link Hotel} a trip uses in one city, plus the one fact that is genuinely the
- * trip's own: whether this company runs a free shuttle on this package. Everything else about the
- * hotel — name, stars, distance, walkability — lives on {@code Hotel} itself.
+ * Which catalogue {@link Hotel} a trip uses in one city. Everything about the hotel itself — name,
+ * stars, distance, walkability, free shuttle — lives on {@code Hotel}; this row is purely the join.
  *
  * <p>{@code city} is denormalized here on purpose so {@code uq_trip_hotels_trip_city} (one hotel per
  * city per trip) stays a simple two-column index. It can never disagree with {@code hotel.getCity()}
@@ -49,9 +48,6 @@ public class TripHotel extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "city", nullable = false, length = 20)
     private HotelCity city;
-
-    @Column(name = "free_bus_included", nullable = false)
-    private boolean freeBusIncluded;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
