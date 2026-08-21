@@ -146,6 +146,12 @@ public class Lead extends BaseEntity {
     @Column(name = "contacted_at")
     private Instant contactedAt;
 
+    @Column(name = "confirmed_by")
+    private UUID confirmedBy;
+
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+
     @Column(name = "deposit_reported_by")
     private UUID depositReportedBy;
 
@@ -260,6 +266,10 @@ public class Lead extends BaseEntity {
             case MARK_CONTACTED -> {
                 contactedBy = actorUserId;
                 contactedAt = at;
+            }
+            case CONFIRM_VIA_COMPANY -> {
+                confirmedBy = actorUserId;
+                confirmedAt = at;
             }
             case MARK_DEPOSIT_PAID -> {
                 depositConfirmedBy = actorUserId;

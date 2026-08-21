@@ -119,7 +119,7 @@ public class CreateLeadUseCase {
                 trip.getCompany().getId(),
                 trip.getId(),
                 customer.getId(),
-                trip.getCompany().getCommissionPerTraveler(),
+                trip.effectiveCommissionPerTraveler(),
                 travelers.getAdultCount(),
                 travelers.getChildCount(),
                 travelers.getInfantCount(),

@@ -44,23 +44,28 @@ public record TripDetailResponse(
         @Schema(description = "EGP each traveler earns back after the trip is paid for and the company settles up",
                 example = "500.00")
         BigDecimal cashbackPerTraveler,
+        @Schema(description = "This trip's commission-per-traveler override, in EGP. Null means it uses the "
+                + "company's own rate. Admin/company-only — never present on the public/customer view.")
+        BigDecimal commissionPerTraveler,
         Instant lastUpdate,
         List<TripHotelResponse> hotels,
         List<RoomPriceResponse> roomPrices,
         CompanyContact company) {
 
-    public record CompanyContact(UUID companyId, String companyName, String whatsapp, String logoUrl) {
+    public record CompanyContact(UUID companyId, String companyName, String whatsapp) {
     }
 
     /**
      * companyVisible gates whether {@code company} is populated — never leak identity to a browsing
-     * customer. Note what is deliberately absent: the company's commission. Customers see only the
-     * cashback that derives from it.
+     * customer. includeCommission gates {@code commissionPerTraveler} the same way: true for the
+     * company/admin-owned reads, false for the public/customer one. Customers only ever see the
+     * cashback that derives from it, never the commission itself.
      */
-    private static TripDetailResponse from(Trip trip, boolean companyVisible, BigDecimal cashbackPerTraveler) {
+    private static TripDetailResponse from(
+            Trip trip, boolean companyVisible, BigDecimal cashbackPerTraveler, boolean includeCommission) {
         CompanyContact contact = companyVisible
                 ? new CompanyContact(trip.getCompany().getId(), trip.getCompany().getCompanyName(),
-                        trip.getCompany().getWhatsapp(), trip.getCompany().getLogoUrl())
+                        trip.getCompany().getWhatsapp())
                 : null;
 
         return new TripDetailResponse(
@@ -75,13 +80,13 @@ public record TripDetailResponse(
                 trip.isVisaIncluded(), trip.isTransportationIncluded(), trip.isMealsIncluded(),
                 trip.isGuideIncluded(), trip.isZamzamIncluded(), trip.isFastTrainIncluded(), trip.getDescription(),
                 CurrencyResponse.from(trip.getCurrency()), trip.getAvailableSeats(), trip.getStatus(), trip.getTier(),
-                cashbackPerTraveler, trip.getLastUpdate(),
+                cashbackPerTraveler, includeCommission ? trip.getCommissionPerTraveler() : null, trip.getLastUpdate(),
                 trip.getHotels().stream().map(TripHotelResponse::from).toList(),
                 trip.getRoomPrices().stream().map(RoomPriceResponse::from).toList(),
                 contact);
     }
 
     public static TripDetailResponse from(TripDetailResult result) {
-        return from(result.trip(), result.companyVisible(), result.cashbackPerTraveler());
+        return from(result.trip(), result.companyVisible(), result.cashbackPerTraveler(), result.includeCommission());
     }
 }

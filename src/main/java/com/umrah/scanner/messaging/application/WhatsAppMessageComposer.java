@@ -12,8 +12,11 @@ import com.umrah.scanner.trip.domain.TripHotel;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DecimalStyle;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /**
@@ -57,8 +60,15 @@ public class WhatsAppMessageComposer {
         m.append(ar ? "🕌 مكة: " : "🕌 Makkah: ").append(trip.getDaysInMakkah()).append(ar ? " أيام" : " nights").append('\n');
         m.append(ar ? "🕌 المدينة: " : "🕌 Madinah: ").append(trip.getDaysInMadinah()).append(ar ? " أيام" : " nights").append("\n\n");
 
+        // EnumMap (not the entity's own @OrderBy("city asc"), which sorts alphabetically and would
+        // put Madinah first) so Makkah always lists ahead of Madinah, matching every other city
+        // presentation in this message.
+        Map<HotelCity, List<TripHotel>> hotelsByCity = new EnumMap<>(HotelCity.class);
         for (TripHotel tripHotel : trip.getHotels()) {
-            m.append(hotelLine(tripHotel, ar)).append('\n');
+            hotelsByCity.computeIfAbsent(tripHotel.getCity(), c -> new ArrayList<>()).add(tripHotel);
+        }
+        for (Map.Entry<HotelCity, List<TripHotel>> entry : hotelsByCity.entrySet()) {
+            m.append(groupedHotelLine(entry.getKey(), entry.getValue(), ar)).append('\n');
         }
         m.append('\n');
 
@@ -113,6 +123,33 @@ public class WhatsAppMessageComposer {
         return priced ? total : null;
     }
 
+    /**
+     * Sent to the company, not the customer — everything they need to recognise the booking and
+     * reach the traveler: which trip, its dates, and the customer's own contact and party size.
+     */
+    public String composeCustomerConfirmationMessage(
+            Trip trip, String customerName, String customerPhone,
+            int adultCount, int childCount, int infantCount, WhatsAppLanguage lang) {
+        boolean ar = lang == WhatsAppLanguage.AR;
+        StringBuilder m = new StringBuilder();
+
+        m.append(ar
+                ? "السلام عليكم، برجاء تأكيد هذا الحجز:\n\n"
+                : "Hello, please confirm this booking:\n\n");
+
+        m.append(ar ? "الرحلة: " : "Trip: ").append(trip.getTitle()).append(" (").append(trip.getTripCode()).append(")\n");
+        DateTimeFormatter date = ar ? DATE_AR : DATE_EN;
+        m.append(ar ? "📅 السفر: " : "📅 Departure: ").append(trip.getDepartureDate().format(date)).append('\n');
+        m.append(ar ? "📅 العودة: " : "📅 Return: ").append(trip.getReturnDate().format(date)).append("\n\n");
+
+        m.append(ar ? "بيانات العميل:\n" : "Customer details:\n");
+        m.append(ar ? "👤 الاسم: " : "👤 Name: ").append(customerName).append('\n');
+        m.append(ar ? "📱 الهاتف: " : "📱 Phone: ").append(customerPhone).append('\n');
+        m.append(travelersLine(adultCount, childCount, infantCount, ar));
+
+        return m.toString();
+    }
+
     /** The operator's own identity and how to reach every branch. */
     public String composeCompanyMessage(CompanyProfile company, String customerName, WhatsAppLanguage lang) {
         boolean ar = lang == WhatsAppLanguage.AR;
@@ -154,19 +191,36 @@ public class WhatsAppMessageComposer {
         return ar ? airport.getCityAr() : airport.getIataCode();
     }
 
-    private String hotelLine(TripHotel tripHotel, boolean ar) {
-        Hotel hotel = tripHotel.getHotel();
-        StringBuilder line = new StringBuilder("🏨 ")
-                .append(cityLabel(hotel.getCity(), ar)).append(": ")
-                .append(ar && hotel.getNameAr() != null ? hotel.getNameAr() : hotel.getName())
-                .append(" (").append(hotel.getStars()).append(ar ? " نجوم" : "★").append(')');
-        if (hotel.getDistanceToHaramM() != null) {
-            line.append(" — ").append(hotel.getDistanceToHaramM()).append(ar ? " متر" : "m");
-        }
-        if (tripHotel.isFreeBusIncluded()) {
-            line.append(ar ? " — باص مجاني" : " — free shuttle");
-        }
+    /**
+     * One line per city, joining every hotel offered there with "or" — a trip may list several
+     * alternatives per city, and the customer picks one once they're actually booking, not from this
+     * message. Distance-to-haram is dropped here (it doesn't merge cleanly across an "or") for every
+     * city, including the common one-hotel case, so a city's line never reads inconsistently
+     * depending on how many options happen to be listed.
+     */
+    private String groupedHotelLine(HotelCity city, List<TripHotel> tripHotels, boolean ar) {
+        StringBuilder line = new StringBuilder("🏨 ").append(cityLabel(city, ar)).append(": ");
+        List<String> names = tripHotels.stream().map(th -> hotelNameWithStars(th.getHotel(), ar)).toList();
+        line.append(String.join(ar ? " أو " : " or ", names));
+        line.append(shuttleSuffix(tripHotels, ar));
         return line.toString();
+    }
+
+    private String hotelNameWithStars(Hotel hotel, boolean ar) {
+        return (ar && hotel.getNameAr() != null ? hotel.getNameAr() : hotel.getName())
+                + " (" + hotel.getStars() + (ar ? " نجوم" : "★") + ")";
+    }
+
+    /** Says once, for the whole city line, whether the free shuttle applies to all, some, or none of the listed hotels. */
+    private String shuttleSuffix(List<TripHotel> tripHotels, boolean ar) {
+        long withShuttle = tripHotels.stream().filter(TripHotel::isFreeBusIncluded).count();
+        if (withShuttle == 0) {
+            return "";
+        }
+        if (withShuttle == tripHotels.size()) {
+            return ar ? " — باص مجاني" : " — free shuttle";
+        }
+        return ar ? " — بعض الفنادق بباص مجاني" : " — some hotels include a free shuttle";
     }
 
     private String cityLabel(HotelCity city, boolean ar) {

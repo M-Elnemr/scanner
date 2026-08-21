@@ -38,8 +38,6 @@ export default async function ProfilePage() {
             initial={{
               fullName: customer?.fullName ?? "",
               phone: customer?.phone ?? "",
-              cashbackWalletNumber: customer?.cashbackWalletNumber ?? "",
-              walletType: customer?.walletType ?? "VODAFONE_CASH",
             }}
           />
         </CardContent>

@@ -37,8 +37,7 @@ public class CustomerController {
     @PutMapping
     public ApiResponse<CustomerResponse> updateMine(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody UpdateCustomerProfileRequest request) {
-        var command = new UpdateCustomerProfileCommand(
-                request.fullName(), request.phone(), request.cashbackWalletNumber(), request.walletType());
+        var command = new UpdateCustomerProfileCommand(request.fullName(), request.phone());
         return ApiResponse.of(CustomerResponse.from(updateCustomerProfileUseCase.execute(currentUser.userId(), command)));
     }
 }

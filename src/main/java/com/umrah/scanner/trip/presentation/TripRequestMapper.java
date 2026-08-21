@@ -20,7 +20,8 @@ final class TripRequestMapper {
                 r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
                 r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
                 r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
-                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
+                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier(),
+                r.commissionPerTraveler());
     }
 
     static UpdateTripCommand toUpdateCommand(UpdateTripRequest r) {
@@ -31,7 +32,8 @@ final class TripRequestMapper {
                 r.airline(), r.transitCount(), r.transitCity(), r.transitDuration(),
                 r.daysInMakkah(), r.daysInMadinah(), r.visaIncluded(), r.transportationIncluded(), r.mealsIncluded(),
                 r.guideIncluded(), r.zamzamIncluded(), r.fastTrainIncluded(), r.description(), r.currencyId(),
-                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier());
+                r.availableSeats(), toHotelInputs(r.hotels()), toRoomPriceInputs(r.prices()), r.tier(),
+                r.commissionPerTraveler());
     }
 
     // null means "omitted" (leave untouched on update); an empty list is an explicit clear.

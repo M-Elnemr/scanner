@@ -2,27 +2,35 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, MessageCircle, ExternalLink, Building2 } from "lucide-react";
+import { Loader2, MessageCircle, ExternalLink, Building2, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { composeCompanyWhatsAppAction, composeTripWhatsAppAction, type WhatsAppMessage } from "@/lib/admin/whatsapp-actions";
-import { markContactedAction } from "@/lib/admin/leads-actions";
+import {
+  composeCompanyWhatsAppAction,
+  composeConfirmWhatsAppAction,
+  composeTripWhatsAppAction,
+  type WhatsAppMessage,
+} from "@/lib/admin/whatsapp-actions";
+import { confirmViaCompanyAction, markContactedAction } from "@/lib/admin/leads-actions";
 
-type Kind = "trip" | "company";
+type Kind = "trip" | "company" | "confirm";
 
 export function WhatsAppButtons({
   leadId,
   compact = false,
   canMarkContacted = false,
+  canConfirmViaCompany = false,
 }: {
   leadId: string;
   compact?: boolean;
   /** Whether MARK_CONTACTED is in this lead's availableActions — only true right after INTERESTED. */
   canMarkContacted?: boolean;
+  /** Whether CONFIRM_VIA_COMPANY is in this lead's availableActions — only true right after CONTACTED. */
+  canConfirmViaCompany?: boolean;
 }) {
   const t = useTranslations("admin.whatsapp");
   const tActions = useTranslations("admin.leads.actions");
@@ -32,14 +40,21 @@ export function WhatsAppButtons({
   const [kind, setKind] = useState<Kind>("trip");
   const [preview, setPreview] = useState<WhatsAppMessage | null>(null);
 
-  // Opening the trip message in WhatsApp is treated as "the admin has now contacted the customer" —
-  // there is no delivery receipt WhatsApp's click-to-chat link can give us, so this fires the moment
-  // the admin follows the link rather than waiting for a confirmation that can't exist.
+  // Neither WhatsApp click-to-chat link gives a delivery receipt, so both status changes fire the
+  // moment the admin follows the link rather than waiting for a confirmation that can't exist:
+  // opening the trip message is treated as "the customer has now been contacted", and opening the
+  // confirm message is treated as "the company has now acknowledged the booking".
   function handleOpenInWhatsapp() {
     if (kind === "trip" && canMarkContacted) {
       startTransition(async () => {
         const result = await markContactedAction(leadId);
         if (result.ok) toast.success(tActions("contactedToast"));
+        else toast.error(result.error);
+      });
+    } else if (kind === "confirm" && canConfirmViaCompany) {
+      startTransition(async () => {
+        const result = await confirmViaCompanyAction(leadId);
+        if (result.ok) toast.success(tActions("confirmedViaCompanyToast"));
         else toast.error(result.error);
       });
     }
@@ -52,7 +67,9 @@ export function WhatsAppButtons({
       const result =
         nextKind === "trip"
           ? await composeTripWhatsAppAction(leadId, nextLang)
-          : await composeCompanyWhatsAppAction(leadId, nextLang);
+          : nextKind === "company"
+            ? await composeCompanyWhatsAppAction(leadId, nextLang)
+            : await composeConfirmWhatsAppAction(leadId, nextLang);
       if (result.ok) {
         setPreview(result.data);
         setOpen(true);
@@ -98,6 +115,22 @@ export function WhatsAppButtons({
             </TooltipTrigger>
             <TooltipContent>{t("messageAboutCompany")}</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={pending}
+                  onClick={() => compose("confirm")}
+                  aria-label={t("confirmWithCompany")}
+                />
+              }
+            >
+              {pending && kind === "confirm" ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            </TooltipTrigger>
+            <TooltipContent>{t("confirmWithCompany")}</TooltipContent>
+          </Tooltip>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
@@ -108,6 +141,10 @@ export function WhatsAppButtons({
           <Button variant="outline" disabled={pending} onClick={() => compose("company")}>
             {pending && kind === "company" ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
             {t("messageAboutCompany")}
+          </Button>
+          <Button variant="outline" disabled={pending} onClick={() => compose("confirm")}>
+            {pending && kind === "confirm" ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            {t("confirmWithCompany")}
           </Button>
         </div>
       )}

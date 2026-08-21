@@ -27,8 +27,10 @@ export default async function EditTripPage(props: PageProps<"/admin/trips/[id]">
   const trip = tripResult.data?.data;
   if (!trip?.id) notFound();
 
-  const makkah = trip.hotels?.find((h) => h.city === "MAKKAH");
-  const madinah = trip.hotels?.find((h) => h.city === "MADINAH");
+  const toHotelRows = (city: "MAKKAH" | "MADINAH") =>
+    (trip.hotels ?? [])
+      .filter((h) => h.city === city && h.hotel?.id)
+      .map((h) => ({ hotelId: h.hotel!.id!, freeBusIncluded: h.freeBusIncluded ?? false }));
   const priceFor = (type: string) => trip.roomPrices?.find((p) => p.roomType === type)?.price;
 
   return (
@@ -53,6 +55,7 @@ export default async function EditTripPage(props: PageProps<"/admin/trips/[id]">
         makkahHotels={makkahHotels}
         madinahHotels={madinahHotels}
         initial={{
+          companyId: trip.company?.companyId ?? "",
           tripCode: trip.tripCode ?? "",
           title: trip.title ?? "",
           departureDate: trip.departureDate ?? "",
@@ -77,10 +80,9 @@ export default async function EditTripPage(props: PageProps<"/admin/trips/[id]">
           currencyId: trip.currency?.id ?? "",
           availableSeats: trip.availableSeats != null ? String(trip.availableSeats) : "",
           tier: trip.tier ?? "ECONOMIC",
-          makkahHotelId: makkah?.hotel?.id ?? "",
-          makkahFreeBus: makkah?.freeBusIncluded ?? false,
-          madinahHotelId: madinah?.hotel?.id ?? "",
-          madinahFreeBus: madinah?.freeBusIncluded ?? false,
+          makkahHotelRows: toHotelRows("MAKKAH"),
+          madinahHotelRows: toHotelRows("MADINAH"),
+          commissionPerTraveler: trip.commissionPerTraveler != null ? String(trip.commissionPerTraveler) : "",
           prices: {
             SINGLE: priceFor("SINGLE") != null ? String(priceFor("SINGLE")) : "",
             DOUBLE: priceFor("DOUBLE") != null ? String(priceFor("DOUBLE")) : "",

@@ -232,22 +232,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/companies/me/logo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["uploadLogo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/companies/me/documents": {
         parameters: {
             query?: never;
@@ -642,6 +626,26 @@ export interface paths {
          * @description Admin sent the customer the trip details over WhatsApp. Allowed only from INTERESTED.
          */
         patch: operations["markContacted"];
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/mark-confirmed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mark the booking as confirmed with the company
+         * @description Admin relayed the customer's booking to the company over WhatsApp and the company acknowledged it. Allowed only from CONTACTED.
+         */
+        patch: operations["markConfirmed"];
         trace?: never;
     };
     "/api/v1/admin/leads/{id}/confirm-commission": {
@@ -1116,7 +1120,7 @@ export interface paths {
         };
         /**
          * Get a lead with its trip and company detail embedded
-         * @description Also see the trip he preserved and the trip's company in one call, rather than three.
+         * @description Also see the trip he preserved and the trip's company in one call, rather than three. trip/company are null if since deleted — the lead's own tripId/tripTitle/companyId/companyName still identify what was booked and with whom.
          */
         get: operations["getOne_2"];
         put?: never;
@@ -1139,6 +1143,26 @@ export interface paths {
          * @description Returns the message text and a wa.me link pre-filled with it, addressed to the customer behind this lead. Nothing is sent automatically. lang defaults to Arabic; pass lang=en for English.
          */
         get: operations["whatsAppTripMessage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/whatsapp/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compose a WhatsApp message confirming the booking with the company
+         * @description Sent to the COMPANY, not the customer — the trip, its dates, and the customer's own contact details and party size, so the company can acknowledge the booking. Nothing is sent automatically. lang defaults to Arabic; pass lang=en for English.
+         */
+        get: operations["whatsAppConfirmMessage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1190,9 +1214,6 @@ export interface components {
         UpdateCustomerProfileRequest: {
             fullName: string;
             phone: string;
-            cashbackWalletNumber?: string;
-            /** @enum {string} */
-            walletType?: "VODAFONE_CASH" | "ETISALAT_CASH" | "INSTA_PAY";
         };
         ApiResponseCustomerResponse: {
             data?: components["schemas"]["CustomerResponse"];
@@ -1234,7 +1255,7 @@ export interface components {
             /** @description Who is travelling. The company needs this to serve the booking; it never includes the payout wallet. */
             customer?: components["schemas"]["LeadCustomer"];
             /** @enum {string} */
-            status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            status?: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             /**
              * Format: int32
              * @description Adults on the booking; always at least 1
@@ -1261,7 +1282,7 @@ export interface components {
             confirmedRoomType?: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "CHILD" | "INFANT";
             confirmedPrice?: number;
             /** @description Exactly the actions this caller may perform on this lead right now */
-            availableActions?: ("MARK_CONTACTED" | "MARK_DEPOSIT_PAID" | "MARK_FULLY_PAID" | "REPORT_COMMISSION_PAID" | "CONFIRM_COMMISSION_PAID" | "PAY_CASHBACK" | "CANCEL")[];
+            availableActions?: ("MARK_CONTACTED" | "CONFIRM_VIA_COMPANY" | "MARK_DEPOSIT_PAID" | "MARK_FULLY_PAID" | "REPORT_COMMISSION_PAID" | "CONFIRM_COMMISSION_PAID" | "PAY_CASHBACK" | "CANCEL")[];
             audit?: components["schemas"]["LeadAudit"];
             /** Format: date-time */
             createdAt?: string;
@@ -1314,7 +1335,6 @@ export interface components {
         };
         UpdateCompanyProfileRequest: {
             companyName: string;
-            logoUrl?: string;
             whatsapp?: string;
             description?: string;
             addresses: components["schemas"]["CompanyAddressRequest"][];
@@ -1329,7 +1349,6 @@ export interface components {
             companyName?: string;
             licenseNumber?: string;
             addresses?: components["schemas"]["CompanyAddressResponse"][];
-            logoUrl?: string;
             whatsapp?: string;
             description?: string;
             /** @enum {string} */
@@ -1403,6 +1422,7 @@ export interface components {
             prices?: components["schemas"]["RoomPriceRequest"][];
             /** @enum {string} */
             tier: "VIP" | "PREMIUM" | "ECONOMIC";
+            commissionPerTraveler?: number;
         };
         /** @description A reference airport, with the country that scopes it. */
         Airport: {
@@ -1435,7 +1455,6 @@ export interface components {
             companyId?: string;
             companyName?: string;
             whatsapp?: string;
-            logoUrl?: string;
         };
         /** @description A currency a trip can be priced in. */
         Currency: {
@@ -1536,6 +1555,8 @@ export interface components {
              * @example 500
              */
             cashbackPerTraveler?: number;
+            /** @description This trip's commission-per-traveler override, in EGP. Null means it uses the company's own rate. Admin/company-only — never present on the public/customer view. */
+            commissionPerTraveler?: number;
             /** Format: date-time */
             lastUpdate?: string;
             hotels?: components["schemas"]["TripHotel"][];
@@ -1574,7 +1595,6 @@ export interface components {
         AdminUpdateCompanyProfileRequest: {
             licenseNumber: string;
             companyName: string;
-            logoUrl?: string;
             whatsapp?: string;
             description?: string;
             addresses: components["schemas"]["CompanyAddressRequest"][];
@@ -1662,7 +1682,6 @@ export interface components {
         RegisterCompanyRequest: {
             companyName: string;
             licenseNumber: string;
-            logoUrl?: string;
             whatsapp?: string;
             description?: string;
             addresses: components["schemas"]["CompanyAddressRequest"][];
@@ -1706,6 +1725,7 @@ export interface components {
             prices?: components["schemas"]["RoomPriceRequest"][];
             /** @enum {string} */
             tier: "VIP" | "PREMIUM" | "ECONOMIC";
+            commissionPerTraveler?: number;
         };
         UploadCompanyDocumentRequest: {
             /** @enum {string} */
@@ -1800,7 +1820,6 @@ export interface components {
             ownerEmail: string;
             companyName: string;
             licenseNumber: string;
-            logoUrl?: string;
             whatsapp?: string;
             description?: string;
             addresses: components["schemas"]["CompanyAddressRequest"][];
@@ -1835,7 +1854,7 @@ export interface components {
         };
         OverrideLeadStatusRequest: {
             /** @enum {string} */
-            status: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            status: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             reason: string;
         };
         CompanyDecisionRequest: {
@@ -1913,9 +1932,9 @@ export interface components {
         };
         LeadStatusHistoryResponse: {
             /** @enum {string} */
-            fromStatus?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            fromStatus?: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             /** @enum {string} */
-            toStatus?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+            toStatus?: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
             /** Format: uuid */
             changedBy?: string;
             /** Format: date-time */
@@ -1981,7 +2000,6 @@ export interface components {
             id?: string;
             companyName?: string;
             licenseNumber?: string;
-            logoUrl?: string;
             whatsapp?: string;
             description?: string;
             /** @description Average of all reviews, 0 to 5 */
@@ -2699,33 +2717,6 @@ export interface operations {
             };
         };
     };
-    uploadLogo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCompany"];
-                };
-            };
-        };
-    };
     uploadDocument: {
         parameters: {
             query?: never;
@@ -3348,6 +3339,32 @@ export interface operations {
             };
         };
     };
+    markConfirmed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LeadActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLead"];
+                };
+            };
+        };
+    };
     confirmCommission: {
         parameters: {
             query?: never;
@@ -3705,7 +3722,7 @@ export interface operations {
     listMineAsCustomer: {
         parameters: {
             query: {
-                status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+                status?: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -3865,7 +3882,7 @@ export interface operations {
     listMineAsCompany: {
         parameters: {
             query: {
-                status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+                status?: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -3930,7 +3947,7 @@ export interface operations {
     list_8: {
         parameters: {
             query: {
-                status?: "INTERESTED" | "CONTACTED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
+                status?: "INTERESTED" | "CONTACTED" | "CONFIRMED" | "PENDING_DEPOSIT_CONFIRMATION" | "DEPOSIT_PAID" | "PENDING_FULL_PAYMENT_CONFIRMATION" | "FULLY_PAID" | "PENDING_COMMISSION_CONFIRMATION" | "COMMISSION_PAID" | "CASHBACK_PAID" | "CANCELLED";
                 companyId?: string;
                 tripId?: string;
                 customerId?: string;
@@ -3979,6 +3996,30 @@ export interface operations {
         };
     };
     whatsAppTripMessage: {
+        parameters: {
+            query?: {
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseWhatsAppMessage"];
+                };
+            };
+        };
+    };
+    whatsAppConfirmMessage: {
         parameters: {
             query?: {
                 lang?: string;

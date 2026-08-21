@@ -16,7 +16,6 @@ import com.umrah.scanner.company.application.SuspendCompanyUseCase;
 import com.umrah.scanner.company.application.UpdateCompanyProfileCommand;
 import com.umrah.scanner.company.application.UpdateCompanyProfileUseCase;
 import com.umrah.scanner.company.application.UploadCompanyDocumentUseCase;
-import com.umrah.scanner.company.application.UploadCompanyLogoUseCase;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.common.response.ApiResponse;
 import com.umrah.scanner.common.response.PageResponse;
@@ -29,7 +28,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -42,7 +40,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Companies", description = "Company profiles, verification, and admin-configured commission.")
 @RestController
@@ -57,7 +54,6 @@ public class CompanyController {
     private final AdminCreateCompanyUseCase adminCreateCompanyUseCase;
     private final DeleteCompanyUseCase deleteCompanyUseCase;
     private final UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase;
-    private final UploadCompanyLogoUseCase uploadCompanyLogoUseCase;
     private final SetCompanyCommissionUseCase setCompanyCommissionUseCase;
     private final CompanyQueryService companyQueryService;
 
@@ -71,7 +67,6 @@ public class CompanyController {
             AdminCreateCompanyUseCase adminCreateCompanyUseCase,
             DeleteCompanyUseCase deleteCompanyUseCase,
             UploadCompanyDocumentUseCase uploadCompanyDocumentUseCase,
-            UploadCompanyLogoUseCase uploadCompanyLogoUseCase,
             SetCompanyCommissionUseCase setCompanyCommissionUseCase,
             CompanyQueryService companyQueryService) {
         this.registerCompanyUseCase = registerCompanyUseCase;
@@ -83,7 +78,6 @@ public class CompanyController {
         this.adminCreateCompanyUseCase = adminCreateCompanyUseCase;
         this.deleteCompanyUseCase = deleteCompanyUseCase;
         this.uploadCompanyDocumentUseCase = uploadCompanyDocumentUseCase;
-        this.uploadCompanyLogoUseCase = uploadCompanyLogoUseCase;
         this.setCompanyCommissionUseCase = setCompanyCommissionUseCase;
         this.companyQueryService = companyQueryService;
     }
@@ -96,7 +90,7 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> register(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody RegisterCompanyRequest request) {
         var command = new RegisterCompanyCommand(
-                request.companyName(), request.licenseNumber(), request.logoUrl(), request.whatsapp(),
+                request.companyName(), request.licenseNumber(), request.whatsapp(),
                 request.description(), toAddressInputs(request.addresses()));
         var company = registerCompanyUseCase.execute(currentUser.userId(), command);
         return ApiResponse.of(CompanyResponse.from(company));
@@ -113,17 +107,9 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> updateMine(
             @AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody UpdateCompanyProfileRequest request) {
         var command = new UpdateCompanyProfileCommand(
-                request.companyName(), request.logoUrl(), request.whatsapp(), request.description(),
+                request.companyName(), request.whatsapp(), request.description(),
                 toAddressInputs(request.addresses()));
         var company = updateCompanyProfileUseCase.executeAsCompany(currentUser.userId(), command);
-        return ApiResponse.of(CompanyResponse.from(company));
-    }
-
-    @PreAuthorize("hasRole('COMPANY')")
-    @PostMapping(value = "/api/v1/companies/me/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<CompanyResponse> uploadLogo(
-            @AuthenticationPrincipal AuthenticatedUser currentUser, @RequestParam("file") MultipartFile file) {
-        var company = uploadCompanyLogoUseCase.execute(currentUser.userId(), file);
         return ApiResponse.of(CompanyResponse.from(company));
     }
 
@@ -182,7 +168,7 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> adminCreate(
             @AuthenticationPrincipal AuthenticatedUser admin, @Valid @RequestBody AdminCreateCompanyRequest request) {
         var command = new AdminCreateCompanyCommand(
-                request.ownerEmail(), request.companyName(), request.licenseNumber(), request.logoUrl(),
+                request.ownerEmail(), request.companyName(), request.licenseNumber(),
                 request.whatsapp(), request.description(), toAddressInputs(request.addresses()),
                 request.commissionPerTraveler(), request.autoApprove());
         var company = adminCreateCompanyUseCase.execute(admin.userId(), command);
@@ -196,7 +182,7 @@ public class CompanyController {
     @PutMapping("/api/v1/admin/companies/{id}")
     public ApiResponse<CompanyResponse> adminUpdate(@PathVariable UUID id, @Valid @RequestBody AdminUpdateCompanyProfileRequest request) {
         var profile = new UpdateCompanyProfileCommand(
-                request.companyName(), request.logoUrl(), request.whatsapp(), request.description(),
+                request.companyName(), request.whatsapp(), request.description(),
                 toAddressInputs(request.addresses()));
         var company = updateCompanyProfileUseCase.executeAsAdmin(id, new AdminUpdateCompanyProfileCommand(request.licenseNumber(), profile));
         return ApiResponse.of(CompanyResponse.from(company));

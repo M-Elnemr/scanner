@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -139,6 +140,15 @@ public class Trip extends SoftDeletableEntity {
     @Column(name = "available_seats", nullable = false)
     private int availableSeats;
 
+    /**
+     * Per-traveler commission override for this trip, in EGP. Null means "use the company's current
+     * rate" — see {@link #effectiveCommissionPerTraveler()}. Set once at trip creation/edit; leads
+     * still snapshot whatever this resolves to at creation time, so a later edit here or to the
+     * company's own rate never repriced an existing lead.
+     */
+    @Column(name = "commission_per_traveler", precision = 10, scale = 2)
+    private BigDecimal commissionPerTraveler;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TripStatus status;
@@ -165,6 +175,11 @@ public class Trip extends SoftDeletableEntity {
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("roomType asc")
     private List<RoomPrice> roomPrices = new ArrayList<>();
+
+    /** The rate actually used to price a lead: this trip's own override if set, else the company's. */
+    public BigDecimal effectiveCommissionPerTraveler() {
+        return commissionPerTraveler != null ? commissionPerTraveler : company.getCommissionPerTraveler();
+    }
 
     public void addHotel(TripHotel hotel) {
         hotels.add(hotel);

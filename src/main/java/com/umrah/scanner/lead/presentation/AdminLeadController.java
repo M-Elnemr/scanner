@@ -133,4 +133,16 @@ public class AdminLeadController {
         var message = whatsAppLeadMessageService.companyMessage(id, WhatsAppLanguage.fromParam(lang));
         return ApiResponse.of(WhatsAppMessageResponse.from(message));
     }
+
+    @Operation(summary = "Compose a WhatsApp message confirming the booking with the company",
+            description = "Sent to the COMPANY, not the customer — the trip, its dates, and the customer's own "
+                    + "contact details and party size, so the company can acknowledge the booking. Nothing is "
+                    + "sent automatically. lang defaults to Arabic; pass lang=en for English.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/api/v1/admin/leads/{id}/whatsapp/confirm")
+    public ApiResponse<WhatsAppMessageResponse> whatsAppConfirmMessage(
+            @PathVariable UUID id, @RequestParam(required = false) String lang) {
+        var message = whatsAppLeadMessageService.confirmMessage(id, WhatsAppLanguage.fromParam(lang));
+        return ApiResponse.of(WhatsAppMessageResponse.from(message));
+    }
 }

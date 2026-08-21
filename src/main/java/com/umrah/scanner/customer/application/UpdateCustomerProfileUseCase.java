@@ -30,14 +30,16 @@ public class UpdateCustomerProfileUseCase {
 
         profile.setFullName(command.fullName());
         profile.setPhone(command.phone());
-        profile.setCashbackWalletNumber(command.cashbackWalletNumber());
-        profile.setWalletType(command.walletType());
         profile.setProfileCompleted(isComplete(profile));
 
         return customerProfileRepository.save(profile);
     }
 
-    /** Wallet info is not required for now — cashback payout collection is deferred client-side. */
+    /**
+     * Wallet info plays no part here: the customer can no longer set it themselves (see
+     * {@link CustomerProfile#getCashbackWalletNumber()}/{@link CustomerProfile#getWalletType()}),
+     * so a completed profile is just a name and a phone number.
+     */
     private boolean isComplete(CustomerProfile profile) {
         return profile.getFullName() != null && !profile.getFullName().isBlank()
                 && profile.getPhone() != null && !profile.getPhone().isBlank();

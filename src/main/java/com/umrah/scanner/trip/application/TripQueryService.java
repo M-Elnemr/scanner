@@ -50,7 +50,11 @@ public class TripQueryService {
         this.leadPricingService = leadPricingService;
     }
 
-    /** One photo per city for the browse-list card — batched so N trips cost one query, not N. */
+    /**
+     * One photo per city for the browse-list card — batched so N trips cost one query, not N. A
+     * trip may list several hotels for the same city; the first one (per the repository query's
+     * {@code city, id} ordering) wins rather than whichever happened to be iterated last.
+     */
     @Transactional(readOnly = true)
     public Map<UUID, TripHotelPhotos> hotelPhotos(List<UUID> tripIds) {
         if (tripIds.isEmpty()) {
@@ -64,11 +68,8 @@ public class TripQueryService {
                 continue;
             }
             UUID tripId = th.getTrip().getId();
-            if (th.getCity() == HotelCity.MAKKAH) {
-                makkah.put(tripId, photoUrl);
-            } else {
-                madinah.put(tripId, photoUrl);
-            }
+            Map<UUID, String> target = th.getCity() == HotelCity.MAKKAH ? makkah : madinah;
+            target.putIfAbsent(tripId, photoUrl);
         }
         Map<UUID, TripHotelPhotos> result = new HashMap<>();
         for (UUID id : tripIds) {
@@ -154,7 +155,7 @@ public class TripQueryService {
         boolean companyVisible = viewingCustomerId
                 .map(customerId -> leadRepository.findNotCancelledByCustomerIdAndTripId(customerId, tripId).isPresent())
                 .orElse(false);
-        return new TripDetailResult(trip, companyVisible, cashbackPerTraveler(trip));
+        return new TripDetailResult(trip, companyVisible, cashbackPerTraveler(trip), false);
     }
 
     @Transactional(readOnly = true)
@@ -162,7 +163,7 @@ public class TripQueryService {
         Trip trip = tripRepository.findWithDetailsByIdAndCompanyId(tripId, companyId)
                 .orElseThrow(() -> NotFoundException.of("Trip", tripId));
         initializeCollections(trip);
-        return new TripDetailResult(trip, true, cashbackPerTraveler(trip));
+        return new TripDetailResult(trip, true, cashbackPerTraveler(trip), true);
     }
 
     /**
@@ -179,7 +180,7 @@ public class TripQueryService {
     public TripDetailResult ownedDetail(UUID tripId) {
         Trip trip = tripRepository.findWithDetailsById(tripId).orElseThrow(() -> NotFoundException.of("Trip", tripId));
         initializeCollections(trip);
-        return new TripDetailResult(trip, true, cashbackPerTraveler(trip));
+        return new TripDetailResult(trip, true, cashbackPerTraveler(trip), true);
     }
 
     /**
@@ -188,7 +189,7 @@ public class TripQueryService {
      */
     private BigDecimal cashbackPerTraveler(Trip trip) {
         return leadPricingService.cashbackPerTraveler(
-                trip.getCompany().getId(), trip.getId(), trip.getCompany().getCommissionPerTraveler());
+                trip.getCompany().getId(), trip.getId(), trip.effectiveCommissionPerTraveler());
     }
 
     /**

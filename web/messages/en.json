@@ -360,6 +360,7 @@
     "leadStatus": {
       "INTERESTED": "Interested",
       "CONTACTED": "Contacted",
+      "CONFIRMED": "Confirmed",
       "PENDING_DEPOSIT_CONFIRMATION": "Deposit pending confirmation",
       "DEPOSIT_PAID": "Deposit paid",
       "PENDING_FULL_PAYMENT_CONFIRMATION": "Full payment pending confirmation",
@@ -433,7 +434,6 @@
         "nameLabel": "Company name",
         "licenceLabel": "Licence number",
         "whatsappLabel": "WhatsApp number",
-        "logoLabel": "Logo URL",
         "descriptionLabel": "Description",
         "commissionLabel": "Commission per traveler (EGP)",
         "autoApproveLabel": "Auto-approve",
@@ -533,6 +533,7 @@
       "historyTitle": "History",
       "actions": {
         "contactedToast": "Marked as contacted.",
+        "confirmedViaCompanyToast": "Marked as confirmed with the company.",
         "confirmCommission": "Confirm commission",
         "confirmedToast": "Commission confirmed.",
         "payCashback": "Pay cashback",
@@ -592,6 +593,8 @@
         "availableSeatsLabel": "Available seats",
         "daysInMakkahLabel": "Days in Makkah",
         "daysInMadinahLabel": "Days in Madinah",
+        "commissionLabel": "Commission per traveler (EGP)",
+        "commissionHint": "Defaults to the company's rate when the trip is created — override it here for this trip only.",
         "flightsTitle": "Flights",
         "airlineLabel": "Airline",
         "transitStopsLabel": "Transit stops",
@@ -614,6 +617,7 @@
         "makkahHotelLabel": "Makkah hotel",
         "madinahHotelLabel": "Madinah hotel",
         "hotelNone": "None",
+        "addHotel": "Add hotel",
         "makkahShuttle": "Free shuttle to the Haram",
         "madinahShuttle": "Free shuttle to the Mosque",
         "roomPricesTitle": "Room prices",
@@ -633,6 +637,7 @@
     "whatsapp": {
       "messageAboutTrip": "Message about trip",
       "messageAboutCompany": "Message about company",
+      "confirmWithCompany": "Confirm with company",
       "previewTitle": "WhatsApp message preview",
       "previewDesc": "To {name} ({phone}). Nothing is sent until you press send in WhatsApp.",
       "defaultRecipient": "the customer",

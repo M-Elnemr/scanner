@@ -3,12 +3,12 @@ package com.umrah.scanner.trip.application;
 import com.umrah.scanner.common.exception.NotFoundException;
 import com.umrah.scanner.common.exception.ValidationException;
 import com.umrah.scanner.hotel.domain.Hotel;
-import com.umrah.scanner.hotel.domain.HotelCity;
 import com.umrah.scanner.hotel.infrastructure.HotelRepository;
 import java.util.ArrayList;
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
@@ -26,10 +26,14 @@ public class TripHotelResolver {
         this.hotelRepository = hotelRepository;
     }
 
-    /** @return resolved hotels in input order; the caller copies {@code city} off each hotel. */
+    /**
+     * @return resolved hotels in input order; the caller copies {@code city} off each hotel. A trip
+     * may list several hotels for the same city (the customer sees them as alternatives), so the
+     * only thing refused here is the same hotel appearing twice.
+     */
     public List<ResolvedTripHotel> resolve(List<TripHotelInput> inputs) {
         List<ResolvedTripHotel> resolved = new ArrayList<>();
-        Set<HotelCity> seenCities = EnumSet.noneOf(HotelCity.class);
+        Set<UUID> seenHotelIds = new HashSet<>();
 
         for (TripHotelInput input : inputs) {
             if (input.hotelId() == null) {
@@ -40,8 +44,8 @@ public class TripHotelResolver {
             if (!hotel.isActive()) {
                 throw new ValidationException("\"" + hotel.getName() + "\" is no longer offered");
             }
-            if (!seenCities.add(hotel.getCity())) {
-                throw new ValidationException("Only one hotel per city is allowed — " + hotel.getCity() + " is duplicated");
+            if (!seenHotelIds.add(input.hotelId())) {
+                throw new ValidationException("\"" + hotel.getName() + "\" is listed more than once");
             }
             resolved.add(new ResolvedTripHotel(hotel, input.freeBusIncluded()));
         }

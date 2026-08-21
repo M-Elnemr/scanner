@@ -57,7 +57,6 @@ public class UpdateCompanyProfileUseCase {
     // beforehand), so this is a full replace, not a partial/patch update.
     private void apply(CompanyProfile company, UpdateCompanyProfileCommand command) {
         company.setCompanyName(command.companyName());
-        company.setLogoUrl(command.logoUrl());
         company.setWhatsapp(command.whatsapp());
         company.setDescription(command.description());
         companyProfileFactory.replaceAddresses(company, command.addresses());

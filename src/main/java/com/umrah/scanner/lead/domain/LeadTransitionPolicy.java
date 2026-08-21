@@ -32,6 +32,12 @@ public final class LeadTransitionPolicy {
         rule(LeadAction.MARK_CONTACTED, Map.of(
                 LeadStatus.INTERESTED, LeadStatus.CONTACTED));
 
+        // Admin relays the customer's booking to the company over WhatsApp and the company
+        // acknowledges it. Only legal straight off CONTACTED — the customer has to have been
+        // reached first.
+        rule(LeadAction.CONFIRM_VIA_COMPANY, Map.of(
+                LeadStatus.CONTACTED, LeadStatus.CONFIRMED));
+
         // Deposit and full payment: the company records both directly — the customer no longer
         // self-reports (that used to park the lead in a PENDING_*_CONFIRMATION status awaiting
         // confirmation; both statuses stay defined in LeadStatus for leads already sitting there,
@@ -39,6 +45,7 @@ public final class LeadTransitionPolicy {
         rule(LeadAction.MARK_DEPOSIT_PAID, Map.of(
                 LeadStatus.INTERESTED, LeadStatus.DEPOSIT_PAID,
                 LeadStatus.CONTACTED, LeadStatus.DEPOSIT_PAID,
+                LeadStatus.CONFIRMED, LeadStatus.DEPOSIT_PAID,
                 LeadStatus.PENDING_DEPOSIT_CONFIRMATION, LeadStatus.DEPOSIT_PAID));
 
         rule(LeadAction.MARK_FULLY_PAID, Map.of(
@@ -68,6 +75,7 @@ public final class LeadTransitionPolicy {
         rule(LeadAction.CANCEL, Map.of(
                 LeadStatus.INTERESTED, LeadStatus.CANCELLED,
                 LeadStatus.CONTACTED, LeadStatus.CANCELLED,
+                LeadStatus.CONFIRMED, LeadStatus.CANCELLED,
                 LeadStatus.PENDING_DEPOSIT_CONFIRMATION, LeadStatus.CANCELLED,
                 LeadStatus.DEPOSIT_PAID, LeadStatus.CANCELLED,
                 LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION, LeadStatus.CANCELLED,

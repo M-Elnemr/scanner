@@ -22,13 +22,16 @@ public enum LeadStatus {
     /** Admin sent the customer the trip details over WhatsApp. */
     CONTACTED(1),
 
-    PENDING_DEPOSIT_CONFIRMATION(2),
-    DEPOSIT_PAID(3),
-    PENDING_FULL_PAYMENT_CONFIRMATION(4),
-    FULLY_PAID(5),
-    PENDING_COMMISSION_CONFIRMATION(6),
-    COMMISSION_PAID(7),
-    CASHBACK_PAID(8),
+    /** Admin relayed the customer's booking to the company over WhatsApp and the company acknowledged it. */
+    CONFIRMED(2),
+
+    PENDING_DEPOSIT_CONFIRMATION(3),
+    DEPOSIT_PAID(4),
+    PENDING_FULL_PAYMENT_CONFIRMATION(5),
+    FULLY_PAID(6),
+    PENDING_COMMISSION_CONFIRMATION(7),
+    COMMISSION_PAID(8),
+    CASHBACK_PAID(9),
 
     /** The customer withdrew. Off the ladder — see the class comment before comparing stages. */
     CANCELLED(-1);

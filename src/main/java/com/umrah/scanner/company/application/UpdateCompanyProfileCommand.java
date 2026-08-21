@@ -4,7 +4,6 @@ import java.util.List;
 
 public record UpdateCompanyProfileCommand(
         String companyName,
-        String logoUrl,
         String whatsapp,
         String description,
         List<CompanyAddressInput> addresses) {

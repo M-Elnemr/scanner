@@ -5,7 +5,6 @@ import java.util.List;
 public record RegisterCompanyCommand(
         String companyName,
         String licenseNumber,
-        String logoUrl,
         String whatsapp,
         String description,
         List<CompanyAddressInput> addresses) {

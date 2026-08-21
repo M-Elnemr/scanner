@@ -15,6 +15,9 @@ public enum LeadAction {
     /** Admin sent the customer the trip details over WhatsApp. */
     MARK_CONTACTED(Role.ADMIN),
 
+    /** Admin relayed the customer's booking to the company over WhatsApp and the company acknowledged it. */
+    CONFIRM_VIA_COMPANY(Role.ADMIN),
+
     /** Company records that the deposit was paid — the customer no longer self-reports this. */
     MARK_DEPOSIT_PAID(Role.COMPANY),
 

@@ -360,6 +360,7 @@
     "leadStatus": {
       "INTERESTED": "مهتم",
       "CONTACTED": "تم التواصل",
+      "CONFIRMED": "تم التأكيد",
       "PENDING_DEPOSIT_CONFIRMATION": "بانتظار تأكيد العربون",
       "DEPOSIT_PAID": "تم دفع العربون",
       "PENDING_FULL_PAYMENT_CONFIRMATION": "بانتظار تأكيد السداد الكامل",
@@ -433,7 +434,6 @@
         "nameLabel": "اسم الشركة",
         "licenceLabel": "رقم الترخيص",
         "whatsappLabel": "رقم واتساب",
-        "logoLabel": "رابط الشعار",
         "descriptionLabel": "الوصف",
         "commissionLabel": "العمولة لكل مسافر (جنيه)",
         "autoApproveLabel": "اعتماد تلقائي",
@@ -533,6 +533,7 @@
       "historyTitle": "السجل",
       "actions": {
         "contactedToast": "تم تسجيل التواصل مع العميل.",
+        "confirmedViaCompanyToast": "تم تسجيل التأكيد مع الشركة.",
         "confirmCommission": "تأكيد العمولة",
         "confirmedToast": "تم تأكيد العمولة.",
         "payCashback": "دفع الكاش باك",
@@ -592,6 +593,8 @@
         "availableSeatsLabel": "المقاعد المتاحة",
         "daysInMakkahLabel": "عدد الأيام في مكة",
         "daysInMadinahLabel": "عدد الأيام في المدينة",
+        "commissionLabel": "العمولة لكل مسافر (جنيه)",
+        "commissionHint": "تُملأ تلقائيًا بمعدل الشركة عند إنشاء الرحلة — يمكنك تعديلها لهذه الرحلة فقط.",
         "flightsTitle": "الرحلات الجوية",
         "airlineLabel": "شركة الطيران",
         "transitStopsLabel": "عدد محطات الترانزيت",
@@ -614,6 +617,7 @@
         "makkahHotelLabel": "فندق مكة",
         "madinahHotelLabel": "فندق المدينة",
         "hotelNone": "بدون",
+        "addHotel": "إضافة فندق",
         "makkahShuttle": "باص مجاني إلى الحرم",
         "madinahShuttle": "باص مجاني إلى المسجد",
         "roomPricesTitle": "أسعار الغرف",
@@ -633,6 +637,7 @@
     "whatsapp": {
       "messageAboutTrip": "مراسلة بخصوص الرحلة",
       "messageAboutCompany": "مراسلة بخصوص الشركة",
+      "confirmWithCompany": "تأكيد مع الشركة",
       "previewTitle": "معاينة رسالة واتساب",
       "previewDesc": "إلى {name} ({phone}). لن يتم إرسال شيء حتى تضغط الإرسال داخل واتساب.",
       "defaultRecipient": "العميل",

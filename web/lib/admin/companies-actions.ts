@@ -15,7 +15,6 @@ export interface CompanyAddressInput {
 export interface CompanyProfileInput {
   companyName: string;
   licenseNumber: string;
-  logoUrl?: string;
   whatsapp?: string;
   description?: string;
   addresses: CompanyAddressInput[];

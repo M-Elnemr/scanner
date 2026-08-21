@@ -72,7 +72,7 @@ export function CompanyAddressEditor({
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">{t("mobileLabel")}</Label>
-              <Input value={address.mobileNumber} onChange={(e) => update(index, { mobileNumber: e.target.value })} />
+              <Input value={address.mobileNumber} onChange={(e) => update(index, { mobileNumber: e.target.value })} required />
             </div>
             <div className="flex items-end sm:col-span-1">
               <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(index)}>
@@ -81,7 +81,7 @@ export function CompanyAddressEditor({
             </div>
             <div className="space-y-1 sm:col-span-3">
               <Label className="text-xs text-muted-foreground">{t("addressLabel")}</Label>
-              <Input value={address.addressText} onChange={(e) => update(index, { addressText: e.target.value })} />
+              <Input value={address.addressText} onChange={(e) => update(index, { addressText: e.target.value })} required />
             </div>
           </div>
         ))}

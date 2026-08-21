@@ -18,12 +18,7 @@ export async function markNotificationReadAction(id: string): Promise<ActionResu
   }
 }
 
-export async function updateProfileAction(input: {
-  fullName: string;
-  phone: string;
-  cashbackWalletNumber: string;
-  walletType: "VODAFONE_CASH" | "ETISALAT_CASH" | "INSTA_PAY";
-}): Promise<ActionResult> {
+export async function updateProfileAction(input: { fullName: string; phone: string }): Promise<ActionResult> {
   try {
     const api = await apiClient();
     const result = await api.PUT("/api/v1/customers/me", { body: input });

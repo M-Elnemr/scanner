@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Backs the admin dashboard's two WhatsApp buttons on a lead: one message with the trip details,
- * one with the company's. Both go to the customer behind the lead — composing a message for anyone
- * else is out of scope, since these exist to make first contact easy, not as a general messaging
- * tool.
+ * Backs the admin dashboard's WhatsApp buttons on a lead: a trip-details message and a
+ * company-details message, both sent to the customer, plus a booking-confirmation message sent the
+ * other direction — to the company, about the customer. Composing a message for anyone beyond these
+ * three is out of scope; this exists to make contact easy, not as a general messaging tool.
  */
 @Service
 public class WhatsAppLeadMessageService {
@@ -55,6 +55,28 @@ public class WhatsAppLeadMessageService {
         CompanyProfile company = companyQueryService.getById(lead.getCompanyId());
         String message = composer.composeCompanyMessage(company, lead.getCustomer().getFullName(), lang);
         return toMessage(lead, message);
+    }
+
+    /**
+     * The one message in this class that goes TO the company rather than the customer — relaying
+     * the customer's booking (which trip, its dates, their contact details and party size) so the
+     * company can acknowledge it. Backs the CONFIRM_VIA_COMPANY admin action.
+     */
+    @Transactional(readOnly = true)
+    public WhatsAppMessage confirmMessage(UUID leadId, WhatsAppLanguage lang) {
+        Lead lead = leadQueryService.getForAdmin(leadId);
+        Trip trip = tripQueryService.ownedDetail(lead.getTripId()).trip();
+        CompanyProfile company = companyQueryService.getById(lead.getCompanyId());
+        String message = composer.composeCustomerConfirmationMessage(
+                trip,
+                lead.getCustomer().getFullName(),
+                lead.getCustomer().getPhone(),
+                lead.getTravelers().getAdultCount(),
+                lead.getTravelers().getChildCount(),
+                lead.getTravelers().getInfantCount(),
+                lang);
+        String link = PhoneNumbers.toWhatsAppLink(company.getWhatsapp(), message);
+        return new WhatsAppMessage(company.getCompanyName(), company.getWhatsapp(), message, link);
     }
 
     private WhatsAppMessage toMessage(Lead lead, String message) {

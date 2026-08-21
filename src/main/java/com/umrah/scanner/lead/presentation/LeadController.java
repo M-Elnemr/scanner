@@ -198,6 +198,19 @@ public class LeadController {
                 act(id, LeadAction.MARK_CONTACTED, Role.ADMIN, admin, request)));
     }
 
+    @Operation(summary = "Mark the booking as confirmed with the company",
+            description = "Admin relayed the customer's booking to the company over WhatsApp and the company "
+                    + "acknowledged it. Allowed only from CONTACTED.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/api/v1/admin/leads/{id}/mark-confirmed")
+    public ApiResponse<LeadResponse> markConfirmed(
+            @AuthenticationPrincipal AuthenticatedUser admin,
+            @PathVariable UUID id,
+            @RequestBody(required = false) LeadActionRequest request) {
+        return ApiResponse.of(LeadResponse.forAdmin(
+                act(id, LeadAction.CONFIRM_VIA_COMPANY, Role.ADMIN, admin, request)));
+    }
+
     @Operation(summary = "Confirm the company's commission payment",
             description = "Accepts a company's report, or records the payment directly from FULLY_PAID. "
                     + "Cashback becomes payable only after this.")

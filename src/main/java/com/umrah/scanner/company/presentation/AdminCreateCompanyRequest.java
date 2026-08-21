@@ -15,7 +15,6 @@ public record AdminCreateCompanyRequest(
         @NotBlank @Email String ownerEmail,
         @NotBlank @Size(max = 255) String companyName,
         @NotBlank @Size(max = 100) String licenseNumber,
-        String logoUrl,
         String whatsapp,
         String description,
         @NotEmpty @Valid List<CompanyAddressRequest> addresses,

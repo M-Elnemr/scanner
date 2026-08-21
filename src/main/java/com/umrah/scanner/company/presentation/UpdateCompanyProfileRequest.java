@@ -8,7 +8,6 @@ import java.util.List;
 
 public record UpdateCompanyProfileRequest(
         @NotBlank @Size(max = 255) String companyName,
-        String logoUrl,
         String whatsapp,
         String description,
         @NotEmpty @Valid List<CompanyAddressRequest> addresses) {

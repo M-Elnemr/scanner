@@ -18,7 +18,6 @@ interface FormState {
   ownerEmail: string;
   companyName: string;
   licenseNumber: string;
-  logoUrl: string;
   whatsapp: string;
   description: string;
   commissionPerTraveler: string;
@@ -46,7 +45,6 @@ export function CompanyForm({
     ownerEmail: initial.ownerEmail ?? "",
     companyName: initial.companyName ?? "",
     licenseNumber: initial.licenseNumber ?? "",
-    logoUrl: initial.logoUrl ?? "",
     whatsapp: initial.whatsapp ?? "",
     description: initial.description ?? "",
     commissionPerTraveler: initial.commissionPerTraveler ?? "",
@@ -60,9 +58,8 @@ export function CompanyForm({
       const base = {
         companyName: form.companyName,
         licenseNumber: form.licenseNumber,
-        logoUrl: form.logoUrl || undefined,
-        whatsapp: form.whatsapp || undefined,
-        description: form.description || undefined,
+        whatsapp: form.whatsapp,
+        description: form.description,
         addresses: form.addresses,
       };
 
@@ -128,15 +125,15 @@ export function CompanyForm({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="whatsapp">{t("whatsappLabel")}</Label>
-          <Input id="whatsapp" value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="logoUrl">{t("logoLabel")}</Label>
-          <Input id="logoUrl" value={form.logoUrl} onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))} />
-        </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="whatsapp">{t("whatsappLabel")}</Label>
+        <Input
+          id="whatsapp"
+          value={form.whatsapp}
+          onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
+          required
+        />
+        {fieldErrors.whatsapp && <p className="text-xs text-destructive">{fieldErrors.whatsapp}</p>}
       </div>
 
       <div className="space-y-1.5">
@@ -146,7 +143,9 @@ export function CompanyForm({
           rows={3}
           value={form.description}
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          required
         />
+        {fieldErrors.description && <p className="text-xs text-destructive">{fieldErrors.description}</p>}
       </div>
 
       {mode === "create" && (
@@ -159,6 +158,7 @@ export function CompanyForm({
               min={0}
               value={form.commissionPerTraveler}
               onChange={(e) => setForm((f) => ({ ...f, commissionPerTraveler: e.target.value }))}
+              required
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3">
@@ -181,7 +181,17 @@ export function CompanyForm({
         cities={cities}
       />
 
-      <Button type="submit" disabled={pending || form.addresses.length === 0}>
+      <Button
+        type="submit"
+        disabled={
+          pending ||
+          form.addresses.length === 0 ||
+          !form.whatsapp ||
+          !form.description ||
+          (mode === "create" && !form.commissionPerTraveler) ||
+          form.addresses.some((a) => !a.mobileNumber || !a.addressText)
+        }
+      >
         {pending && <Loader2 className="size-4 animate-spin" />}
         {mode === "create" ? t("createSubmit") : t("saveSubmit")}
       </Button>

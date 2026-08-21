@@ -51,7 +51,6 @@ export default async function EditCompanyPage(props: PageProps<"/admin/companies
             initial={{
               companyName: company.companyName ?? "",
               licenseNumber: company.licenseNumber ?? "",
-              logoUrl: company.logoUrl ?? "",
               whatsapp: company.whatsapp ?? "",
               description: company.description ?? "",
               addresses: (company.addresses ?? []).map((a) => ({

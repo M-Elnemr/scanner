@@ -9,12 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfileAction } from "@/lib/customer/actions";
 
-type WalletType = "VODAFONE_CASH" | "ETISALAT_CASH" | "INSTA_PAY";
-
 export function ProfileForm({
   initial,
 }: {
-  initial: { fullName: string; phone: string; cashbackWalletNumber: string; walletType: WalletType };
+  initial: { fullName: string; phone: string };
 }) {
   const [values, setValues] = useState(initial);
   const [pending, startTransition] = useTransition();

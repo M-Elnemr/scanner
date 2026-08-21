@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,11 @@ const ROOM_LABEL_KEY: Record<RoomPriceInput["roomType"], "roomSingle" | "roomDou
   CHILD: "roomChild",
   INFANT: "roomInfant",
 };
+
+interface HotelRow {
+  hotelId: string;
+  freeBusIncluded: boolean;
+}
 
 interface TripDraft {
   tripCode: string;
@@ -52,10 +57,9 @@ interface TripDraft {
   currencyId: string;
   availableSeats: string;
   tier: "VIP" | "PREMIUM" | "ECONOMIC";
-  makkahHotelId: string;
-  makkahFreeBus: boolean;
-  madinahHotelId: string;
-  madinahFreeBus: boolean;
+  makkahHotelRows: HotelRow[];
+  madinahHotelRows: HotelRow[];
+  commissionPerTraveler: string;
   prices: Record<RoomPriceInput["roomType"], string>;
 }
 
@@ -84,10 +88,9 @@ const EMPTY: TripDraft = {
   currencyId: "",
   availableSeats: "",
   tier: "ECONOMIC",
-  makkahHotelId: "",
-  makkahFreeBus: false,
-  madinahHotelId: "",
-  madinahFreeBus: false,
+  makkahHotelRows: [],
+  madinahHotelRows: [],
+  commissionPerTraveler: "",
   prices: { SINGLE: "", DOUBLE: "", TRIPLE: "", QUAD: "", CHILD: "", INFANT: "" },
 };
 
@@ -117,7 +120,17 @@ export function TripForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [companyId, setCompanyId] = useState(initial.companyId ?? "");
   const [form, setForm] = useState<TripDraft>(() => {
-    if (mode !== "create") return { ...EMPTY, ...initial };
+    if (mode !== "create") {
+      // A trip created before per-trip commission existed, or one that never had its override set,
+      // falls back to showing the owning company's current rate — the field is required, so it must
+      // never render blank.
+      const owner = companies.find((c) => c.id === initial.companyId);
+      return {
+        ...EMPTY,
+        ...initial,
+        commissionPerTraveler: initial.commissionPerTraveler || (owner ? String(owner.commissionPerTraveler) : ""),
+      };
+    }
     const cairoId = airports.find((a) => a.iataCode === "CAI")?.id ?? airports.find((a) => a.city === "Cairo")?.id ?? "";
     const egpId = currencies.find((c) => c.code === "EGP")?.id ?? "";
     return {
@@ -131,6 +144,18 @@ export function TripForm({
       ...initial,
     };
   });
+
+  function handleCompanyChange(id: string) {
+    setCompanyId(id);
+    // Company commission is only ever the *starting point* for a new trip — pick it up here, but
+    // leave it alone if the admin already typed something for this trip.
+    if (mode === "create" && !form.commissionPerTraveler) {
+      const owner = companies.find((c) => c.id === id);
+      if (owner) {
+        setForm((f) => ({ ...f, commissionPerTraveler: String(owner.commissionPerTraveler) }));
+      }
+    }
+  }
 
   const INCLUSIONS: { key: keyof TripDraft; label: string }[] = [
     { key: "visaIncluded", label: t("inclusionVisa") },
@@ -148,9 +173,9 @@ export function TripForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
 
-    const hotels: TripInput["hotels"] = [];
-    if (form.makkahHotelId) hotels.push({ hotelId: form.makkahHotelId, freeBusIncluded: form.makkahFreeBus });
-    if (form.madinahHotelId) hotels.push({ hotelId: form.madinahHotelId, freeBusIncluded: form.madinahFreeBus });
+    const hotels: TripInput["hotels"] = [...form.makkahHotelRows, ...form.madinahHotelRows]
+      .filter((h) => h.hotelId)
+      .map((h) => ({ hotelId: h.hotelId, freeBusIncluded: h.freeBusIncluded }));
 
     const prices: RoomPriceInput[] = ROOM_TYPES.filter((t) => form.prices[t]).map((t) => ({
       roomType: t,
@@ -184,6 +209,7 @@ export function TripForm({
       hotels,
       prices,
       tier: form.tier,
+      commissionPerTraveler: form.commissionPerTraveler ? Number(form.commissionPerTraveler) : undefined,
     };
 
     startTransition(async () => {
@@ -209,7 +235,7 @@ export function TripForm({
           <Label>{t("companyLabel")}</Label>
           <Select
             value={companyId}
-            onValueChange={(v) => v && setCompanyId(v)}
+            onValueChange={(v) => v && handleCompanyChange(v)}
             items={companies.map((c) => ({ value: c.id, label: c.name }))}
           >
             <SelectTrigger className="w-full">
@@ -308,9 +334,10 @@ export function TripForm({
             <Input
               id="availableSeats"
               type="number"
-              min={0}
+              min={1}
               value={form.availableSeats}
               onChange={(e) => set("availableSeats", e.target.value)}
+              required
             />
           </div>
           <div className="space-y-1.5">
@@ -321,6 +348,7 @@ export function TripForm({
               min={0}
               value={form.daysInMakkah}
               onChange={(e) => set("daysInMakkah", e.target.value)}
+              required
             />
           </div>
           <div className="space-y-1.5">
@@ -331,7 +359,20 @@ export function TripForm({
               min={0}
               value={form.daysInMadinah}
               onChange={(e) => set("daysInMadinah", e.target.value)}
+              required
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="commissionPerTraveler">{t("commissionLabel")}</Label>
+            <Input
+              id="commissionPerTraveler"
+              type="number"
+              min={0}
+              value={form.commissionPerTraveler}
+              onChange={(e) => set("commissionPerTraveler", e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">{t("commissionHint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -353,6 +394,7 @@ export function TripForm({
               min={0}
               value={form.transitCount}
               onChange={(e) => set("transitCount", e.target.value)}
+              required
             />
           </div>
           <AirportField label={t("outboundDeparture")} value={form.outboundDepartureAirportId} onChange={(v) => set("outboundDepartureAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
@@ -361,7 +403,7 @@ export function TripForm({
           <AirportField label={t("returnArrival")} value={form.returnArrivalAirportId} onChange={(v) => set("returnArrivalAirportId", v)} airports={airports} placeholder={t("airportPlaceholder")} />
           <div className="space-y-1.5">
             <Label htmlFor="transitCity">{t("transitCityLabel")}</Label>
-            <Input id="transitCity" value={form.transitCity} onChange={(e) => set("transitCity", e.target.value)} />
+            <Input id="transitCity" value={form.transitCity} onChange={(e) => set("transitCity", e.target.value)} required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="transitDuration">{t("transitDurationLabel")}</Label>
@@ -370,6 +412,7 @@ export function TripForm({
               placeholder={t("transitDurationPlaceholder")}
               value={form.transitDuration}
               onChange={(e) => set("transitDuration", e.target.value)}
+              required
             />
           </div>
         </CardContent>
@@ -396,53 +439,25 @@ export function TripForm({
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>{t("makkahHotelLabel")}</Label>
-            <Select
-              value={form.makkahHotelId}
-              onValueChange={(v) => set("makkahHotelId", v ?? "")}
-              items={makkahHotels.map((h) => ({ value: h.id, label: h.name }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("hotelNone")} />
-              </SelectTrigger>
-              <SelectContent>
-                {makkahHotels.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    {h.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {form.makkahHotelId && (
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Checkbox checked={form.makkahFreeBus} onCheckedChange={(v) => set("makkahFreeBus", Boolean(v))} />
-                {t("makkahShuttle")}
-              </label>
-            )}
+            <HotelRowsEditor
+              rows={form.makkahHotelRows}
+              onChange={(rows) => set("makkahHotelRows", rows)}
+              options={makkahHotels}
+              addLabel={t("addHotel")}
+              noneLabel={t("hotelNone")}
+              shuttleLabel={t("makkahShuttle")}
+            />
           </div>
           <div className="space-y-2">
             <Label>{t("madinahHotelLabel")}</Label>
-            <Select
-              value={form.madinahHotelId}
-              onValueChange={(v) => set("madinahHotelId", v ?? "")}
-              items={madinahHotels.map((h) => ({ value: h.id, label: h.name }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("hotelNone")} />
-              </SelectTrigger>
-              <SelectContent>
-                {madinahHotels.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    {h.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {form.madinahHotelId && (
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Checkbox checked={form.madinahFreeBus} onCheckedChange={(v) => set("madinahFreeBus", Boolean(v))} />
-                {t("madinahShuttle")}
-              </label>
-            )}
+            <HotelRowsEditor
+              rows={form.madinahHotelRows}
+              onChange={(rows) => set("madinahHotelRows", rows)}
+              options={madinahHotels}
+              addLabel={t("addHotel")}
+              noneLabel={t("hotelNone")}
+              shuttleLabel={t("madinahShuttle")}
+            />
           </div>
         </CardContent>
       </Card>
@@ -472,15 +487,105 @@ export function TripForm({
           <CardTitle className="font-heading text-base">{t("descriptionTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea rows={4} value={form.description} onChange={(e) => set("description", e.target.value)} />
+          <Textarea rows={4} value={form.description} onChange={(e) => set("description", e.target.value)} required />
         </CardContent>
       </Card>
 
-      <Button type="submit" disabled={pending || (mode === "create" && !companyId)}>
+      <Button
+        type="submit"
+        disabled={
+          pending ||
+          (mode === "create" && !companyId) ||
+          !form.currencyId ||
+          !form.outboundDepartureAirportId ||
+          !form.outboundArrivalAirportId ||
+          !form.returnDepartureAirportId ||
+          !form.returnArrivalAirportId ||
+          form.makkahHotelRows.filter((h) => h.hotelId).length === 0 ||
+          form.madinahHotelRows.filter((h) => h.hotelId).length === 0
+        }
+      >
         {pending && <Loader2 className="size-4 animate-spin" />}
         {mode === "create" ? t("createSubmit") : t("saveSubmit")}
       </Button>
     </form>
+  );
+}
+
+/** Repeatable hotel rows for one city — a trip may offer several alternatives per city. */
+function HotelRowsEditor({
+  rows,
+  onChange,
+  options,
+  addLabel,
+  noneLabel,
+  shuttleLabel,
+}: {
+  rows: HotelRow[];
+  onChange: (rows: HotelRow[]) => void;
+  options: HotelOption[];
+  addLabel: string;
+  noneLabel: string;
+  shuttleLabel: string;
+}) {
+  function update(index: number, patch: Partial<HotelRow>) {
+    onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  function remove(index: number) {
+    onChange(rows.filter((_, i) => i !== index));
+  }
+
+  function add() {
+    onChange([...rows, { hotelId: "", freeBusIncluded: false }]);
+  }
+
+  return (
+    <div className="space-y-2">
+      {rows.map((row, index) => {
+        // A hotel already picked in another row of the same city can't be picked again.
+        const availableOptions = options.filter(
+          (h) => h.id === row.hotelId || !rows.some((r, i) => i !== index && r.hotelId === h.id),
+        );
+        return (
+          <div key={index} className="flex items-start gap-2">
+            <div className="flex-1 space-y-1.5">
+              <Select
+                value={row.hotelId}
+                onValueChange={(v) => update(index, { hotelId: v ?? "" })}
+                items={availableOptions.map((h) => ({ value: h.id, label: h.name }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={noneLabel} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableOptions.map((h) => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {h.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {row.hotelId && (
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox
+                    checked={row.freeBusIncluded}
+                    onCheckedChange={(v) => update(index, { freeBusIncluded: Boolean(v) })}
+                  />
+                  {shuttleLabel}
+                </label>
+              )}
+            </div>
+            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(index)}>
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        );
+      })}
+      <Button type="button" variant="outline" size="sm" onClick={add}>
+        <Plus className="size-3.5" /> {addLabel}
+      </Button>
+    </div>
   );
 }
 

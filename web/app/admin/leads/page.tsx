@@ -74,6 +74,7 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
     [
       "INTERESTED",
       "CONTACTED",
+      "CONFIRMED",
       "PENDING_DEPOSIT_CONFIRMATION",
       "DEPOSIT_PAID",
       "PENDING_FULL_PAYMENT_CONFIRMATION",
@@ -95,6 +96,7 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
                 status: status as
                   | "INTERESTED"
                   | "CONTACTED"
+                  | "CONFIRMED"
                   | "PENDING_DEPOSIT_CONFIRMATION"
                   | "DEPOSIT_PAID"
                   | "PENDING_FULL_PAYMENT_CONFIRMATION"
@@ -178,6 +180,7 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
                       leadId={l.id}
                       compact
                       canMarkContacted={(l.availableActions ?? []).includes("MARK_CONTACTED")}
+                      canConfirmViaCompany={(l.availableActions ?? []).includes("CONFIRM_VIA_COMPANY")}
                     />
                   )}
                 </TableCell>

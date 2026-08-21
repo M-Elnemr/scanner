@@ -42,3 +42,19 @@ export async function composeCompanyWhatsAppAction(
     return { ok: false, error: error instanceof ApiError ? error.message : "Could not compose the message." };
   }
 }
+
+export async function composeConfirmWhatsAppAction(
+  leadId: string,
+  lang: "ar" | "en" = "ar",
+): Promise<{ ok: true; data: WhatsAppMessage } | { ok: false; error: string }> {
+  try {
+    const api = await apiClient();
+    const result = await api.GET("/api/v1/admin/leads/{id}/whatsapp/confirm", {
+      params: { path: { id: leadId }, query: { lang } },
+      cache: "no-store",
+    });
+    return { ok: true, data: unwrap<WhatsAppMessage>(result) };
+  } catch (error) {
+    return { ok: false, error: error instanceof ApiError ? error.message : "Could not compose the message." };
+  }
+}

@@ -100,7 +100,11 @@ export default async function AdminLeadDetailPage(props: PageProps<"/admin/leads
 
       <div>
         <h2 className="mb-3 font-heading text-base font-semibold">{t("whatsappTitle")}</h2>
-        <WhatsAppButtons leadId={lead.id} canMarkContacted={(lead.availableActions ?? []).includes("MARK_CONTACTED")} />
+        <WhatsAppButtons
+          leadId={lead.id}
+          canMarkContacted={(lead.availableActions ?? []).includes("MARK_CONTACTED")}
+          canConfirmViaCompany={(lead.availableActions ?? []).includes("CONFIRM_VIA_COMPANY")}
+        />
       </div>
 
       {history.length > 0 && (

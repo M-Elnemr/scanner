@@ -40,14 +40,46 @@ class LeadTransitionPolicyTest {
     }
 
     @Nested
+    @DisplayName("confirm via company")
+    class ConfirmViaCompany {
+
+        @Test
+        void adminConfirmsAContactedLead() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.CONFIRM_VIA_COMPANY, LeadStatus.CONTACTED))
+                    .contains(LeadStatus.CONFIRMED);
+        }
+
+        @Test
+        void cannotSkipTheContactStep() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.CONFIRM_VIA_COMPANY, LeadStatus.INTERESTED)).isEmpty();
+        }
+
+        @Test
+        void cannotBeDoneTwice() {
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.CONFIRM_VIA_COMPANY, LeadStatus.CONFIRMED)).isEmpty();
+        }
+
+        @Test
+        void belongsToTheAdminAlone() {
+            assertThat(LeadTransitionPolicy.actorOf(LeadAction.CONFIRM_VIA_COMPANY)).isEqualTo(Role.ADMIN);
+            assertThat(LeadTransitionPolicy.isAllowed(LeadAction.CONFIRM_VIA_COMPANY, LeadStatus.CONTACTED, Role.CUSTOMER))
+                    .isFalse();
+            assertThat(LeadTransitionPolicy.isAllowed(LeadAction.CONFIRM_VIA_COMPANY, LeadStatus.CONTACTED, Role.COMPANY))
+                    .isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("deposit")
     class Deposit {
 
         @Test
-        void companyConfirmsFromInterestedOrContacted() {
+        void companyConfirmsFromInterestedContactedOrConfirmed() {
             assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.INTERESTED))
                     .contains(LeadStatus.DEPOSIT_PAID);
             assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.CONTACTED))
+                    .contains(LeadStatus.DEPOSIT_PAID);
+            assertThat(LeadTransitionPolicy.targetOf(LeadAction.MARK_DEPOSIT_PAID, LeadStatus.CONFIRMED))
                     .contains(LeadStatus.DEPOSIT_PAID);
         }
 
@@ -213,6 +245,8 @@ class LeadTransitionPolicyTest {
                     .containsExactly(LeadAction.MARK_DEPOSIT_PAID);
             assertThat(LeadTransitionPolicy.availableActions(LeadStatus.INTERESTED, Role.ADMIN))
                     .containsExactly(LeadAction.MARK_CONTACTED);
+            assertThat(LeadTransitionPolicy.availableActions(LeadStatus.CONTACTED, Role.ADMIN))
+                    .containsExactly(LeadAction.CONFIRM_VIA_COMPANY);
         }
     }
 }

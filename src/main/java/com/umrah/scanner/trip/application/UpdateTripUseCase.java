@@ -76,6 +76,7 @@ public class UpdateTripUseCase {
         trip.setDescription(command.description());
         trip.setAvailableSeats(command.availableSeats());
         trip.setTier(command.tier());
+        trip.setCommissionPerTraveler(command.commissionPerTraveler());
         trip.setLastUpdate(Instant.now());
 
         if (command.hotels() != null) {

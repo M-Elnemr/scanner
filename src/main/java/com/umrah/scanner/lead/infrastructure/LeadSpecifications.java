@@ -23,7 +23,7 @@ public final class LeadSpecifications {
      * it belongs at the end next to the other terminal status, not at the front.
      */
     private static final List<LeadStatus> STATUS_DISPLAY_ORDER = List.of(
-            LeadStatus.INTERESTED, LeadStatus.CONTACTED, LeadStatus.PENDING_DEPOSIT_CONFIRMATION,
+            LeadStatus.INTERESTED, LeadStatus.CONTACTED, LeadStatus.CONFIRMED, LeadStatus.PENDING_DEPOSIT_CONFIRMATION,
             LeadStatus.DEPOSIT_PAID, LeadStatus.PENDING_FULL_PAYMENT_CONFIRMATION, LeadStatus.FULLY_PAID,
             LeadStatus.PENDING_COMMISSION_CONFIRMATION, LeadStatus.COMMISSION_PAID, LeadStatus.CASHBACK_PAID,
             LeadStatus.CANCELLED);

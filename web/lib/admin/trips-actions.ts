@@ -43,6 +43,7 @@ export interface TripInput {
   hotels?: TripHotelInput[];
   prices?: RoomPriceInput[];
   tier: "VIP" | "PREMIUM" | "ECONOMIC";
+  commissionPerTraveler?: number;
 }
 
 function revalidateTrips(id?: string) {

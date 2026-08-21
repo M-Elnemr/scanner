@@ -10,7 +10,6 @@ import java.util.List;
 public record AdminUpdateCompanyProfileRequest(
         @NotBlank @Size(max = 100) String licenseNumber,
         @NotBlank @Size(max = 255) String companyName,
-        String logoUrl,
         String whatsapp,
         String description,
         @NotEmpty @Valid List<CompanyAddressRequest> addresses) {

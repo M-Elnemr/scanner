@@ -20,7 +20,6 @@ public record AdminCreateCompanyCommand(
         String ownerEmail,
         String companyName,
         String licenseNumber,
-        String logoUrl,
         String whatsapp,
         String description,
         List<CompanyAddressInput> addresses,

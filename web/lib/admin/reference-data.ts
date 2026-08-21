@@ -20,6 +20,7 @@ export interface CurrencyOption {
 export interface CompanyOption {
   id: string;
   name: string;
+  commissionPerTraveler: number;
 }
 
 export interface TripOption {
@@ -65,5 +66,7 @@ export async function listApprovedCompanies(): Promise<CompanyOption[]> {
     params: { query: { status: "APPROVED", ...pageableQuery(0, 200, "companyName,asc") } },
     cache: "no-store",
   });
-  return (result.data?.data?.content ?? []).filter((c) => c.id).map((c) => ({ id: c.id!, name: c.companyName ?? "" }));
+  return (result.data?.data?.content ?? [])
+    .filter((c) => c.id)
+    .map((c) => ({ id: c.id!, name: c.companyName ?? "", commissionPerTraveler: c.commissionPerTraveler ?? 0 }));
 }

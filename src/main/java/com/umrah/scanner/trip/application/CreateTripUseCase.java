@@ -102,6 +102,7 @@ public class CreateTripUseCase {
         trip.setAvailableSeats(command.availableSeats());
         trip.setStatus(TripStatus.PUBLISHED);
         trip.setTier(command.tier());
+        trip.setCommissionPerTraveler(command.commissionPerTraveler());
         trip.setLastUpdate(Instant.now());
 
         if (command.hotels() != null) {

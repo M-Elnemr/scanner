@@ -56,7 +56,6 @@ public class AdminCreateCompanyUseCase {
         company.setUser(owner);
         company.setCompanyName(command.companyName());
         company.setLicenseNumber(command.licenseNumber());
-        company.setLogoUrl(command.logoUrl());
         company.setWhatsapp(command.whatsapp());
         company.setDescription(command.description());
         company.setCommissionPerTraveler(Money.normalize(

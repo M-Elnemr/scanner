@@ -156,6 +156,7 @@ export function HotelFormDialog({
                 max={7}
                 value={form.stars}
                 onChange={(e) => setForm((f) => ({ ...f, stars: e.target.value }))}
+                required
               />
             </div>
           </div>
@@ -168,7 +169,7 @@ export function HotelFormDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="hotelNameAr">{t("nameArLabel")}</Label>
-            <Input id="hotelNameAr" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} />
+            <Input id="hotelNameAr" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} required />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -180,6 +181,7 @@ export function HotelFormDialog({
                 min={0}
                 value={form.distanceToHaramM}
                 onChange={(e) => setForm((f) => ({ ...f, distanceToHaramM: e.target.value }))}
+                required
               />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border px-3">

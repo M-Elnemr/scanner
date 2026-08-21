@@ -9,6 +9,7 @@ import type { ActionResult } from "@/lib/leads/actions";
 type LeadStatus =
   | "INTERESTED"
   | "CONTACTED"
+  | "CONFIRMED"
   | "PENDING_DEPOSIT_CONFIRMATION"
   | "DEPOSIT_PAID"
   | "PENDING_FULL_PAYMENT_CONFIRMATION"
@@ -49,6 +50,22 @@ export async function markContactedAction(id: string, note?: string): Promise<Ac
   } catch (error) {
     if (error instanceof ApiError) return { ok: false, error: error.message };
     return { ok: false, error: "Could not mark this lead as contacted." };
+  }
+}
+
+export async function confirmViaCompanyAction(id: string, note?: string): Promise<ActionResult> {
+  try {
+    const api = await apiClient();
+    const result = await api.PATCH("/api/v1/admin/leads/{id}/mark-confirmed", {
+      params: { path: { id } },
+      body: note ? { note } : undefined,
+    });
+    unwrapVoid(result);
+    revalidateLead(id);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, error: error.message };
+    return { ok: false, error: "Could not mark this lead as confirmed." };
   }
 }
 

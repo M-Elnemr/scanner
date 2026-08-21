@@ -40,9 +40,6 @@ public class CompanyProfile extends SoftDeletableEntity {
     @Column(name = "license_number", nullable = false, length = 100)
     private String licenseNumber;
 
-    @Column(name = "logo_url", length = 500)
-    private String logoUrl;
-
     @Column(name = "whatsapp", length = 30)
     private String whatsapp;
 
