@@ -103,7 +103,8 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   const madinahGroup = sortedHotels.filter((th) => th.city === "MADINAH");
 
   const roomPriceValues = (trip.roomPrices ?? []).map((p) => p.price).filter((p): p is number => p != null);
-  const startingPrice = roomPriceValues.length ? Math.min(...roomPriceValues) : undefined;
+  const quadPrice = trip.roomPrices?.find((p) => p.roomType === "QUAD")?.price;
+  const startingPrice = quadPrice ?? (roomPriceValues.length ? Math.min(...roomPriceValues) : undefined);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -285,34 +286,35 @@ function nearestGate(lat: number, lng: number) {
   );
 }
 
-/** A pasted maps link, if the admin set one, always wins over coordinates — it's whatever they
- * intended people to see, which a generated directions link can't guarantee to match. */
+/** Coordinates win whenever we have them — they let us route to the nearest Haram gate / the
+ * Prophet's Mosque and show a real distance, which is the whole point of this link. A pasted maps
+ * link is only a fallback for hotels we don't have coordinates for; it's just a bare pin otherwise. */
 function mapUrl(
   hotel: { locationUrl?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined,
   city: string | undefined,
 ): string | undefined {
   if (!hotel) return undefined;
-  if (hotel.locationUrl) return hotel.locationUrl;
-  if (hotel.latitude == null || hotel.longitude == null) return undefined;
-  const reference = city === "MADINAH" ? PROPHETS_MOSQUE : nearestGate(hotel.latitude, hotel.longitude);
-  const params = new URLSearchParams({
-    api: "1",
-    origin: `${hotel.latitude},${hotel.longitude}`,
-    destination: `${reference.lat},${reference.lng}`,
-  });
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+  if (hotel.latitude != null && hotel.longitude != null) {
+    const reference = city === "MADINAH" ? PROPHETS_MOSQUE : nearestGate(hotel.latitude, hotel.longitude);
+    const params = new URLSearchParams({
+      api: "1",
+      origin: `${hotel.latitude},${hotel.longitude}`,
+      destination: `${reference.lat},${reference.lng}`,
+    });
+    return `https://www.google.com/maps/dir/?${params.toString()}`;
+  }
+  return hotel.locationUrl ?? undefined;
 }
 
 /** Names the specific gate being routed to for a Makkah hotel with real coordinates; the generic
- * label otherwise (Madinah, or whenever a pasted locationUrl/missing coordinates make the
- * destination something other than a computed nearest gate). */
+ * label otherwise (Madinah, or a hotel with no coordinates falling back to a bare pasted link). */
 function mapLinkLabel(
   hotel: { locationUrl?: string | null; latitude?: number | null; longitude?: number | null } | null | undefined,
   city: string | undefined,
   locale: "ar" | "en",
   t: (key: string, values?: Record<string, string | number>) => string,
 ): string {
-  if (city === "MAKKAH" && !hotel?.locationUrl && hotel?.latitude != null && hotel?.longitude != null) {
+  if (city === "MAKKAH" && hotel?.latitude != null && hotel?.longitude != null) {
     const gate = nearestGate(hotel.latitude, hotel.longitude);
     return t("viewOnMapVia", { gate: locale === "ar" ? gate.nameAr : gate.name });
   }
@@ -357,17 +359,11 @@ function HotelCityCard({
   return (
     <div className="space-y-3">
       <CityBadge label={cityLabel} />
-      <div className="space-y-3">
+      <div className="flex flex-wrap items-stretch gap-3">
         {hotels.map((h, i) => (
-          <div key={i} className="space-y-3">
-            {i > 0 && (
-              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />
-                {t("orSeparator")}
-                <span className="h-px flex-1 bg-border" />
-              </div>
-            )}
-            <HotelDetailCard hotel={h.hotel} city={city} locale={locale} t={t} />
+          <div key={i} className="flex items-stretch gap-3">
+            {i > 0 && <span className="self-center text-xs font-medium text-muted-foreground">{t("orSeparator")}</span>}
+            <HotelDetailCard hotel={h.hotel} city={city} locale={locale} t={t} className="flex-1 min-w-[220px]" />
           </div>
         ))}
       </div>
@@ -381,16 +377,18 @@ function HotelDetailCard({
   city,
   locale,
   t,
+  className,
 }: {
   hotel: TripHotelItem["hotel"];
   city: "MAKKAH" | "MADINAH";
   locale: "ar" | "en";
   t: (key: string, values?: Record<string, string | number>) => string;
+  className?: string;
 }) {
   const name = locale === "ar" && hotel?.nameAr ? hotel.nameAr : hotel?.name;
 
   return (
-    <Card>
+    <Card className={className}>
       <CardContent className="space-y-1.5 pt-6">
         <p className="font-heading font-semibold">{name}</p>
         {hotel?.stars ? (
@@ -408,8 +406,13 @@ function HotelDetailCard({
           </p>
         )}
         {mapUrl(hotel, city) && (
-          <a href={mapUrl(hotel, city)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
-            <LocateFixed className="size-3.5" /> {mapLinkLabel(hotel, city, locale, t)}
+          <a
+            href={mapUrl(hotel, city)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            <LocateFixed className="size-3.5 shrink-0" /> {mapLinkLabel(hotel, city, locale, t)}
           </a>
         )}
         {hotel?.freeBusIncluded && (

@@ -138,6 +138,7 @@ function Track({
             aria-label="Previous image"
             disabled={!canPrev}
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onIndexChange(index - 1);
             }}
@@ -150,6 +151,7 @@ function Track({
             aria-label="Next image"
             disabled={!canNext}
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onIndexChange(index + 1);
             }}
