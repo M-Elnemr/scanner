@@ -175,7 +175,9 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
           {sortedHotels.length ? (
             <div>
               <h2 className="mb-3 font-heading text-lg font-semibold">{t("hotels")}</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Each city gets the full content width (not a 2-col grid) so its hotel alternatives
+                  have room to sit beside each other instead of wrapping back to a vertical stack. */}
+              <div className="space-y-4">
                 {makkahGroup.length > 0 && <HotelCityCard city="MAKKAH" hotels={makkahGroup} t={t} locale={locale} />}
                 {madinahGroup.length > 0 && <HotelCityCard city="MADINAH" hotels={madinahGroup} t={t} locale={locale} />}
               </div>
@@ -386,39 +388,50 @@ function HotelDetailCard({
   className?: string;
 }) {
   const name = locale === "ar" && hotel?.nameAr ? hotel.nameAr : hotel?.name;
+  const link = mapUrl(hotel, city);
+  const hasFacts = hotel?.distanceToHaramM != null || Boolean(link) || Boolean(hotel?.freeBusIncluded);
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-1.5 pt-6">
-        <p className="font-heading font-semibold">{name}</p>
-        {hotel?.stars ? (
-          <div className="flex items-center gap-1 text-amber-500">
-            {Array.from({ length: hotel.stars }).map((_, j) => (
-              <BadgeCheck key={j} className="size-3.5" />
-            ))}
+      <CardContent className="space-y-3 pt-6">
+        <div>
+          <p className="font-heading font-semibold">{name}</p>
+          {hotel?.stars ? (
+            <div className="mt-1 flex items-center gap-1 text-amber-500">
+              {Array.from({ length: hotel.stars }).map((_, j) => (
+                <BadgeCheck key={j} className="size-3.5" />
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Facts row is optional per hotel — a hotel with no coordinates/map link (and no shuttle or
+            distance) just skips straight from name+stars to the next card, no empty gap left behind. */}
+        {hasFacts && (
+          <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
+            {hotel?.distanceToHaramM != null && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+                <MapPin className="size-3.5 shrink-0" />
+                {t("distanceFrom", { distance: hotel.distanceToHaramM, place: city === "MAKKAH" ? t("haram") : t("prophetsMosque") })}
+                {hotel.canWalk ? t("walkableSuffix") : ""}
+              </span>
+            )}
+            {link && (
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+              >
+                <LocateFixed className="size-3.5 shrink-0" /> {mapLinkLabel(hotel, city, locale, t)}
+              </a>
+            )}
+            {hotel?.freeBusIncluded && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+                <Bus className="size-3.5 shrink-0" /> {t("freeShuttle")}
+              </span>
+            )}
           </div>
-        ) : null}
-        {hotel?.distanceToHaramM != null && (
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-            <MapPin className="size-3.5 shrink-0" />
-            {t("distanceFrom", { distance: hotel.distanceToHaramM, place: city === "MAKKAH" ? t("haram") : t("prophetsMosque") })}
-            {hotel.canWalk ? t("walkableSuffix") : ""}
-          </p>
-        )}
-        {mapUrl(hotel, city) && (
-          <a
-            href={mapUrl(hotel, city)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
-          >
-            <LocateFixed className="size-3.5 shrink-0" /> {mapLinkLabel(hotel, city, locale, t)}
-          </a>
-        )}
-        {hotel?.freeBusIncluded && (
-          <p className="flex items-center gap-1 text-sm text-primary">
-            <Bus className="size-3.5" /> {t("freeShuttle")}
-          </p>
         )}
       </CardContent>
     </Card>
