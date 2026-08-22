@@ -43,10 +43,10 @@ export function PreserveFlow({
     return (
       <Button
         size="lg"
-        className="w-full rounded-full sm:w-auto"
+        className="h-14 w-full gap-2 rounded-xl text-base font-semibold shadow-md [&_svg]:size-5"
         render={<Link href={`/login?next=/trips/${tripId}`} />}
       >
-        <Compass className="size-4" /> {t("signIn")}
+        <Compass /> {t("signIn")}
       </Button>
     );
   }
@@ -59,10 +59,10 @@ export function PreserveFlow({
     return (
       <Button
         size="lg"
-        className="w-full rounded-full border-2 border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600/90 sm:w-auto"
+        className="h-14 w-full gap-2 rounded-xl border-2 border-emerald-600 bg-emerald-600 text-base font-semibold text-white shadow-md hover:bg-emerald-600/90 [&_svg]:size-5"
         render={<Link href={`/leads/${activeLead.leadId}`} />}
       >
-        <CheckCircle2 className="size-4" /> {t("preservedView")}
+        <CheckCircle2 /> {t("preservedView")}
       </Button>
     );
   }
@@ -118,8 +118,12 @@ export function PreserveFlow({
 
   return (
     <>
-      <Button size="lg" className="w-full rounded-full sm:w-auto" onClick={openPicker}>
-        <Compass className="size-4" /> {t("preserve")}
+      <Button
+        size="lg"
+        className="h-14 w-full gap-2 rounded-xl text-base font-semibold shadow-md transition-transform hover:scale-[1.02] [&_svg]:size-5"
+        onClick={openPicker}
+      >
+        <Compass /> {t("preserve")}
       </Button>
 
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>

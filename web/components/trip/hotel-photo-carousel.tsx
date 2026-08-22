@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Expand, Landmark } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, Expand, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -45,6 +45,10 @@ export function HotelPhotoCarousel({ photos, tier, locale, variant = "card", cla
 
   const name = (p: HotelPhoto) => (locale === "ar" && p.hotelNameAr ? p.hotelNameAr : p.hotelName);
 
+  function goTo(i: number) {
+    setIndex(Math.min(usable.length - 1, Math.max(0, i)));
+  }
+
   return (
     <>
       <div className={cn("relative", className)}>
@@ -52,7 +56,7 @@ export function HotelPhotoCarousel({ photos, tier, locale, variant = "card", cla
           photos={usable}
           locale={locale}
           index={index}
-          onIndexChange={setIndex}
+          onIndexChange={goTo}
           showNameOverlay={variant === "detail"}
           onTap={variant === "detail" ? () => setLightboxOpen(true) : undefined}
         />
@@ -69,7 +73,7 @@ export function HotelPhotoCarousel({ photos, tier, locale, variant = "card", cla
           <DialogContent className="max-w-none w-screen h-screen max-h-screen rounded-none border-0 bg-black p-0 sm:max-w-none">
             <DialogTitle className="sr-only">{name(usable[index]) ?? ""}</DialogTitle>
             <div className="relative h-full w-full">
-              <Track photos={usable} locale={locale} index={index} onIndexChange={setIndex} showNameOverlay fullscreen />
+              <Track photos={usable} locale={locale} index={index} onIndexChange={goTo} showNameOverlay fullscreen />
               {usable.length > 1 && <Dots count={usable.length} active={index} />}
             </div>
           </DialogContent>
@@ -96,42 +100,65 @@ function Track({
   onTap?: () => void;
   fullscreen?: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  function handleScroll() {
-    const el = ref.current;
-    if (!el || el.clientWidth === 0) return;
-    const next = Math.min(photos.length - 1, Math.max(0, Math.abs(Math.round(el.scrollLeft / el.clientWidth))));
-    if (next !== index) onIndexChange(next);
-  }
-
   const name = (p: HotelPhoto) => (locale === "ar" && p.hotelNameAr ? p.hotelNameAr : p.hotelName);
+  const canPrev = index > 0;
+  const canNext = index < photos.length - 1;
 
   return (
-    <div
-      ref={ref}
-      onScroll={handleScroll}
-      className={cn(
-        "scrollbar-none flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain",
-        fullscreen ? "items-center" : "",
+    <div className={cn("relative h-full w-full overflow-hidden", fullscreen ? "flex items-center" : "")}>
+      {/* Forced LTR here so arrow navigation stays spatially predictable (left = previous, right = next)
+          regardless of the surrounding page's RTL direction — this strip is purely visual, not text. */}
+      <div
+        dir="ltr"
+        className="flex h-full w-full transition-transform duration-300 ease-out"
+        style={{ transform: `translateX(${index * -100}%)` }}
+      >
+        {photos.map((p, i) => (
+          <div key={i} className="relative h-full w-full shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={p.photoUrl}
+              alt={name(p) ?? ""}
+              onClick={onTap}
+              className={cn("h-full w-full", fullscreen ? "object-contain" : "object-cover", onTap && "cursor-zoom-in")}
+            />
+            {showNameOverlay && name(p) && (
+              <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3">
+                <p className="text-sm font-semibold text-white drop-shadow-sm">{name(p)}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {photos.length > 1 && (
+        <>
+          <button
+            type="button"
+            aria-label="Previous image"
+            disabled={!canPrev}
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange(index - 1);
+            }}
+            className="absolute left-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-opacity hover:bg-black/60 disabled:pointer-events-none disabled:opacity-30"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next image"
+            disabled={!canNext}
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange(index + 1);
+            }}
+            className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-opacity hover:bg-black/60 disabled:pointer-events-none disabled:opacity-30"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        </>
       )}
-    >
-      {photos.map((p, i) => (
-        <div key={i} className="relative h-full w-full shrink-0 snap-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={p.photoUrl}
-            alt={name(p) ?? ""}
-            onClick={onTap}
-            className={cn("h-full w-full", fullscreen ? "object-contain" : "object-cover", onTap && "cursor-zoom-in")}
-          />
-          {showNameOverlay && name(p) && (
-            <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3">
-              <p className="text-sm font-semibold text-white drop-shadow-sm">{name(p)}</p>
-            </div>
-          )}
-        </div>
-      ))}
     </div>
   );
 }

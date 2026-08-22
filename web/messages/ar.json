@@ -258,6 +258,7 @@
     "orSeparator": "أو",
     "roomPrices": "أسعار الغرف",
     "aboutJourney": "عن هذه الرحلة",
+    "startingFrom": "يبدأ من",
     "seatsLeft": "{count, plural, =0 {لا توجد مقاعد متاحة} one {مقعد واحد متاح} two {مقعدان متاحان} few {# مقاعد متاحة} many {# مقعدًا متاحًا} other {# مقعد متاح}}",
     "thisTripFallback": "هذه الرحلة",
     "operatorLocked": "احجز هذه الرحلة لعرض تفاصيل الشركة المنظمة."

@@ -17,6 +17,7 @@ import {
 import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { getCurrentUser } from "@/lib/auth/server";
+import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { HotelPhotoCarousel } from "@/components/trip/hotel-photo-carousel";
@@ -100,6 +101,9 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
   }));
   const makkahGroup = sortedHotels.filter((th) => th.city === "MAKKAH");
   const madinahGroup = sortedHotels.filter((th) => th.city === "MADINAH");
+
+  const roomPriceValues = (trip.roomPrices ?? []).map((p) => p.price).filter((p): p is number => p != null);
+  const startingPrice = roomPriceValues.length ? Math.min(...roomPriceValues) : undefined;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -204,8 +208,26 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
         </div>
 
         <div className="lg:sticky lg:top-24 lg:h-fit">
-          <Card>
+          <Card className="border-2 border-primary/15 shadow-lg">
             <CardContent className="space-y-4 pt-6">
+              {startingPrice != null && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">{t("startingFrom")}</p>
+                  <p className="font-heading text-3xl font-bold text-primary">
+                    {formatMoney(startingPrice, trip.currency, locale)}
+                  </p>
+                </div>
+              )}
+              {trip.availableSeats != null && (
+                <p
+                  className={cn(
+                    "text-sm font-medium",
+                    trip.availableSeats <= 5 ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {t("seatsLeft", { count: trip.availableSeats })}
+                </p>
+              )}
               {trip.id && (
                 <PreserveFlow
                   tripId={trip.id}
@@ -313,11 +335,11 @@ type TripHotelItem = {
 };
 
 /**
- * One card per city. A single hotel keeps the full detail (stars, distance, walkability, map link,
- * free shuttle). Several alternatives for the same city collapse to their names joined with "or" —
- * distance-to-haram and the map link don't merge cleanly across an "or", so those are dropped rather
- * than shown for (and misattributed to) whichever hotel happened to be listed first. Mirrors the
- * grouping WhatsAppMessageComposer already does for the company/customer WhatsApp messages.
+ * One card per hotel, grouped under a single city label. Each alternative gets its own full detail
+ * (stars, distance, walkability, map link, free shuttle) instead of collapsing multiple hotels'
+ * names into one line — that used to drop distance/map for anything but a single hotel per city,
+ * and joined star-rating glyphs directly against the next hotel's name/"or" text with no real
+ * whitespace between them (readable via CSS margins, but broken wherever styling doesn't apply).
  */
 function HotelCityCard({
   city,
@@ -331,60 +353,68 @@ function HotelCityCard({
   locale: "ar" | "en";
 }) {
   const cityLabel = city === "MAKKAH" ? t("makkah") : t("madinah");
-  const withShuttle = hotels.filter((h) => h.hotel?.freeBusIncluded).length;
-  const shuttleLine =
-    withShuttle === 0 ? null : withShuttle === hotels.length ? t("freeShuttle") : t("someShuttle");
 
-  if (hotels.length === 1) {
-    const hotel = hotels[0].hotel;
-    return (
-      <Card>
-        <CardContent className="space-y-1.5 pt-6">
-          <CityBadge label={cityLabel} />
-          <p className="font-heading font-semibold">{hotel?.name}</p>
-          <div className="flex items-center gap-1 text-amber-500">
-            {Array.from({ length: hotel?.stars ?? 0 }).map((_, j) => (
-              <BadgeCheck key={j} className="size-3.5" />
-            ))}
+  return (
+    <div className="space-y-3">
+      <CityBadge label={cityLabel} />
+      <div className="space-y-3">
+        {hotels.map((h, i) => (
+          <div key={i} className="space-y-3">
+            {i > 0 && (
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                {t("orSeparator")}
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            )}
+            <HotelDetailCard hotel={h.hotel} city={city} locale={locale} t={t} />
           </div>
-          {hotel?.distanceToHaramM != null && (
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-              <MapPin className="size-3.5 shrink-0" />
-              {t("distanceFrom", { distance: hotel.distanceToHaramM, place: city === "MAKKAH" ? t("haram") : t("prophetsMosque") })}
-              {hotel.canWalk ? t("walkableSuffix") : ""}
-            </p>
-          )}
-          {mapUrl(hotel, city) && (
-            <a href={mapUrl(hotel, city)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
-              <LocateFixed className="size-3.5" /> {mapLinkLabel(hotel, city, locale, t)}
-            </a>
-          )}
-          {shuttleLine && (
-            <p className="flex items-center gap-1 text-sm text-primary">
-              <Bus className="size-3.5" /> {shuttleLine}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Full detail for a single hotel — everything except photos, which the carousel above already covers. */
+function HotelDetailCard({
+  hotel,
+  city,
+  locale,
+  t,
+}: {
+  hotel: TripHotelItem["hotel"];
+  city: "MAKKAH" | "MADINAH";
+  locale: "ar" | "en";
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const name = locale === "ar" && hotel?.nameAr ? hotel.nameAr : hotel?.name;
 
   return (
     <Card>
-      <CardContent className="space-y-2 pt-6">
-        <CityBadge label={cityLabel} />
-        <p className="font-heading font-semibold">
-          {hotels.map((h, i) => (
-            <span key={i}>
-              {i > 0 && <span className="mx-1 font-normal text-muted-foreground">{t("orSeparator")}</span>}
-              {h.hotel?.name}
-              {h.hotel?.stars ? <span className="ms-1 text-xs font-normal text-amber-500">{"★".repeat(h.hotel.stars)}</span> : null}
-            </span>
-          ))}
-        </p>
-        {shuttleLine && (
+      <CardContent className="space-y-1.5 pt-6">
+        <p className="font-heading font-semibold">{name}</p>
+        {hotel?.stars ? (
+          <div className="flex items-center gap-1 text-amber-500">
+            {Array.from({ length: hotel.stars }).map((_, j) => (
+              <BadgeCheck key={j} className="size-3.5" />
+            ))}
+          </div>
+        ) : null}
+        {hotel?.distanceToHaramM != null && (
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+            <MapPin className="size-3.5 shrink-0" />
+            {t("distanceFrom", { distance: hotel.distanceToHaramM, place: city === "MAKKAH" ? t("haram") : t("prophetsMosque") })}
+            {hotel.canWalk ? t("walkableSuffix") : ""}
+          </p>
+        )}
+        {mapUrl(hotel, city) && (
+          <a href={mapUrl(hotel, city)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+            <LocateFixed className="size-3.5" /> {mapLinkLabel(hotel, city, locale, t)}
+          </a>
+        )}
+        {hotel?.freeBusIncluded && (
           <p className="flex items-center gap-1 text-sm text-primary">
-            <Bus className="size-3.5" /> {shuttleLine}
+            <Bus className="size-3.5" /> {t("freeShuttle")}
           </p>
         )}
       </CardContent>
