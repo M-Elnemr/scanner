@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { today } from "@/lib/format/date";
+import type { CityOption } from "@/lib/admin/cities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -28,13 +29,15 @@ import {
 
 const TIER_VALUES = ["VIP", "PREMIUM", "ECONOMIC"] as const;
 
-export function FilterBar() {
+export function FilterBar({ cities = [] }: { cities?: CityOption[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const locale = useLocale() as "ar" | "en";
   const t = useTranslations("trips");
   const tTiers = useTranslations("tiers");
   const tRoomTypes = useTranslations("roomTypes");
   const activeTiers = searchParams.getAll("tiers");
+  const priceSort = searchParams.get("priceSort") ?? "";
 
   const TIERS = TIER_VALUES.map((value) => ({
     value,
@@ -49,6 +52,7 @@ export function FilterBar() {
     maxDays: searchParams.get("maxDays") ?? "",
     departureFrom: searchParams.get("departureFrom") ?? "",
     departureTo: searchParams.get("departureTo") ?? "",
+    cityId: searchParams.get("cityId") ?? "",
   });
 
   function pushParams(mutate: (params: URLSearchParams) => void) {
@@ -67,9 +71,16 @@ export function FilterBar() {
     });
   }
 
+  function setPriceSort(direction: string) {
+    pushParams((params) => {
+      if (direction) params.set("priceSort", direction);
+      else params.delete("priceSort");
+    });
+  }
+
   function applyAdvanced() {
     pushParams((params) => {
-      const keys = ["roomSize", "minPrice", "maxPrice", "minDays", "maxDays", "departureFrom", "departureTo"] as const;
+      const keys = ["roomSize", "minPrice", "maxPrice", "minDays", "maxDays", "departureFrom", "departureTo", "cityId"] as const;
       for (const key of keys) {
         const value = draft[key];
         if (value) params.set(key, value);
@@ -79,12 +90,21 @@ export function FilterBar() {
   }
 
   function clearAll() {
-    setDraft({ roomSize: "", minPrice: "", maxPrice: "", minDays: "", maxDays: "", departureFrom: "", departureTo: "" });
+    setDraft({
+      roomSize: "",
+      minPrice: "",
+      maxPrice: "",
+      minDays: "",
+      maxDays: "",
+      departureFrom: "",
+      departureTo: "",
+      cityId: "",
+    });
     router.push("/trips");
   }
 
   const advancedCount = Object.values(draft).filter(Boolean).length;
-  const hasAnyFilter = activeTiers.length > 0 || advancedCount > 0;
+  const hasAnyFilter = activeTiers.length > 0 || advancedCount > 0 || Boolean(priceSort);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -98,6 +118,25 @@ export function FilterBar() {
           {tier.label}
         </Badge>
       ))}
+
+      {/* Price sort is the most important sort criterion, so it's a primary control here — applied
+          immediately, not tucked into the advanced-filters Sheet below. */}
+      <Select
+        value={priceSort}
+        onValueChange={(v) => setPriceSort(v ?? "")}
+        items={[
+          { value: "asc", label: t("sortPriceAsc") },
+          { value: "desc", label: t("sortPriceDesc") },
+        ]}
+      >
+        <SelectTrigger className="w-auto rounded-full" size="sm">
+          <SelectValue placeholder={t("sortBy")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="asc">{t("sortPriceAsc")}</SelectItem>
+          <SelectItem value="desc">{t("sortPriceDesc")}</SelectItem>
+        </SelectContent>
+      </Select>
 
       <Sheet>
         <SheetTrigger render={<Button variant="outline" size="sm" className="rounded-full" />}>
@@ -174,6 +213,26 @@ export function FilterBar() {
                   onChange={(e) => setDraft((d) => ({ ...d, maxDays: e.target.value }))}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t("companyCity")}</Label>
+              <Select
+                value={draft.cityId}
+                onValueChange={(v) => setDraft((d) => ({ ...d, cityId: v ?? "" }))}
+                items={cities.map((c) => ({ value: c.id, label: locale === "ar" && c.nameAr ? c.nameAr : c.name }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("anyCity")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {locale === "ar" && c.nameAr ? c.nameAr : c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">

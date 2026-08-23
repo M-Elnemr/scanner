@@ -1,11 +1,14 @@
 package com.umrah.scanner.trip.infrastructure;
 
+import com.umrah.scanner.company.domain.CompanyAddress;
 import com.umrah.scanner.company.domain.CompanyStatus;
 import com.umrah.scanner.trip.domain.RoomPrice;
 import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.domain.TripTier;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Subquery;
 import java.math.BigDecimal;
@@ -14,6 +17,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 /** Dynamic filter predicates for the public trip-browse query and the admin trip console. */
@@ -111,6 +115,38 @@ public final class TripSpecifications {
             subquery.where(predicates.toArray(new Predicate[0]));
 
             return cb.exists(subquery);
+        };
+    }
+
+    /** Matches trips whose organizing company has at least one branch address in {@code cityId}. */
+    public static Specification<Trip> companyInCity(UUID cityId) {
+        return (root, query, cb) -> {
+            Subquery<Integer> subquery = query.subquery(Integer.class);
+            var address = subquery.from(CompanyAddress.class);
+            subquery.select(cb.literal(1));
+            subquery.where(
+                    cb.equal(address.get("company"), root.get("company")),
+                    cb.equal(address.get("city").get("id"), cityId));
+            return cb.exists(subquery);
+        };
+    }
+
+    /**
+     * Orders results by the given room type's price. A left join keeps trips with no price row for
+     * that room type in the result set (sorted to whichever end the database puts nulls on) instead
+     * of silently dropping them.
+     *
+     * <p>Sets order directly on the shared {@code CriteriaQuery} rather than returning a predicate —
+     * this only works because callers never also populate {@code Pageable}'s own {@code Sort} on the
+     * same query; Spring Data JPA overwrites {@code query.orderBy(...)} with {@code Pageable}'s sort
+     * whenever one is present, which would silently undo this.
+     */
+    public static Specification<Trip> orderByRoomTypePrice(RoomType roomType, Sort.Direction direction) {
+        return (root, query, cb) -> {
+            Join<Trip, RoomPrice> prices = root.join("roomPrices", JoinType.LEFT);
+            prices.on(cb.equal(prices.get("roomType"), roomType));
+            query.orderBy(direction == Sort.Direction.DESC ? cb.desc(prices.get("price")) : cb.asc(prices.get("price")));
+            return cb.conjunction();
         };
     }
 }

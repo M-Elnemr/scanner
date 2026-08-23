@@ -122,6 +122,12 @@ public class TripQueryService {
             RoomType roomType = filter.priceRoomType() != null ? filter.priceRoomType() : RoomType.QUAD;
             specs.add(TripSpecifications.priceForRoomTypeBetween(roomType, filter.minPrice(), filter.maxPrice()));
         }
+        if (filter.companyCityId() != null) {
+            specs.add(TripSpecifications.companyInCity(filter.companyCityId()));
+        }
+        if (filter.priceSortDirection() != null) {
+            specs.add(TripSpecifications.orderByRoomTypePrice(RoomType.QUAD, filter.priceSortDirection()));
+        }
         return tripRepository.findAll(Specification.allOf(specs), pageable);
     }
 

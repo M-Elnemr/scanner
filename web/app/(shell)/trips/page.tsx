@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { publicApi, unwrap } from "@/lib/api/client";
 import { pageableQuery } from "@/lib/api/pageable";
+import { listCities } from "@/lib/admin/cities";
 import { FilterBar } from "@/components/trip/filter-bar";
 import { TripGrid } from "@/components/trip/trip-grid";
 import { TripPagination } from "@/components/trip/trip-pagination";
@@ -34,24 +35,31 @@ export default async function TripsPage(props: PageProps<"/trips">) {
   const maxDays = first(sp.maxDays) ? Number(first(sp.maxDays)) : undefined;
   const departureFrom = first(sp.departureFrom);
   const departureTo = first(sp.departureTo);
+  const cityId = first(sp.cityId);
+  const priceSort = first(sp.priceSort) as "asc" | "desc" | undefined;
 
-  const result = await publicApi.GET("/api/v1/trips", {
-    params: {
-      query: {
-        ...(tiers.length ? { tiers } : {}),
-        roomSize,
-        minPrice,
-        maxPrice,
-        minDays,
-        maxDays,
-        departureFrom,
-        departureTo,
-        ...pageableQuery(page, 12),
+  const [result, cities] = await Promise.all([
+    publicApi.GET("/api/v1/trips", {
+      params: {
+        query: {
+          ...(tiers.length ? { tiers } : {}),
+          roomSize,
+          minPrice,
+          maxPrice,
+          minDays,
+          maxDays,
+          departureFrom,
+          departureTo,
+          cityId,
+          priceSort,
+          ...pageableQuery(page, 12),
+        },
       },
-    },
-    cache: "force-cache",
-    next: { revalidate: 30 },
-  });
+      cache: "force-cache",
+      next: { revalidate: 30 },
+    }),
+    listCities(),
+  ]);
   const result_ = unwrap(result);
 
   const searchParams = new URLSearchParams();
@@ -69,7 +77,7 @@ export default async function TripsPage(props: PageProps<"/trips">) {
             {t("journeysAvailable", { count: result_.totalElements ?? 0 })}
           </p>
         </div>
-        <FilterBar />
+        <FilterBar cities={cities} />
       </div>
 
       {result_.content?.length ? (

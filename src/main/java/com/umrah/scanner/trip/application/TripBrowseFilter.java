@@ -5,6 +5,8 @@ import com.umrah.scanner.trip.domain.TripTier;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.data.domain.Sort;
 
 /** All fields optional — an unset field applies no filtering on that dimension. */
 public record TripBrowseFilter(
@@ -15,7 +17,12 @@ public record TripBrowseFilter(
         Integer minDays,
         Integer maxDays,
         LocalDate departureFrom,
-        LocalDate departureTo) {
+        LocalDate departureTo,
+        /** Trips whose organizing company has at least one branch address in this city. */
+        UUID companyCityId,
+        /** Orders results by the QUAD room price; {@code null} leaves the default (unordered) result order. */
+        Sort.Direction priceSortDirection) {
 
-    public static final TripBrowseFilter NONE = new TripBrowseFilter(null, null, null, null, null, null, null, null);
+    public static final TripBrowseFilter NONE =
+            new TripBrowseFilter(null, null, null, null, null, null, null, null, null, null);
 }

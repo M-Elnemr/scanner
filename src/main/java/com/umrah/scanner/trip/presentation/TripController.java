@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -152,9 +153,13 @@ public class TripController {
             @RequestParam(required = false) Integer maxDays,
             @RequestParam(required = false) LocalDate departureFrom,
             @RequestParam(required = false) LocalDate departureTo,
+            @RequestParam(required = false) UUID cityId,
+            // Deliberately not named "sort" — that query param is already claimed by Pageable below.
+            @RequestParam(required = false) String priceSort,
             Pageable pageable) {
         var filter = new TripBrowseFilter(
-                tiers, roomTypeForSize(roomSize), minPrice, maxPrice, minDays, maxDays, departureFrom, departureTo);
+                tiers, roomTypeForSize(roomSize), minPrice, maxPrice, minDays, maxDays, departureFrom, departureTo,
+                cityId, priceSortDirection(priceSort));
         Page<Trip> trips = tripQueryService.browsePublished(filter, pageable);
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
         Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds(trips));
@@ -175,6 +180,17 @@ public class TripController {
             case 4 -> RoomType.QUAD;
             default -> throw new ValidationException("roomSize must be 1, 2, 3, or 4");
         };
+    }
+
+    private Sort.Direction priceSortDirection(String priceSort) {
+        if (priceSort == null) {
+            return null;
+        }
+        try {
+            return Sort.Direction.fromString(priceSort);
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("priceSort must be 'asc' or 'desc'");
+        }
     }
 
     @GetMapping("/api/v1/trips/{id}")

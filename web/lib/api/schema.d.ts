@@ -1644,6 +1644,13 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        HotelPhoto: {
+            /** @enum {string} */
+            city?: "MAKKAH" | "MADINAH";
+            hotelName?: string;
+            hotelNameAr?: string;
+            photoUrl?: string;
+        };
         TripSummaryResponse: {
             /** Format: uuid */
             id?: string;
@@ -1670,16 +1677,7 @@ export interface components {
             priceStartsFrom?: number;
             makkahHotelPhotoUrl?: string;
             madinahHotelPhotoUrl?: string;
-            /** @description One entry per hotel with a photo, Makkah first then Madinah — backs a swipeable gallery. */
             hotelPhotos?: components["schemas"]["HotelPhoto"][];
-        };
-        /** @description One entry per hotel with a photo, Makkah first then Madinah — backs a swipeable gallery. */
-        HotelPhoto: {
-            /** @enum {string} */
-            city?: "MAKKAH" | "MADINAH";
-            hotelName?: string;
-            hotelNameAr?: string;
-            photoUrl?: string;
         };
         RegisterCompanyRequest: {
             companyName: string;
@@ -3523,6 +3521,8 @@ export interface operations {
                 maxDays?: number;
                 departureFrom?: string;
                 departureTo?: string;
+                cityId?: string;
+                priceSort?: string;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
