@@ -216,6 +216,8 @@
     "any": "Any",
     "companyCity": "Company city",
     "anyCity": "Any city",
+    "departureAirport": "Departure & return airport",
+    "anyAirport": "Any airport",
     "priceRange": "Price range",
     "min": "Min",
     "max": "Max",

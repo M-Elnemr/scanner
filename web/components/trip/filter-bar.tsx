@@ -6,6 +6,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { today } from "@/lib/format/date";
 import type { CityOption } from "@/lib/admin/cities";
+import type { AirportOption } from "@/lib/admin/reference-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,12 @@ import {
 
 const TIER_VALUES = ["VIP", "PREMIUM", "ECONOMIC"] as const;
 
-export function FilterBar({ cities = [] }: { cities?: CityOption[] }) {
+function airportLabel(a: AirportOption, locale: "ar" | "en") {
+  const city = locale === "ar" && a.cityAr ? a.cityAr : a.city;
+  return `${city} (${a.iataCode})`;
+}
+
+export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[]; airports?: AirportOption[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = useLocale() as "ar" | "en";
@@ -53,6 +59,7 @@ export function FilterBar({ cities = [] }: { cities?: CityOption[] }) {
     departureFrom: searchParams.get("departureFrom") ?? "",
     departureTo: searchParams.get("departureTo") ?? "",
     cityId: searchParams.get("cityId") ?? "",
+    departureAirportId: searchParams.get("departureAirportId") ?? "",
   });
 
   function pushParams(mutate: (params: URLSearchParams) => void) {
@@ -80,7 +87,7 @@ export function FilterBar({ cities = [] }: { cities?: CityOption[] }) {
 
   function applyAdvanced() {
     pushParams((params) => {
-      const keys = ["roomSize", "minPrice", "maxPrice", "minDays", "maxDays", "departureFrom", "departureTo", "cityId"] as const;
+      const keys = ["roomSize", "minPrice", "maxPrice", "minDays", "maxDays", "departureFrom", "departureTo", "cityId", "departureAirportId"] as const;
       for (const key of keys) {
         const value = draft[key];
         if (value) params.set(key, value);
@@ -99,6 +106,7 @@ export function FilterBar({ cities = [] }: { cities?: CityOption[] }) {
       departureFrom: "",
       departureTo: "",
       cityId: "",
+      departureAirportId: "",
     });
     router.push("/trips");
   }
@@ -229,6 +237,26 @@ export function FilterBar({ cities = [] }: { cities?: CityOption[] }) {
                   {cities.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {locale === "ar" && c.nameAr ? c.nameAr : c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>{t("departureAirport")}</Label>
+              <Select
+                value={draft.departureAirportId}
+                onValueChange={(v) => setDraft((d) => ({ ...d, departureAirportId: v ?? "" }))}
+                items={airports.map((a) => ({ value: a.id, label: airportLabel(a, locale) }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("anyAirport")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {airports.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {airportLabel(a, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -216,6 +216,8 @@
     "any": "أي",
     "companyCity": "مدينة الشركة المنظمة",
     "anyCity": "أي مدينة",
+    "departureAirport": "مطار الذهاب والعودة",
+    "anyAirport": "أي مطار",
     "priceRange": "نطاق السعر",
     "min": "الحد الأدنى",
     "max": "الحد الأقصى",

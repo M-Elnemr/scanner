@@ -125,6 +125,9 @@ public class TripQueryService {
         if (filter.companyCityId() != null) {
             specs.add(TripSpecifications.companyInCity(filter.companyCityId()));
         }
+        if (filter.departureAirportId() != null) {
+            specs.add(TripSpecifications.hasOutboundDepartureAirport(filter.departureAirportId()));
+        }
         if (filter.priceSortDirection() != null) {
             specs.add(TripSpecifications.orderByRoomTypePrice(RoomType.QUAD, filter.priceSortDirection()));
         }

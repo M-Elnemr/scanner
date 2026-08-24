@@ -20,9 +20,11 @@ public record TripBrowseFilter(
         LocalDate departureTo,
         /** Trips whose organizing company has at least one branch address in this city. */
         UUID companyCityId,
+        /** The Egyptian airport the traveler wants to depart from and return to. */
+        UUID departureAirportId,
         /** Orders results by the QUAD room price; {@code null} leaves the default (unordered) result order. */
         Sort.Direction priceSortDirection) {
 
     public static final TripBrowseFilter NONE =
-            new TripBrowseFilter(null, null, null, null, null, null, null, null, null, null);
+            new TripBrowseFilter(null, null, null, null, null, null, null, null, null, null, null);
 }

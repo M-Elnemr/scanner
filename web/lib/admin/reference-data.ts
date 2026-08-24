@@ -9,6 +9,7 @@ export interface AirportOption {
   cityAr?: string;
   countryName: string;
   countryNameAr?: string;
+  countryIso2?: string;
 }
 
 export interface CurrencyOption {
@@ -52,6 +53,7 @@ export async function listAirports(): Promise<AirportOption[]> {
       cityAr: a.cityAr,
       countryName: a.countryName ?? "",
       countryNameAr: a.countryNameAr,
+      countryIso2: a.countryIso2,
     }));
 }
 

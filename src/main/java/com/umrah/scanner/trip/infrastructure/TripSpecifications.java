@@ -118,6 +118,11 @@ public final class TripSpecifications {
         };
     }
 
+    /** Matches trips departing (and returning) from this Egyptian airport. */
+    public static Specification<Trip> hasOutboundDepartureAirport(UUID airportId) {
+        return (root, query, cb) -> cb.equal(root.get("outboundDepartureAirport").get("id"), airportId);
+    }
+
     /** Matches trips whose organizing company has at least one branch address in {@code cityId}. */
     public static Specification<Trip> companyInCity(UUID cityId) {
         return (root, query, cb) -> {

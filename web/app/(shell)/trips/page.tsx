@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { publicApi, unwrap } from "@/lib/api/client";
 import { pageableQuery } from "@/lib/api/pageable";
 import { listCities } from "@/lib/admin/cities";
+import { listAirports } from "@/lib/admin/reference-data";
 import { FilterBar } from "@/components/trip/filter-bar";
 import { TripGrid } from "@/components/trip/trip-grid";
 import { TripPagination } from "@/components/trip/trip-pagination";
@@ -36,9 +37,10 @@ export default async function TripsPage(props: PageProps<"/trips">) {
   const departureFrom = first(sp.departureFrom);
   const departureTo = first(sp.departureTo);
   const cityId = first(sp.cityId);
+  const departureAirportId = first(sp.departureAirportId);
   const priceSort = first(sp.priceSort) as "asc" | "desc" | undefined;
 
-  const [result, cities] = await Promise.all([
+  const [result, cities, airports] = await Promise.all([
     publicApi.GET("/api/v1/trips", {
       params: {
         query: {
@@ -51,6 +53,7 @@ export default async function TripsPage(props: PageProps<"/trips">) {
           departureFrom,
           departureTo,
           cityId,
+          departureAirportId,
           priceSort,
           ...pageableQuery(page, 12),
         },
@@ -59,8 +62,12 @@ export default async function TripsPage(props: PageProps<"/trips">) {
       next: { revalidate: 30 },
     }),
     listCities(),
+    listAirports(),
   ]);
   const result_ = unwrap(result);
+  // Trips only ever depart from and return to Egypt (the other leg is Saudi Arabia), so the
+  // filter only ever needs to offer Egyptian airports.
+  const departureAirports = airports.filter((a) => a.countryIso2 === "EG");
 
   const searchParams = new URLSearchParams();
   Object.entries(sp).forEach(([key, value]) => {
@@ -77,7 +84,7 @@ export default async function TripsPage(props: PageProps<"/trips">) {
             {t("journeysAvailable", { count: result_.totalElements ?? 0 })}
           </p>
         </div>
-        <FilterBar cities={cities} />
+        <FilterBar cities={cities} airports={departureAirports} />
       </div>
 
       {result_.content?.length ? (

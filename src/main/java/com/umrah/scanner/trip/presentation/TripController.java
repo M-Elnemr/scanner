@@ -154,12 +154,13 @@ public class TripController {
             @RequestParam(required = false) LocalDate departureFrom,
             @RequestParam(required = false) LocalDate departureTo,
             @RequestParam(required = false) UUID cityId,
+            @RequestParam(required = false) UUID departureAirportId,
             // Deliberately not named "sort" — that query param is already claimed by Pageable below.
             @RequestParam(required = false) String priceSort,
             Pageable pageable) {
         var filter = new TripBrowseFilter(
                 tiers, roomTypeForSize(roomSize), minPrice, maxPrice, minDays, maxDays, departureFrom, departureTo,
-                cityId, priceSortDirection(priceSort));
+                cityId, departureAirportId, priceSortDirection(priceSort));
         Page<Trip> trips = tripQueryService.browsePublished(filter, pageable);
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
         Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds(trips));

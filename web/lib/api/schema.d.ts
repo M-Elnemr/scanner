@@ -3522,6 +3522,7 @@ export interface operations {
                 departureFrom?: string;
                 departureTo?: string;
                 cityId?: string;
+                departureAirportId?: string;
                 priceSort?: string;
                 pageable: components["schemas"]["Pageable"];
             };
