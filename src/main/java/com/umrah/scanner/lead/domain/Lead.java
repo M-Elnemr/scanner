@@ -76,6 +76,18 @@ public class Lead extends BaseEntity {
     private UUID tripId;
 
     /**
+     * {@code tripId} above is only populated once this row is read back from the database — for a
+     * lead just built and saved in the current transaction it is still null, since Hibernate never
+     * re-reads {@code insertable = false} columns after an insert. Falling back to the in-memory
+     * {@code trip} association (always set by then) keeps every reader correct regardless of
+     * whether the lead has round-tripped through the database yet. Explicit so Lombok's
+     * {@code @Getter} does not overwrite it with the raw field accessor.
+     */
+    public UUID getTripId() {
+        return tripId != null ? tripId : (trip != null ? trip.getId() : null);
+    }
+
+    /**
      * The trip's title and code as they were when this lead was created. Same reasoning as the
      * commission/cashback snapshot below: a trip can be renamed or deleted later, but a lead's own
      * record of what the customer booked should not silently change or disappear because of that.
@@ -95,6 +107,11 @@ public class Lead extends BaseEntity {
     /** Read-only shadow of the {@code company} association's FK — same reasoning as {@link #tripId}: CompanyProfile is soft-deletable too. */
     @Column(name = "company_id", insertable = false, updatable = false)
     private UUID companyId;
+
+    /** Same fallback reasoning as {@link #getTripId()}: null until reloaded, so fall back to the in-memory association. */
+    public UUID getCompanyId() {
+        return companyId != null ? companyId : (company != null ? company.getId() : null);
+    }
 
     /** The company's name as it was when this lead was created — same reasoning as {@link #tripTitle}. */
     @Column(name = "company_name", nullable = false)

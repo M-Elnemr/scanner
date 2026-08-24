@@ -9,7 +9,6 @@ import com.umrah.scanner.user.domain.Role;
 import com.umrah.scanner.user.domain.User;
 import com.umrah.scanner.user.infrastructure.UserRepository;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
@@ -108,12 +107,7 @@ public class LeadNotifier {
     }
 
     private Map<String, Object> payload(Lead lead) {
-        // The tripId shadow column (safe even once a deleted trip makes getTrip() null, see its
-        // Javadoc) is only populated once the row is read back from the database. A lead just
-        // built by CreateLeadUseCase and saved in this same transaction never gets that reload, so
-        // fall back to the in-memory trip association, which is always set at that point.
-        UUID tripId = lead.getTripId() != null ? lead.getTripId() : lead.getTrip().getId();
-        return Map.of("leadId", lead.getId().toString(), "tripId", tripId.toString());
+        return Map.of("leadId", lead.getId().toString(), "tripId", lead.getTripId().toString());
     }
 
     private static String statusLabel(LeadStatus status) {
