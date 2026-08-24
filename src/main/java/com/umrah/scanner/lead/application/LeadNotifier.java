@@ -108,7 +108,11 @@ public class LeadNotifier {
     }
 
     private Map<String, Object> payload(Lead lead) {
-        UUID tripId = lead.getTripId();
+        // The tripId shadow column (safe even once a deleted trip makes getTrip() null, see its
+        // Javadoc) is only populated once the row is read back from the database. A lead just
+        // built by CreateLeadUseCase and saved in this same transaction never gets that reload, so
+        // fall back to the in-memory trip association, which is always set at that point.
+        UUID tripId = lead.getTripId() != null ? lead.getTripId() : lead.getTrip().getId();
         return Map.of("leadId", lead.getId().toString(), "tripId", tripId.toString());
     }
 
