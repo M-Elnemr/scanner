@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { TripStatusBadge } from "@/components/admin/trip-status-badge";
 import { TripRowActions } from "@/components/admin/trip-row-actions";
+import { CopyTripDetailsButton } from "@/components/admin/copy-trip-details-button";
 import { AdminFilterBar } from "@/components/admin/admin-filter-bar";
 import { TablePagination } from "@/components/admin/table-pagination";
 import { formatDate } from "@/lib/format/date";
@@ -109,7 +110,10 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
                   <TripStatusBadge status={t.status} />
                 </TableCell>
                 <TableCell>
-                  <TripRowActions id={t.id ?? ""} status={t.status} companies={companies} />
+                  <div className="flex items-center justify-end gap-1">
+                    {t.id && <CopyTripDetailsButton tripId={t.id} />}
+                    <TripRowActions id={t.id ?? ""} status={t.status} companies={companies} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

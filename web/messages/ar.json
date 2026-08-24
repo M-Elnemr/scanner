@@ -395,7 +395,13 @@
       "allCompanies": "كل الشركات",
       "clear": "مسح",
       "searchPlaceholderDefault": "بحث…",
-      "none": "—"
+      "none": "—",
+      "pullToRefresh": "اسحب للتحديث",
+      "releaseToRefresh": "اترك للتحديث",
+      "refreshing": "جارٍ التحديث…",
+      "copyTripDetails": "نسخ تفاصيل الرحلة",
+      "tripDetailsCopied": "تم نسخ تفاصيل الرحلة",
+      "copyFailed": "تعذر النسخ إلى الحافظة."
     },
     "companies": {
       "title": "الشركات",
@@ -569,6 +575,28 @@
       "colSeats": "المقاعد",
       "colStatus": "الحالة",
       "empty": "لا توجد رحلات مطابقة لهذه الفلاتر.",
+      "copyDetails": "نسخ تفاصيل الرحلة",
+      "copy": {
+        "header": "{title} ({tripCode})",
+        "labelCompany": "الشركة",
+        "labelStatus": "الحالة",
+        "labelTier": "الفئة",
+        "labelDates": "التواريخ",
+        "labelNights": "{makkah} ليالٍ في مكة، {madinah} في المدينة",
+        "labelSeats": "المقاعد المتاحة",
+        "labelAirline": "شركة الطيران",
+        "labelOutbound": "الذهاب",
+        "labelReturn": "العودة",
+        "labelHotelMakkah": "فندق مكة",
+        "labelHotelMadinah": "فندق المدينة",
+        "hotelLine": "{name} ({stars}★، {distance} متر من الحرم)",
+        "labelRoomPrices": "أسعار الغرف",
+        "labelInclusions": "يشمل",
+        "labelCommission": "العمولة لكل مسافر",
+        "labelCashback": "الكاش باك لكل مسافر",
+        "labelDescription": "الوصف",
+        "noneValue": "غير محدد"
+      },
       "actions": {
         "viewPublic": "عرض الصفحة العامة",
         "edit": "تعديل",

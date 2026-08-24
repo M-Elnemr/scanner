@@ -35,6 +35,9 @@ public class LeadNotifier {
     public void leadCreated(Lead lead) {
         toCompany(lead, "NEW_LEAD", "عميل جديد مهتم",
                 "يوجد عميل مهتم برحلة " + lead.getTripTitle() + " لعدد " + lead.getTravelerCount() + " من المسافرين.");
+        toAdmins(lead, "NEW_LEAD", "حجز جديد",
+                "قام عميل بحجز رحلة " + lead.getTripTitle() + " مع شركة " + lead.getCompanyName()
+                        + " لعدد " + lead.getTravelerCount() + " من المسافرين.");
     }
 
     /**

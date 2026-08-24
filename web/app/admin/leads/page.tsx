@@ -10,6 +10,7 @@ import { AdminLeadStatusBadge } from "@/components/admin/admin-lead-status-badge
 import { AdminFilterBar } from "@/components/admin/admin-filter-bar";
 import { TablePagination } from "@/components/admin/table-pagination";
 import { WhatsAppButtons } from "@/components/admin/whatsapp-buttons";
+import { PullToRefresh } from "@/components/admin/pull-to-refresh";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 
@@ -122,75 +123,77 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
   const leads = pageData?.content ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("total", { count: pageData?.totalElements ?? 0 })}</p>
-      </div>
+    <PullToRefresh>
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-heading text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("total", { count: pageData?.totalElements ?? 0 })}</p>
+        </div>
 
-      <AdminFilterBar
-        statusOptions={STATUS_OPTIONS}
-        searchPlaceholder={t("searchPlaceholder")}
-        companyOptions={companies.map((c) => ({ value: c.id, label: c.name }))}
-        tripOptions={trips.map((trip) => ({ value: trip.id, label: `${trip.title} · ${trip.tripCode}` }))}
-      />
+        <AdminFilterBar
+          statusOptions={STATUS_OPTIONS}
+          searchPlaceholder={t("searchPlaceholder")}
+          companyOptions={companies.map((c) => ({ value: c.id, label: c.name }))}
+          tripOptions={trips.map((trip) => ({ value: trip.id, label: `${trip.title} · ${trip.tripCode}` }))}
+        />
 
-      <div className="overflow-hidden rounded-xl border border-border bg-background">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("colCustomer")}</TableHead>
-              <TableHead>{t("colTrip")}</TableHead>
-              <TableHead>{t("colCompany")}</TableHead>
-              <TableHead>{t("colCommission")}</TableHead>
-              <SortableHead field="status" label={t("colStatus")} sortBy={sortBy} sortDir={sortDir} baseParams={baseParams} />
-              <SortableHead field="createdAt" label={t("colCreated")} sortBy={sortBy} sortDir={sortDir} baseParams={baseParams} />
-              <TableHead>{t("colWhatsapp")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.length === 0 && (
+        <div className="overflow-hidden rounded-xl border border-border bg-background">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                  {t("empty")}
-                </TableCell>
+                <TableHead>{t("colCustomer")}</TableHead>
+                <TableHead>{t("colTrip")}</TableHead>
+                <TableHead>{t("colCompany")}</TableHead>
+                <TableHead>{t("colCommission")}</TableHead>
+                <SortableHead field="status" label={t("colStatus")} sortBy={sortBy} sortDir={sortDir} baseParams={baseParams} />
+                <SortableHead field="createdAt" label={t("colCreated")} sortBy={sortBy} sortDir={sortDir} baseParams={baseParams} />
+                <TableHead>{t("colWhatsapp")}</TableHead>
               </TableRow>
-            )}
-            {leads.map((l) => (
-              <TableRow key={l.id}>
-                <TableCell className="font-medium">
-                  <Link href={`/admin/leads/${l.id}`} className="hover:text-primary">
-                    {l.customer?.fullName ?? "—"}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">{l.customer?.phone}</p>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{l.tripTitle}</TableCell>
-                <TableCell className="text-muted-foreground">{l.companyName}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {l.commissionAmount != null ? formatMoney(l.commissionAmount, { code: "EGP" }, locale) : "—"}
-                </TableCell>
-                <TableCell>
-                  <AdminLeadStatusBadge status={l.status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">{formatDate(l.createdAt, undefined, locale)}</TableCell>
-                <TableCell>
-                  <p className="text-xs text-muted-foreground">{l.customer?.phone}</p>
-                  {l.id && (
-                    <WhatsAppButtons
-                      leadId={l.id}
-                      compact
-                      canMarkContacted={(l.availableActions ?? []).includes("MARK_CONTACTED")}
-                      canConfirmViaCompany={(l.availableActions ?? []).includes("CONFIRM_VIA_COMPANY")}
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {leads.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                    {t("empty")}
+                  </TableCell>
+                </TableRow>
+              )}
+              {leads.map((l) => (
+                <TableRow key={l.id}>
+                  <TableCell className="font-medium">
+                    <Link href={`/admin/leads/${l.id}`} className="hover:text-primary">
+                      {l.customer?.fullName ?? "—"}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">{l.customer?.phone}</p>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{l.tripTitle}</TableCell>
+                  <TableCell className="text-muted-foreground">{l.companyName}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {l.commissionAmount != null ? formatMoney(l.commissionAmount, { code: "EGP" }, locale) : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <AdminLeadStatusBadge status={l.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(l.createdAt, undefined, locale)}</TableCell>
+                  <TableCell>
+                    <p className="text-xs text-muted-foreground">{l.customer?.phone}</p>
+                    {l.id && (
+                      <WhatsAppButtons
+                        leadId={l.id}
+                        compact
+                        canMarkContacted={(l.availableActions ?? []).includes("MARK_CONTACTED")}
+                        canConfirmViaCompany={(l.availableActions ?? []).includes("CONFIRM_VIA_COMPANY")}
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
 
-      <TablePagination page={pageData?.page ?? 0} totalPages={pageData?.totalPages ?? 1} />
-    </div>
+        <TablePagination page={pageData?.page ?? 0} totalPages={pageData?.totalPages ?? 1} />
+      </div>
+    </PullToRefresh>
   );
 }

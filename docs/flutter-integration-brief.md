@@ -675,7 +675,7 @@ In-app notification rows (and future FCM pushes) carry a `type` plus a `data` ma
 
 | `type` | Recipient | Trigger |
 |---|---|---|
-| `NEW_LEAD` | company | customer contacted the company |
+| `NEW_LEAD` | company, admin | customer contacted the company — admins get their own title/body ("حجز جديد") naming the company, same `type` and `data` shape |
 | `DEPOSIT_CONFIRMATION_REQUIRED` | company | customer reported the deposit |
 | `DEPOSIT_CONFIRMED` | customer | company confirmed the deposit |
 | `FULL_PAYMENT_CONFIRMATION_REQUIRED` | company | customer reported full payment |

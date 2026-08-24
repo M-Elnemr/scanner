@@ -5,6 +5,9 @@ import { apiClient } from "@/lib/auth/server";
 import { unwrap, unwrapVoid } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { ActionResult } from "@/lib/leads/actions";
+import type { components } from "@/lib/api/schema";
+
+export type TripDetail = components["schemas"]["TripDetail"];
 
 export interface TripHotelInput {
   hotelId: string;
@@ -99,6 +102,17 @@ export async function changeTripStatusAction(
   } catch (error) {
     if (error instanceof ApiError) return { ok: false, error: error.message };
     return { ok: false, error: "Could not change trip status." };
+  }
+}
+
+export async function getTripDetailsAction(id: string): Promise<ActionResult<TripDetail>> {
+  try {
+    const api = await apiClient();
+    const result = await api.GET("/api/v1/admin/trips/{id}", { params: { path: { id } }, cache: "no-store" });
+    return { ok: true, data: unwrap<TripDetail>(result) };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, error: error.message };
+    return { ok: false, error: "Could not load trip details." };
   }
 }
 

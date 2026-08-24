@@ -7,6 +7,7 @@ import { listHotelsByCity } from "@/lib/admin/hotel-picker";
 import { TripForm } from "@/components/admin/trip-form";
 import { TripStatusBadge } from "@/components/admin/trip-status-badge";
 import { TripRowActions } from "@/components/admin/trip-row-actions";
+import { CopyTripDetailsButton } from "@/components/admin/copy-trip-details-button";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.pageTitle");
@@ -43,7 +44,10 @@ export default async function EditTripPage(props: PageProps<"/admin/trips/[id]">
             <span className="text-xs text-muted-foreground">{trip.company?.companyName}</span>
           </div>
         </div>
-        <TripRowActions id={trip.id} status={trip.status} companies={companies} />
+        <div className="flex items-center gap-1">
+          <CopyTripDetailsButton tripId={trip.id} />
+          <TripRowActions id={trip.id} status={trip.status} companies={companies} />
+        </div>
       </div>
 
       <TripForm
