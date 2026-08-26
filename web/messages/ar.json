@@ -185,6 +185,7 @@
     "double": "مزدوجة",
     "triple": "ثلاثية",
     "quad": "رباعية",
+    "quint": "خماسية",
     "child": "طفل",
     "infant": "رضيع"
   },
@@ -578,7 +579,6 @@
       "copyDetails": "نسخ تفاصيل الرحلة",
       "copy": {
         "header": "{title} ({tripCode})",
-        "labelCompany": "الشركة",
         "labelStatus": "الحالة",
         "labelTier": "الفئة",
         "labelDates": "التواريخ",
@@ -593,7 +593,6 @@
         "labelRoomPrices": "أسعار الغرف",
         "labelInclusions": "يشمل",
         "labelCommission": "العمولة لكل مسافر",
-        "labelCashback": "الكاش باك لكل مسافر",
         "labelDescription": "الوصف",
         "noneValue": "غير محدد"
       },
@@ -658,6 +657,7 @@
         "roomDouble": "مزدوجة",
         "roomTriple": "ثلاثية",
         "roomQuad": "رباعية",
+        "roomQuint": "خماسية",
         "roomChild": "طفل",
         "roomInfant": "رضيع",
         "descriptionTitle": "الوصف",

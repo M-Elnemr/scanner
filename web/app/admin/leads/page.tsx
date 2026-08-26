@@ -58,8 +58,20 @@ export default async function AdminLeadsPage(props: PageProps<"/admin/leads">) {
   const companyId = typeof searchParams.companyId === "string" ? searchParams.companyId : undefined;
   const tripId = typeof searchParams.tripId === "string" ? searchParams.tripId : undefined;
   const page = typeof searchParams.page === "string" ? Number(searchParams.page) : 0;
-  const sortBy: SortField = searchParams.sortBy === "createdAt" ? "createdAt" : "status";
-  const sortDir: "asc" | "desc" = searchParams.sortDir === "desc" ? "desc" : "asc";
+  // With a status filter applied, every visible row shares one status, so the status-rank sort is
+  // meaningless — default to newest-first by date instead, unless the user explicitly picked a sort
+  // (e.g. by clicking a column header, which always sets sortBy).
+  const hasExplicitSort = typeof searchParams.sortBy === "string";
+  const sortBy: SortField =
+    searchParams.sortBy === "createdAt" ? "createdAt"
+    : searchParams.sortBy === "status" ? "status"
+    : status && !hasExplicitSort ? "createdAt"
+    : "status";
+  const sortDir: "asc" | "desc" =
+    searchParams.sortDir === "desc" ? "desc"
+    : searchParams.sortDir === "asc" ? "asc"
+    : status && !hasExplicitSort ? "desc"
+    : "asc";
 
   // Preserves every filter/sort param except pagination when a header link or filter is followed.
   const baseParams = new URLSearchParams();

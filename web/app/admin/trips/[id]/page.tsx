@@ -89,6 +89,7 @@ export default async function EditTripPage(props: PageProps<"/admin/trips/[id]">
             DOUBLE: priceFor("DOUBLE") != null ? String(priceFor("DOUBLE")) : "",
             TRIPLE: priceFor("TRIPLE") != null ? String(priceFor("TRIPLE")) : "",
             QUAD: priceFor("QUAD") != null ? String(priceFor("QUAD")) : "",
+            QUINT: priceFor("QUINT") != null ? String(priceFor("QUINT")) : "",
             CHILD: priceFor("CHILD") != null ? String(priceFor("CHILD")) : "",
             INFANT: priceFor("INFANT") != null ? String(priceFor("INFANT")) : "",
           },

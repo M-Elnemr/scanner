@@ -54,6 +54,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
     DOUBLE: tRoomTypes("double"),
     TRIPLE: tRoomTypes("triple"),
     QUAD: tRoomTypes("quad"),
+    QUINT: tRoomTypes("quint"),
     CHILD: tRoomTypes("child"),
     INFANT: tRoomTypes("infant"),
   };
@@ -446,7 +447,7 @@ function CityBadge({ label }: { label: string }) {
   );
 }
 
-const ROOM_TYPE_ORDER: Record<string, number> = { DOUBLE: 0, TRIPLE: 1, QUAD: 2, CHILD: 3, INFANT: 4, SINGLE: 5 };
+const ROOM_TYPE_ORDER: Record<string, number> = { DOUBLE: 0, TRIPLE: 1, QUAD: 2, QUINT: 3, CHILD: 4, INFANT: 5, SINGLE: 6 };
 
 function roomTypeSortOrder(roomType: string | undefined): number {
   return roomType != null && roomType in ROOM_TYPE_ORDER ? ROOM_TYPE_ORDER[roomType] : 99;

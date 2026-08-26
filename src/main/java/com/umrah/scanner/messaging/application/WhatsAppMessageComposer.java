@@ -167,9 +167,6 @@ public class WhatsAppMessageComposer {
         if (company.getWhatsapp() != null && !company.getWhatsapp().isBlank()) {
             m.append(ar ? "📱 واتساب: " : "📱 WhatsApp: ").append(company.getWhatsapp()).append('\n');
         }
-        if (company.getDescription() != null && !company.getDescription().isBlank()) {
-            m.append('\n').append(company.getDescription()).append('\n');
-        }
 
         m.append('\n').append(ar ? "الفروع:" : "Branches:").append('\n');
         for (CompanyAddress address : company.getAddresses()) {
@@ -261,12 +258,12 @@ public class WhatsAppMessageComposer {
         if (!ar) {
             return switch (type) {
                 case SINGLE -> "Single"; case DOUBLE -> "Double"; case TRIPLE -> "Triple";
-                case QUAD -> "Quad"; case CHILD -> "Child"; case INFANT -> "Infant";
+                case QUAD -> "Quad"; case QUINT -> "Quint"; case CHILD -> "Child"; case INFANT -> "Infant";
             };
         }
         return switch (type) {
             case SINGLE -> "مفرد"; case DOUBLE -> "مزدوج"; case TRIPLE -> "ثلاثي";
-            case QUAD -> "رباعي"; case CHILD -> "طفل"; case INFANT -> "رضيع";
+            case QUAD -> "رباعي"; case QUINT -> "خماسي"; case CHILD -> "طفل"; case INFANT -> "رضيع";
         };
     }
 

@@ -5,6 +5,7 @@ public enum RoomType {
     DOUBLE,
     TRIPLE,
     QUAD,
+    QUINT,
     CHILD,
     INFANT
 }

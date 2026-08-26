@@ -185,6 +185,7 @@
     "double": "Double",
     "triple": "Triple",
     "quad": "Quad",
+    "quint": "Quint",
     "child": "Child",
     "infant": "Infant"
   },
@@ -578,7 +579,6 @@
       "copyDetails": "Copy trip details",
       "copy": {
         "header": "{title} ({tripCode})",
-        "labelCompany": "Company",
         "labelStatus": "Status",
         "labelTier": "Tier",
         "labelDates": "Dates",
@@ -593,7 +593,6 @@
         "labelRoomPrices": "Room prices",
         "labelInclusions": "Included",
         "labelCommission": "Commission per traveler",
-        "labelCashback": "Cashback per traveler",
         "labelDescription": "Description",
         "noneValue": "None set"
       },
@@ -658,6 +657,7 @@
         "roomDouble": "Double",
         "roomTriple": "Triple",
         "roomQuad": "Quad",
+        "roomQuint": "Quint",
         "roomChild": "Child",
         "roomInfant": "Infant",
         "descriptionTitle": "Description",

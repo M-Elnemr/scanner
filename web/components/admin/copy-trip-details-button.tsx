@@ -17,6 +17,7 @@ const ROOM_TYPE_KEYS = {
   DOUBLE: "double",
   TRIPLE: "triple",
   QUAD: "quad",
+  QUINT: "quint",
   CHILD: "child",
   INFANT: "infant",
 } as const;
@@ -36,7 +37,6 @@ function buildTripDetailsText(
   const lines: string[] = [];
 
   lines.push(t("header", { title: trip.title ?? "", tripCode: trip.tripCode ?? "" }));
-  lines.push(`${t("labelCompany")}: ${trip.company?.companyName ?? none}`);
   lines.push(`${t("labelStatus")}: ${trip.status ? tStatus(trip.status) : none}`);
   lines.push(`${t("labelTier")}: ${trip.tier ? tTier(TIER_KEYS[trip.tier]) : none}`);
   lines.push(
@@ -96,7 +96,6 @@ function buildTripDetailsText(
 
   lines.push("");
   lines.push(`${t("labelCommission")}: ${formatMoney(trip.commissionPerTraveler, trip.currency, locale)}`);
-  lines.push(`${t("labelCashback")}: ${formatMoney(trip.cashbackPerTraveler, trip.currency, locale)}`);
 
   if (trip.description) {
     lines.push("");

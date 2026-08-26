@@ -171,6 +171,7 @@ export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[
                   { value: "2", label: tRoomTypes("double") },
                   { value: "3", label: tRoomTypes("triple") },
                   { value: "4", label: tRoomTypes("quad") },
+                  { value: "5", label: tRoomTypes("quint") },
                 ]}
               >
                 <SelectTrigger className="w-full">
@@ -181,6 +182,7 @@ export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[
                   <SelectItem value="2">{tRoomTypes("double")}</SelectItem>
                   <SelectItem value="3">{tRoomTypes("triple")}</SelectItem>
                   <SelectItem value="4">{tRoomTypes("quad")}</SelectItem>
+                  <SelectItem value="5">{tRoomTypes("quint")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

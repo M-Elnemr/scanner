@@ -1279,7 +1279,7 @@ export interface components {
             /** @description The company's per-traveler rate at the time this lead was created. Null for customers. */
             commissionPerTraveler?: number;
             /** @enum {string} */
-            confirmedRoomType?: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "CHILD" | "INFANT";
+            confirmedRoomType?: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "QUINT" | "CHILD" | "INFANT";
             confirmedPrice?: number;
             /** @description Exactly the actions this caller may perform on this lead right now */
             availableActions?: ("MARK_CONTACTED" | "CONFIRM_VIA_COMPANY" | "MARK_DEPOSIT_PAID" | "MARK_FULLY_PAID" | "REPORT_COMMISSION_PAID" | "CONFIRM_COMMISSION_PAID" | "PAY_CASHBACK" | "CANCEL")[];
@@ -1376,7 +1376,7 @@ export interface components {
         };
         RoomPriceRequest: {
             /** @enum {string} */
-            roomType: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "CHILD" | "INFANT";
+            roomType: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "QUINT" | "CHILD" | "INFANT";
             price: number;
         };
         TripHotelRequest: {
@@ -1502,7 +1502,7 @@ export interface components {
         };
         RoomPriceResponse: {
             /** @enum {string} */
-            roomType?: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "CHILD" | "INFANT";
+            roomType?: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "QUINT" | "CHILD" | "INFANT";
             price?: number;
         };
         /** @description Full Umrah program details as shown on the program page. */

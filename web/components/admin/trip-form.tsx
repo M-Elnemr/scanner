@@ -17,12 +17,16 @@ import type { AirportOption, CompanyOption, CurrencyOption } from "@/lib/admin/r
 import type { HotelOption } from "@/lib/admin/hotel-picker";
 import { today } from "@/lib/format/date";
 
-const ROOM_TYPES: RoomPriceInput["roomType"][] = ["SINGLE", "DOUBLE", "TRIPLE", "QUAD", "CHILD", "INFANT"];
-const ROOM_LABEL_KEY: Record<RoomPriceInput["roomType"], "roomSingle" | "roomDouble" | "roomTriple" | "roomQuad" | "roomChild" | "roomInfant"> = {
+const ROOM_TYPES: RoomPriceInput["roomType"][] = ["SINGLE", "DOUBLE", "TRIPLE", "QUAD", "QUINT", "CHILD", "INFANT"];
+const ROOM_LABEL_KEY: Record<
+  RoomPriceInput["roomType"],
+  "roomSingle" | "roomDouble" | "roomTriple" | "roomQuad" | "roomQuint" | "roomChild" | "roomInfant"
+> = {
   SINGLE: "roomSingle",
   DOUBLE: "roomDouble",
   TRIPLE: "roomTriple",
   QUAD: "roomQuad",
+  QUINT: "roomQuint",
   CHILD: "roomChild",
   INFANT: "roomInfant",
 };
@@ -84,7 +88,7 @@ const EMPTY: TripDraft = {
   makkahHotelRows: [],
   madinahHotelRows: [],
   commissionPerTraveler: "",
-  prices: { SINGLE: "", DOUBLE: "", TRIPLE: "", QUAD: "", CHILD: "", INFANT: "" },
+  prices: { SINGLE: "", DOUBLE: "", TRIPLE: "", QUAD: "", QUINT: "", CHILD: "", INFANT: "" },
 };
 
 export function TripForm({

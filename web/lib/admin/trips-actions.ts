@@ -14,7 +14,7 @@ export interface TripHotelInput {
 }
 
 export interface RoomPriceInput {
-  roomType: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "CHILD" | "INFANT";
+  roomType: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD" | "QUINT" | "CHILD" | "INFANT";
   price: number;
 }
 

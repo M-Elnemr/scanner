@@ -179,7 +179,8 @@ public class TripController {
             case 2 -> RoomType.DOUBLE;
             case 3 -> RoomType.TRIPLE;
             case 4 -> RoomType.QUAD;
-            default -> throw new ValidationException("roomSize must be 1, 2, 3, or 4");
+            case 5 -> RoomType.QUINT;
+            default -> throw new ValidationException("roomSize must be 1, 2, 3, 4, or 5");
         };
     }
 
