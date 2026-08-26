@@ -578,7 +578,6 @@
       "copyDetails": "Copy trip details",
       "copy": {
         "header": "{title} ({tripCode})",
-        "labelCompany": "Company",
         "labelStatus": "Status",
         "labelTier": "Tier",
         "labelDates": "Dates",
@@ -593,7 +592,6 @@
         "labelRoomPrices": "Room prices",
         "labelInclusions": "Included",
         "labelCommission": "Commission per traveler",
-        "labelCashback": "Cashback per traveler",
         "labelDescription": "Description",
         "noneValue": "None set"
       },

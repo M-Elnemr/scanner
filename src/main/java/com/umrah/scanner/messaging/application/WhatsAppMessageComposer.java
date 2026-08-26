@@ -167,9 +167,6 @@ public class WhatsAppMessageComposer {
         if (company.getWhatsapp() != null && !company.getWhatsapp().isBlank()) {
             m.append(ar ? "📱 واتساب: " : "📱 WhatsApp: ").append(company.getWhatsapp()).append('\n');
         }
-        if (company.getDescription() != null && !company.getDescription().isBlank()) {
-            m.append('\n').append(company.getDescription()).append('\n');
-        }
 
         m.append('\n').append(ar ? "الفروع:" : "Branches:").append('\n');
         for (CompanyAddress address : company.getAddresses()) {
