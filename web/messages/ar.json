@@ -213,6 +213,8 @@
     "sortBy": "الترتيب حسب",
     "sortPriceAsc": "السعر: من الأقل للأعلى",
     "sortPriceDesc": "السعر: من الأعلى للأقل",
+    "sortDurationAsc": "مدة الرحلة: الأقصر أولاً",
+    "sortDurationDesc": "مدة الرحلة: الأطول أولاً",
     "roomSize": "حجم الغرفة",
     "any": "أي",
     "companyCity": "مدينة الشركة المنظمة",
@@ -222,7 +224,7 @@
     "priceRange": "نطاق السعر",
     "min": "الحد الأدنى",
     "max": "الحد الأقصى",
-    "tripLength": "مدة الرحلة (بالليالي)",
+    "tripLength": "مدة الرحلة (بالأيام)",
     "departureWindow": "فترة المغادرة",
     "applyFilters": "تطبيق الفلاتر",
     "clear": "مسح",
@@ -234,7 +236,7 @@
     "compareButton": "قارن",
     "pageOf": "صفحة {page} من {totalPages}",
     "from": "يبدأ من",
-    "nightsAbbrev": "{count} ليلة"
+    "daysAbbrev": "{count} يوم"
   },
   "tripDetail": {
     "metaFallbackTitle": "رحلة",
@@ -277,7 +279,7 @@
     "pickAtLeastTwo": "اختر رحلتين على الأقل من صفحة التصفح لمقارنتهما.",
     "rowTier": "الفئة",
     "rowDeparture": "المغادرة",
-    "rowNights": "الليالي",
+    "rowDuration": "مدة الرحلة",
     "rowAirline": "شركة الطيران",
     "rowRoute": "المسار",
     "rowMakkahNights": "ليالي مكة",

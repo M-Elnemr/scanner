@@ -213,6 +213,8 @@
     "sortBy": "Sort by",
     "sortPriceAsc": "Price: Low to High",
     "sortPriceDesc": "Price: High to Low",
+    "sortDurationAsc": "Trip length: Shortest first",
+    "sortDurationDesc": "Trip length: Longest first",
     "roomSize": "Room size",
     "any": "Any",
     "companyCity": "Company city",
@@ -222,7 +224,7 @@
     "priceRange": "Price range",
     "min": "Min",
     "max": "Max",
-    "tripLength": "Trip length (nights)",
+    "tripLength": "Trip length (days)",
     "departureWindow": "Departure window",
     "applyFilters": "Apply filters",
     "clear": "Clear",
@@ -234,7 +236,7 @@
     "compareButton": "Compare",
     "pageOf": "Page {page} of {totalPages}",
     "from": "From",
-    "nightsAbbrev": "{count}N"
+    "daysAbbrev": "{count}D"
   },
   "tripDetail": {
     "metaFallbackTitle": "Trip",
@@ -277,7 +279,7 @@
     "pickAtLeastTwo": "Pick at least two trips from the browse page to compare them.",
     "rowTier": "Tier",
     "rowDeparture": "Departure",
-    "rowNights": "Nights",
+    "rowDuration": "Trip length",
     "rowAirline": "Airline",
     "rowRoute": "Route",
     "rowMakkahNights": "Makkah nights",

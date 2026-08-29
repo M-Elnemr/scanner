@@ -3524,6 +3524,7 @@ export interface operations {
                 cityId?: string;
                 departureAirportId?: string;
                 priceSort?: string;
+                durationSort?: string;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;

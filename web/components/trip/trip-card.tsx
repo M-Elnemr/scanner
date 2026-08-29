@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { HotelPhotoCarousel } from "@/components/trip/hotel-photo-carousel";
 import { CompareToggle } from "@/components/trip/compare-toggle";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, tripDurationNights } from "@/lib/format/date";
+import { formatDate, tripDurationDays } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import type { components } from "@/lib/api/schema";
 
@@ -16,7 +16,7 @@ export function TripCard({ trip }: { trip: TripSummary }) {
   const t = useTranslations("trips");
   const tTiers = useTranslations("tiers");
   const locale = useLocale() as "ar" | "en";
-  const nights = tripDurationNights(trip.departureDate, trip.returnDate);
+  const days = tripDurationDays(trip.departureDate, trip.returnDate);
 
   const TIER_LABEL: Record<string, string> = { VIP: tTiers("vip"), PREMIUM: tTiers("premium"), ECONOMIC: tTiers("economic") };
 
@@ -50,7 +50,7 @@ export function TripCard({ trip }: { trip: TripSummary }) {
           <span className="flex items-center gap-1">
             <CalendarDays className="size-3.5" />
             {formatDate(trip.departureDate, undefined, locale)}
-            {nights != null ? ` · ${t("nightsAbbrev", { count: nights })}` : ""}
+            {days != null ? ` · ${t("daysAbbrev", { count: days })}` : ""}
           </span>
           <span className="flex items-center gap-1">
             <MapPin className="size-3.5" />

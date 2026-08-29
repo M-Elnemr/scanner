@@ -115,8 +115,8 @@ public class TripQueryService {
         if (filter.departureFrom() != null || filter.departureTo() != null) {
             specs.add(TripSpecifications.departureBetween(filter.departureFrom(), filter.departureTo()));
         }
-        if (filter.minDays() != null || filter.maxDays() != null) {
-            specs.add(TripSpecifications.durationBetween(filter.minDays(), filter.maxDays()));
+        if (filter.minNights() != null || filter.maxNights() != null) {
+            specs.add(TripSpecifications.durationBetween(filter.minNights(), filter.maxNights()));
         }
         if (filter.minPrice() != null || filter.maxPrice() != null) {
             RoomType roomType = filter.priceRoomType() != null ? filter.priceRoomType() : RoomType.QUAD;
@@ -128,9 +128,7 @@ public class TripQueryService {
         if (filter.departureAirportId() != null) {
             specs.add(TripSpecifications.hasOutboundDepartureAirport(filter.departureAirportId()));
         }
-        if (filter.priceSortDirection() != null) {
-            specs.add(TripSpecifications.orderByRoomTypePrice(RoomType.QUAD, filter.priceSortDirection()));
-        }
+        specs.add(TripSpecifications.orderBrowseResults(RoomType.QUAD, filter.priceSortDirection(), filter.durationSortDirection()));
         return tripRepository.findAll(Specification.allOf(specs), pageable);
     }
 

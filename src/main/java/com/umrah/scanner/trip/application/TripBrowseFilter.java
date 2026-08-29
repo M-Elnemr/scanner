@@ -14,17 +14,20 @@ public record TripBrowseFilter(
         RoomType priceRoomType,
         BigDecimal minPrice,
         BigDecimal maxPrice,
-        Integer minDays,
-        Integer maxDays,
+        /** Nights ({@code durationDays}), already converted from the public "days" query params by the controller. */
+        Integer minNights,
+        Integer maxNights,
         LocalDate departureFrom,
         LocalDate departureTo,
         /** Trips whose organizing company has at least one branch address in this city. */
         UUID companyCityId,
         /** The Egyptian airport the traveler wants to depart from and return to. */
         UUID departureAirportId,
-        /** Orders results by the QUAD room price; {@code null} leaves the default (unordered) result order. */
-        Sort.Direction priceSortDirection) {
+        /** Orders results by the QUAD room price; {@code null} falls through to the combined default with {@link #durationSortDirection}. */
+        Sort.Direction priceSortDirection,
+        /** Orders results by trip length; {@code null} falls through to the combined default with {@link #priceSortDirection}. */
+        Sort.Direction durationSortDirection) {
 
     public static final TripBrowseFilter NONE =
-            new TripBrowseFilter(null, null, null, null, null, null, null, null, null, null, null);
+            new TripBrowseFilter(null, null, null, null, null, null, null, null, null, null, null, null);
 }

@@ -149,6 +149,9 @@ public class TripController {
             @RequestParam(required = false) Integer roomSize,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            // Public API terms: whole trip days (departure day through return day inclusive), the
+            // travel-industry convention ("15-day trip" = 14 nights) — converted to nights below
+            // before filtering, since durationDays on the entity is the raw return-minus-departure gap.
             @RequestParam(required = false) Integer minDays,
             @RequestParam(required = false) Integer maxDays,
             @RequestParam(required = false) LocalDate departureFrom,
@@ -157,10 +160,13 @@ public class TripController {
             @RequestParam(required = false) UUID departureAirportId,
             // Deliberately not named "sort" — that query param is already claimed by Pageable below.
             @RequestParam(required = false) String priceSort,
+            @RequestParam(required = false) String durationSort,
             Pageable pageable) {
         var filter = new TripBrowseFilter(
-                tiers, roomTypeForSize(roomSize), minPrice, maxPrice, minDays, maxDays, departureFrom, departureTo,
-                cityId, departureAirportId, priceSortDirection(priceSort));
+                tiers, roomTypeForSize(roomSize), minPrice, maxPrice,
+                minDays != null ? minDays - 1 : null, maxDays != null ? maxDays - 1 : null,
+                departureFrom, departureTo, cityId, departureAirportId,
+                parseSortDirection(priceSort, "priceSort"), parseSortDirection(durationSort, "durationSort"));
         Page<Trip> trips = tripQueryService.browsePublished(filter, pageable);
         Map<UUID, BigDecimal> priceStartsFrom = tripQueryService.priceStartsFrom(tripIds(trips));
         Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds(trips));
@@ -184,14 +190,14 @@ public class TripController {
         };
     }
 
-    private Sort.Direction priceSortDirection(String priceSort) {
-        if (priceSort == null) {
+    private Sort.Direction parseSortDirection(String value, String paramName) {
+        if (value == null) {
             return null;
         }
         try {
-            return Sort.Direction.fromString(priceSort);
+            return Sort.Direction.fromString(value);
         } catch (IllegalArgumentException e) {
-            throw new ValidationException("priceSort must be 'asc' or 'desc'");
+            throw new ValidationException(paramName + " must be 'asc' or 'desc'");
         }
     }
 

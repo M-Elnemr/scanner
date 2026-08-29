@@ -39,6 +39,7 @@ export default async function TripsPage(props: PageProps<"/trips">) {
   const cityId = first(sp.cityId);
   const departureAirportId = first(sp.departureAirportId);
   const priceSort = first(sp.priceSort) as "asc" | "desc" | undefined;
+  const durationSort = first(sp.durationSort) as "asc" | "desc" | undefined;
 
   const [result, cities, airports] = await Promise.all([
     publicApi.GET("/api/v1/trips", {
@@ -55,6 +56,7 @@ export default async function TripsPage(props: PageProps<"/trips">) {
           cityId,
           departureAirportId,
           priceSort,
+          durationSort,
           ...pageableQuery(page, 12),
         },
       },

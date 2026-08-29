@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser, apiClient } from "@/lib/auth/server";
-import { formatDate, tripDurationNights } from "@/lib/format/date";
+import { formatDate, tripDurationDays } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { Button } from "@/components/ui/button";
 import type { components } from "@/lib/api/schema";
@@ -24,7 +24,7 @@ function buildRows(
   return [
     { label: t("rowTier"), render: (trip) => trip.tier },
     { label: t("rowDeparture"), render: (trip) => formatDate(trip.departureDate, undefined, locale) },
-    { label: t("rowNights"), render: (trip) => tripDurationNights(trip.departureDate, trip.returnDate) ?? "—" },
+    { label: t("rowDuration"), render: (trip) => tripDurationDays(trip.departureDate, trip.returnDate) ?? "—" },
     { label: t("rowAirline"), render: (trip) => trip.airline },
     {
       label: t("rowRoute"),

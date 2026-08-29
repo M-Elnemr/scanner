@@ -7,9 +7,12 @@ import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.domain.TripTier;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -84,15 +87,15 @@ public final class TripSpecifications {
         };
     }
 
-    public static Specification<Trip> durationBetween(Integer minDays, Integer maxDays) {
+    public static Specification<Trip> durationBetween(Integer minNights, Integer maxNights) {
         return (root, query, cb) -> {
-            if (minDays != null && maxDays != null) {
-                return cb.between(root.get("durationDays"), minDays, maxDays);
+            if (minNights != null && maxNights != null) {
+                return cb.between(root.get("durationDays"), minNights, maxNights);
             }
-            if (minDays != null) {
-                return cb.greaterThanOrEqualTo(root.get("durationDays"), minDays);
+            if (minNights != null) {
+                return cb.greaterThanOrEqualTo(root.get("durationDays"), minNights);
             }
-            return cb.lessThanOrEqualTo(root.get("durationDays"), maxDays);
+            return cb.lessThanOrEqualTo(root.get("durationDays"), maxNights);
         };
     }
 
@@ -137,21 +140,49 @@ public final class TripSpecifications {
     }
 
     /**
-     * Orders results by the given room type's price. A left join keeps trips with no price row for
-     * that room type in the result set (sorted to whichever end the database puts nulls on) instead
-     * of silently dropping them.
+     * Orders browse results by price, trip length, or both, falling back to a fixed default
+     * (longest trip first, then lowest price) when neither is requested. The price ordering left
+     * joins {@code roomPrices} filtered to {@code priceRoomType} so trips with no price row for that
+     * type stay in the result set (sorted to whichever end the database puts nulls on) rather than
+     * being dropped; trip length needs no join, it orders directly on the {@code durationDays}
+     * column.
+     *
+     * <p>When both {@code priceDirection} and {@code durationDirection} are given, price sorts first
+     * and trip length breaks ties — this and the default both need a single combined ordering, since
+     * only one {@code query.orderBy(...)} call can win per query (see below).
      *
      * <p>Sets order directly on the shared {@code CriteriaQuery} rather than returning a predicate —
      * this only works because callers never also populate {@code Pageable}'s own {@code Sort} on the
      * same query; Spring Data JPA overwrites {@code query.orderBy(...)} with {@code Pageable}'s sort
-     * whenever one is present, which would silently undo this.
+     * whenever one is present, which would silently undo this. For the same reason this must be the
+     * only place in a browse query that calls {@code orderBy} — everything is combined into the one
+     * list built here rather than split across separate specifications.
      */
-    public static Specification<Trip> orderByRoomTypePrice(RoomType roomType, Sort.Direction direction) {
+    public static Specification<Trip> orderBrowseResults(
+            RoomType priceRoomType, Sort.Direction priceDirection, Sort.Direction durationDirection) {
         return (root, query, cb) -> {
-            Join<Trip, RoomPrice> prices = root.join("roomPrices", JoinType.LEFT);
-            prices.on(cb.equal(prices.get("roomType"), roomType));
-            query.orderBy(direction == Sort.Direction.DESC ? cb.desc(prices.get("price")) : cb.asc(prices.get("price")));
+            List<Order> orders = new ArrayList<>();
+            if (priceDirection == null && durationDirection == null) {
+                orders.add(cb.desc(root.get("durationDays")));
+                orders.add(priceOrder(root, cb, priceRoomType, Sort.Direction.ASC));
+            } else {
+                if (priceDirection != null) {
+                    orders.add(priceOrder(root, cb, priceRoomType, priceDirection));
+                }
+                if (durationDirection != null) {
+                    orders.add(durationDirection == Sort.Direction.DESC
+                            ? cb.desc(root.get("durationDays"))
+                            : cb.asc(root.get("durationDays")));
+                }
+            }
+            query.orderBy(orders);
             return cb.conjunction();
         };
+    }
+
+    private static Order priceOrder(Root<Trip> root, CriteriaBuilder cb, RoomType roomType, Sort.Direction direction) {
+        Join<Trip, RoomPrice> prices = root.join("roomPrices", JoinType.LEFT);
+        prices.on(cb.equal(prices.get("roomType"), roomType));
+        return direction == Sort.Direction.DESC ? cb.desc(prices.get("price")) : cb.asc(prices.get("price"));
     }
 }

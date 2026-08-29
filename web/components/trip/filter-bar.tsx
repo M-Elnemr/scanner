@@ -44,6 +44,7 @@ export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[
   const tRoomTypes = useTranslations("roomTypes");
   const activeTiers = searchParams.getAll("tiers");
   const priceSort = searchParams.get("priceSort") ?? "";
+  const durationSort = searchParams.get("durationSort") ?? "";
 
   const TIERS = TIER_VALUES.map((value) => ({
     value,
@@ -85,6 +86,13 @@ export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[
     });
   }
 
+  function setDurationSort(direction: string) {
+    pushParams((params) => {
+      if (direction) params.set("durationSort", direction);
+      else params.delete("durationSort");
+    });
+  }
+
   function applyAdvanced() {
     pushParams((params) => {
       const keys = ["roomSize", "minPrice", "maxPrice", "minDays", "maxDays", "departureFrom", "departureTo", "cityId", "departureAirportId"] as const;
@@ -112,7 +120,7 @@ export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[
   }
 
   const advancedCount = Object.values(draft).filter(Boolean).length;
-  const hasAnyFilter = activeTiers.length > 0 || advancedCount > 0 || Boolean(priceSort);
+  const hasAnyFilter = activeTiers.length > 0 || advancedCount > 0 || Boolean(priceSort) || Boolean(durationSort);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -143,6 +151,25 @@ export function FilterBar({ cities = [], airports = [] }: { cities?: CityOption[
         <SelectContent>
           <SelectItem value="asc">{t("sortPriceAsc")}</SelectItem>
           <SelectItem value="desc">{t("sortPriceDesc")}</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Trip-length sort is the secondary tie-breaker when combined with price sort — see
+          TripSpecifications.orderBrowseResults on the backend. */}
+      <Select
+        value={durationSort}
+        onValueChange={(v) => setDurationSort(v ?? "")}
+        items={[
+          { value: "asc", label: t("sortDurationAsc") },
+          { value: "desc", label: t("sortDurationDesc") },
+        ]}
+      >
+        <SelectTrigger className="w-auto rounded-full" size="sm">
+          <SelectValue placeholder={t("sortBy")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="asc">{t("sortDurationAsc")}</SelectItem>
+          <SelectItem value="desc">{t("sortDurationDesc")}</SelectItem>
         </SelectContent>
       </Select>
 

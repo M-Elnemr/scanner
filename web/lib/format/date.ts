@@ -12,9 +12,10 @@ export function formatDate(
   return format(parseISO(iso), pattern, { locale: DATE_FNS_LOCALES[locale] });
 }
 
-export function tripDurationNights(departureDate?: string, returnDate?: string): number | null {
+/** Whole trip days (departure day through return day inclusive) — the travel-industry convention, one more than the night count. */
+export function tripDurationDays(departureDate?: string, returnDate?: string): number | null {
   if (!departureDate || !returnDate) return null;
-  return differenceInCalendarDays(parseISO(returnDate), parseISO(departureDate));
+  return differenceInCalendarDays(parseISO(returnDate), parseISO(departureDate)) + 1;
 }
 
 export function today(): string {
