@@ -695,7 +695,24 @@
       "mostViewedTrips": "Most viewed trips",
       "colTrip": "Trip",
       "colViews": "Views",
-      "empty": "No events recorded in this period yet."
+      "empty": "No events recorded in this period yet.",
+      "uniqueSignedInUsers": "Unique signed-in users",
+      "mostSharedTrips": "Most shared trips",
+      "colShares": "Shares",
+      "range": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last30min": "Last 30 minutes",
+        "last24h": "Last 24 hours",
+        "last7d": "Last 7 days",
+        "last30d": "Last 30 days",
+        "custom": "Custom range",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "reset": "Reset",
+        "viewAsTable": "View as table"
+      }
     }
   }
 }

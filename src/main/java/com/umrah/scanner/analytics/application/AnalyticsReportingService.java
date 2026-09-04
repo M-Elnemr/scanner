@@ -3,9 +3,8 @@ package com.umrah.scanner.analytics.application;
 import com.umrah.scanner.analytics.infrastructure.AnalyticsEventRepository;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.infrastructure.TripRepository;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -18,10 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Read side of the {@code analytics_events} pipeline the app has been writing to (see
  * {@code AnalyticsEventService}) with nothing ever reading it back — this is that read side,
- * kept deliberately cheap: every query is bounded to a caller-supplied date range (clamped to
+ * kept deliberately cheap: every query is bounded to a caller-supplied instant range (clamped to
  * {@link #MAX_RANGE_DAYS}) and runs against the table's existing indexes; trip titles for the
- * most-viewed list are resolved with one batched lookup after the group-by, not a join inside the
- * aggregation query itself.
+ * most-viewed/most-shared lists are resolved with one batched lookup after the group-by, not a
+ * join inside the aggregation query itself.
  */
 @Service
 @Transactional(readOnly = true)
@@ -30,6 +29,7 @@ public class AnalyticsReportingService {
     private static final int MAX_RANGE_DAYS = 90;
     private static final int DEFAULT_RANGE_DAYS = 30;
     private static final String TRIP_VIEW_EVENT_TYPE = "trip_view";
+    private static final String TRIP_SHARE_EVENT_TYPE = "trip_share";
     private static final String TRIP_ENTITY_TYPE = "TRIP";
 
     private final AnalyticsEventRepository analyticsEventRepository;
@@ -40,23 +40,52 @@ public class AnalyticsReportingService {
         this.tripRepository = tripRepository;
     }
 
-    public List<EventTypeCount> eventsByType(LocalDate from, LocalDate to) {
-        DateRange range = clamp(from, to);
+    public List<EventTypeCount> eventsByType(Instant from, Instant to) {
+        Range range = clamp(from, to);
         return analyticsEventRepository.countByEventTypeBetween(range.from(), range.to());
     }
 
-    public AudienceSplit audience(LocalDate from, LocalDate to) {
-        DateRange range = clamp(from, to);
+    public AudienceSplit audience(Instant from, Instant to) {
+        Range range = clamp(from, to);
         long guests = analyticsEventRepository.countGuestEventsBetween(range.from(), range.to());
         long identified = analyticsEventRepository.countIdentifiedEventsBetween(range.from(), range.to());
-        return new AudienceSplit(guests, identified);
+        long uniqueUsers = analyticsEventRepository.countDistinctUsersBetween(range.from(), range.to());
+        return new AudienceSplit(guests, identified, uniqueUsers);
     }
 
-    public List<TripViewCount> mostViewedTrips(LocalDate from, LocalDate to, int limit) {
-        DateRange range = clamp(from, to);
+    /**
+     * Buckets the range into minute/hour/day points depending on its span, so a 30-minute pick
+     * renders as per-minute points and a 30-day pick renders as daily points rather than one lump
+     * total either way. The bucket unit is always chosen here, never taken from the caller, before
+     * it reaches the native {@code date_trunc} query.
+     */
+    public List<TimeBucketCount> eventsOverTime(Instant from, Instant to) {
+        Range range = clamp(from, to);
+        Duration span = Duration.between(range.from(), range.to());
+        String unit;
+        if (span.compareTo(Duration.ofHours(3)) <= 0) {
+            unit = "minute";
+        } else if (span.compareTo(Duration.ofDays(3)) <= 0) {
+            unit = "hour";
+        } else {
+            unit = "day";
+        }
+        return analyticsEventRepository.countByTimeBucket(unit, range.from(), range.to());
+    }
+
+    public List<TripViewCount> mostViewedTrips(Instant from, Instant to, int limit) {
+        return mostTrips(TRIP_VIEW_EVENT_TYPE, from, to, limit);
+    }
+
+    public List<TripViewCount> mostSharedTrips(Instant from, Instant to, int limit) {
+        return mostTrips(TRIP_SHARE_EVENT_TYPE, from, to, limit);
+    }
+
+    private List<TripViewCount> mostTrips(String eventType, Instant from, Instant to, int limit) {
+        Range range = clamp(from, to);
         Pageable pageable = PageRequest.of(0, Math.min(Math.max(limit, 1), 50));
         List<MostViewedTrip> rows = analyticsEventRepository.mostViewed(
-                TRIP_VIEW_EVENT_TYPE, TRIP_ENTITY_TYPE, range.from(), range.to(), pageable);
+                eventType, TRIP_ENTITY_TYPE, range.from(), range.to(), pageable);
         if (rows.isEmpty()) {
             return List.of();
         }
@@ -69,24 +98,21 @@ public class AnalyticsReportingService {
     /**
      * Defaults to the last {@link #DEFAULT_RANGE_DAYS} days when the caller sends neither bound,
      * and clamps the span to {@link #MAX_RANGE_DAYS} regardless — every query this service runs
-     * stays cheap no matter what a caller asks for. {@code to} is exclusive-of-the-next-day
-     * (converted to the start of the day after) so a same-day range still includes today's events.
+     * stays cheap no matter what a caller asks for.
      */
-    private DateRange clamp(LocalDate from, LocalDate to) {
-        LocalDate effectiveTo = to != null ? to : LocalDate.now();
-        LocalDate effectiveFrom = from != null ? from : effectiveTo.minusDays(DEFAULT_RANGE_DAYS);
+    private Range clamp(Instant from, Instant to) {
+        Instant effectiveTo = to != null ? to : Instant.now();
+        Instant effectiveFrom = from != null ? from : effectiveTo.minus(Duration.ofDays(DEFAULT_RANGE_DAYS));
         if (effectiveFrom.isAfter(effectiveTo)) {
             effectiveFrom = effectiveTo;
         }
-        LocalDate earliestAllowed = effectiveTo.minusDays(MAX_RANGE_DAYS);
+        Instant earliestAllowed = effectiveTo.minus(Duration.ofDays(MAX_RANGE_DAYS));
         if (effectiveFrom.isBefore(earliestAllowed)) {
             effectiveFrom = earliestAllowed;
         }
-        return new DateRange(
-                effectiveFrom.atStartOfDay(ZoneOffset.UTC).toInstant(),
-                effectiveTo.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        return new Range(effectiveFrom, effectiveTo);
     }
 
-    private record DateRange(Instant from, Instant to) {
+    private record Range(Instant from, Instant to) {
     }
 }

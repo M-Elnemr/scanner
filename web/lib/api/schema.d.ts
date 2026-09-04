@@ -1223,6 +1223,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/analytics/most-shared-trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mostSharedTrips"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/analytics/events-summary": {
         parameters: {
             query?: never;
@@ -1231,6 +1247,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["eventsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/events-over-time": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["eventsOverTime"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2186,6 +2218,15 @@ export interface components {
             /** Format: int64 */
             count?: number;
         };
+        ApiResponseListTimeBucketCount: {
+            data?: components["schemas"]["TimeBucketCount"][];
+        };
+        TimeBucketCount: {
+            /** Format: date-time */
+            bucket?: string;
+            /** Format: int64 */
+            count?: number;
+        };
         ApiResponseAudienceSplit: {
             data?: components["schemas"]["AudienceSplit"];
         };
@@ -2194,6 +2235,8 @@ export interface components {
             guestEvents?: number;
             /** Format: int64 */
             identifiedEvents?: number;
+            /** Format: int64 */
+            uniqueSignedInUsers?: number;
         };
     };
     responses: never;
@@ -4198,6 +4241,30 @@ export interface operations {
             };
         };
     };
+    mostSharedTrips: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListTripViewCount"];
+                };
+            };
+        };
+    };
     eventsSummary: {
         parameters: {
             query?: {
@@ -4217,6 +4284,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListEventTypeCount"];
+                };
+            };
+        };
+    };
+    eventsOverTime: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListTimeBucketCount"];
                 };
             };
         };

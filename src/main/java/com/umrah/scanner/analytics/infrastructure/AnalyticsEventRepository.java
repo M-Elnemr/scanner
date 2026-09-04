@@ -2,6 +2,7 @@ package com.umrah.scanner.analytics.infrastructure;
 
 import com.umrah.scanner.analytics.application.EventTypeCount;
 import com.umrah.scanner.analytics.application.MostViewedTrip;
+import com.umrah.scanner.analytics.application.TimeBucketCount;
 import com.umrah.scanner.analytics.domain.AnalyticsEvent;
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +27,25 @@ public interface AnalyticsEventRepository extends JpaRepository<AnalyticsEvent, 
     @Query("select count(e) from AnalyticsEvent e "
             + "where e.createdAt >= :from and e.createdAt < :to and e.userId is not null")
     long countIdentifiedEventsBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    /** Uses the {@code (user_id)} index for the non-null branch this filters to. */
+    @Query("select count(distinct e.userId) from AnalyticsEvent e "
+            + "where e.createdAt >= :from and e.createdAt < :to and e.userId is not null")
+    long countDistinctUsersBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    /**
+     * {@code :unit} is always one of a small fixed set chosen server-side by
+     * {@code AnalyticsReportingService} (never client-supplied) — see its own doc comment. Native
+     * query since JPQL has no portable {@code date_trunc} equivalent; uses the
+     * {@code (event_type, created_at)} index's {@code created_at} ordering for the range scan.
+     */
+    @Query(
+            value = "select date_trunc(:unit, created_at) as bucket, count(*) as count "
+                    + "from analytics_events where created_at >= :from and created_at < :to "
+                    + "group by bucket order by bucket",
+            nativeQuery = true)
+    List<TimeBucketCount> countByTimeBucket(
+            @Param("unit") String unit, @Param("from") Instant from, @Param("to") Instant to);
 
     /**
      * Uses the {@code (entity_type, entity_id, event_type)} index (migration V45) — without it,
