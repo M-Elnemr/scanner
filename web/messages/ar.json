@@ -337,7 +337,8 @@
       "companies": "الشركات",
       "trips": "الرحلات",
       "hotels": "الفنادق",
-      "leads": "الحجوزات"
+      "leads": "الحجوزات",
+      "analytics": "الإحصائيات"
     },
     "pageTitle": {
       "dashboard": "لوحة التحكم",
@@ -349,7 +350,8 @@
       "leadDetail": "تفاصيل الحجز · الإدارة",
       "trips": "الرحلات · الإدارة",
       "tripNew": "رحلة جديدة · الإدارة",
-      "tripEdit": "تعديل الرحلة · الإدارة"
+      "tripEdit": "تعديل الرحلة · الإدارة",
+      "analytics": "الإحصائيات · الإدارة"
     },
     "dashboard": {
       "title": "لوحة التحكم",
@@ -679,6 +681,21 @@
       "languageArabic": "العربية",
       "languageEnglish": "الإنجليزية",
       "openInWhatsapp": "فتح في واتساب"
+    },
+    "analytics": {
+      "title": "الإحصائيات",
+      "subtitle": "الاستخدام عبر التطبيق والموقع — الزوار والمستخدمين المسجلين.",
+      "rangeLast30Days": "آخر 30 يومًا",
+      "totalEvents": "إجمالي الأحداث",
+      "guestEvents": "أحداث الزوار",
+      "identifiedEvents": "أحداث المستخدمين المسجلين",
+      "eventsByType": "الأحداث حسب النوع",
+      "colEventType": "نوع الحدث",
+      "colCount": "العدد",
+      "mostViewedTrips": "الأكثر مشاهدة من الرحلات",
+      "colTrip": "الرحلة",
+      "colViews": "المشاهدات",
+      "empty": "لا توجد أحداث مسجلة في هذه الفترة بعد."
     }
   }
 }

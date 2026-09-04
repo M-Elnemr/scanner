@@ -1207,6 +1207,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/analytics/most-viewed-trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mostViewedTrips"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/events-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["eventsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["audience"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2120,6 +2168,33 @@ export interface components {
             totalPages?: number;
             last?: boolean;
         };
+        ApiResponseListTripViewCount: {
+            data?: components["schemas"]["TripViewCount"][];
+        };
+        TripViewCount: {
+            /** Format: uuid */
+            tripId?: string;
+            tripTitle?: string;
+            /** Format: int64 */
+            count?: number;
+        };
+        ApiResponseListEventTypeCount: {
+            data?: components["schemas"]["EventTypeCount"][];
+        };
+        EventTypeCount: {
+            eventType?: string;
+            /** Format: int64 */
+            count?: number;
+        };
+        ApiResponseAudienceSplit: {
+            data?: components["schemas"]["AudienceSplit"];
+        };
+        AudienceSplit: {
+            /** Format: int64 */
+            guestEvents?: number;
+            /** Format: int64 */
+            identifiedEvents?: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -2881,6 +2956,13 @@ export interface operations {
                 departureFrom?: string;
                 departureTo?: string;
                 search?: string;
+                roomSize?: number;
+                minPrice?: number;
+                maxPrice?: number;
+                minDays?: number;
+                maxDays?: number;
+                cityId?: string;
+                departureAirportId?: string;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -4088,6 +4170,76 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseAuditLogResponse"];
+                };
+            };
+        };
+    };
+    mostViewedTrips: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListTripViewCount"];
+                };
+            };
+        };
+    };
+    eventsSummary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListEventTypeCount"];
+                };
+            };
+        };
+    };
+    audience: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAudienceSplit"];
                 };
             };
         };

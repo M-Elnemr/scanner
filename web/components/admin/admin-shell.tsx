@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   Building2,
   Compass,
   Hotel,
@@ -29,6 +30,7 @@ export function AdminShell({ user, children }: { user: CurrentUser; children: Re
     { href: "/admin/trips", label: t("nav.trips"), icon: Compass },
     { href: "/admin/hotels", label: t("nav.hotels"), icon: Hotel },
     { href: "/admin/leads", label: t("nav.leads"), icon: Ticket },
+    { href: "/admin/analytics", label: t("nav.analytics"), icon: BarChart3 },
   ];
 
   return (

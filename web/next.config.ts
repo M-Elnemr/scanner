@@ -5,6 +5,13 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async redirects() {
+    // /trips is the site's effective index — the marketing hero/featured-trips
+    // homepage is retired from routing (kept on disk, not deleted) in favor of
+    // landing straight on the live trip listing. Temporary (307) since this is
+    // a reversible product decision, not a permanent URL move.
+    return [{ source: "/", destination: "/trips", permanent: false }];
+  },
   images: {
     // Company logos and any future trip/hotel photos are served by the backend at /uploads/**.
     // Same origin in production (nginx proxies both under one host), so this pattern only matters

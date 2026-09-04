@@ -23,6 +23,7 @@ import { formatMoney } from "@/lib/format/money";
 import { HotelPhotoCarousel } from "@/components/trip/hotel-photo-carousel";
 import { PreserveFlow } from "@/components/trip/preserve-flow";
 import { FavouriteButton } from "@/components/trip/favourite-button";
+import { TrackPageView } from "@/components/analytics/track-page-view";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -109,6 +110,7 @@ export default async function TripDetailPage(props: PageProps<"/trips/[id]">) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <TrackPageView eventType="trip_view" entityType="TRIP" entityId={id} />
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
           <div className="relative h-56 overflow-hidden rounded-2xl sm:h-72">

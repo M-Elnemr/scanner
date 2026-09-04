@@ -19,10 +19,13 @@ public class AnalyticsEventController {
         this.analyticsEventService = analyticsEventService;
     }
 
+    // currentUser is null for a guest — this endpoint is permitAll (see SecurityConfig) so the
+    // request reaches here with no principal at all rather than being rejected upstream.
     @ResponseStatus(HttpStatus.ACCEPTED)
     @PostMapping("/api/v1/analytics/events")
     public void record(@AuthenticationPrincipal AuthenticatedUser currentUser, @Valid @RequestBody AnalyticsEventRequest request) {
         analyticsEventService.record(
-                currentUser.userId(), request.eventType(), request.entityType(), request.entityId(), request.metadata());
+                currentUser != null ? currentUser.userId() : null,
+                request.eventType(), request.entityType(), request.entityId(), request.metadata());
     }
 }

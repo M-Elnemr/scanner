@@ -141,8 +141,8 @@ public final class TripSpecifications {
 
     /**
      * Orders browse results by price, trip length, or both, falling back to a fixed default
-     * (longest trip first, then lowest price) when neither is requested. The price ordering left
-     * joins {@code roomPrices} filtered to {@code priceRoomType} so trips with no price row for that
+     * (lowest price first) when neither is requested. The price ordering left joins
+     * {@code roomPrices} filtered to {@code priceRoomType} so trips with no price row for that
      * type stay in the result set (sorted to whichever end the database puts nulls on) rather than
      * being dropped; trip length needs no join, it orders directly on the {@code durationDays}
      * column.
@@ -163,7 +163,6 @@ public final class TripSpecifications {
         return (root, query, cb) -> {
             List<Order> orders = new ArrayList<>();
             if (priceDirection == null && durationDirection == null) {
-                orders.add(cb.desc(root.get("durationDays")));
                 orders.add(priceOrder(root, cb, priceRoomType, Sort.Direction.ASC));
             } else {
                 if (priceDirection != null) {

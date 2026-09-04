@@ -4,7 +4,8 @@ import { Plus } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { apiClient } from "@/lib/auth/server";
 import { pageableQuery } from "@/lib/api/pageable";
-import { listApprovedCompanies } from "@/lib/admin/reference-data";
+import { listApprovedCompanies, listAirports } from "@/lib/admin/reference-data";
+import { listCities } from "@/lib/admin/cities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -12,8 +13,13 @@ import { TripStatusBadge } from "@/components/admin/trip-status-badge";
 import { TripRowActions } from "@/components/admin/trip-row-actions";
 import { CopyTripDetailsButton } from "@/components/admin/copy-trip-details-button";
 import { AdminFilterBar } from "@/components/admin/admin-filter-bar";
+import { AdvancedFilterSheet } from "@/components/trip/advanced-filter-sheet";
 import { TablePagination } from "@/components/admin/table-pagination";
 import { formatDate } from "@/lib/format/date";
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.pageTitle");
@@ -27,6 +33,18 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
   const companyId = typeof searchParams.companyId === "string" ? searchParams.companyId : undefined;
   const page = typeof searchParams.page === "string" ? Number(searchParams.page) : 0;
 
+  // Filter parity with the public /trips browse — see AdvancedFilterSheet, shared with the
+  // public page so the two can't drift on what these params mean.
+  const roomSize = firstParam(searchParams.roomSize) ? Number(firstParam(searchParams.roomSize)) : undefined;
+  const minPrice = firstParam(searchParams.minPrice) ? Number(firstParam(searchParams.minPrice)) : undefined;
+  const maxPrice = firstParam(searchParams.maxPrice) ? Number(firstParam(searchParams.maxPrice)) : undefined;
+  const minDays = firstParam(searchParams.minDays) ? Number(firstParam(searchParams.minDays)) : undefined;
+  const maxDays = firstParam(searchParams.maxDays) ? Number(firstParam(searchParams.maxDays)) : undefined;
+  const departureFrom = firstParam(searchParams.departureFrom);
+  const departureTo = firstParam(searchParams.departureTo);
+  const cityId = firstParam(searchParams.cityId);
+  const departureAirportId = firstParam(searchParams.departureAirportId);
+
   const t = await getTranslations("admin.trips");
   const tStatus = await getTranslations("admin.tripStatus");
   const locale = (await getLocale()) as "ar" | "en";
@@ -36,22 +54,35 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
   }));
 
   const api = await apiClient();
-  const [result, companies] = await Promise.all([
+  const [result, companies, cities, airports] = await Promise.all([
     api.GET("/api/v1/admin/trips", {
       params: {
         query: {
           ...(status ? { status: status as "DRAFT" | "PUBLISHED" | "CLOSED" | "EXPIRED" } : {}),
           ...(search ? { search } : {}),
           ...(companyId ? { companyId } : {}),
+          roomSize,
+          minPrice,
+          maxPrice,
+          minDays,
+          maxDays,
+          departureFrom,
+          departureTo,
+          cityId,
+          departureAirportId,
           ...pageableQuery(page, 20, "departureDate,desc"),
         },
       },
       cache: "no-store",
     }),
     listApprovedCompanies(),
+    listCities(),
+    listAirports(),
   ]);
   const pageData = result.data?.data;
   const trips = pageData?.content ?? [];
+  // Same carve-out as the public /trips page: only the Egyptian leg is ever a departure airport.
+  const departureAirports = airports.filter((a) => a.countryIso2 === "EG");
 
   return (
     <div className="space-y-6">
@@ -65,11 +96,14 @@ export default async function AdminTripsPage(props: PageProps<"/admin/trips">) {
         </Button>
       </div>
 
-      <AdminFilterBar
-        statusOptions={STATUS_OPTIONS}
-        searchPlaceholder={t("searchPlaceholder")}
-        companyOptions={companies.map((c) => ({ value: c.id, label: c.name }))}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <AdminFilterBar
+          statusOptions={STATUS_OPTIONS}
+          searchPlaceholder={t("searchPlaceholder")}
+          companyOptions={companies.map((c) => ({ value: c.id, label: c.name }))}
+        />
+        <AdvancedFilterSheet pathname="/admin/trips" cities={cities} airports={departureAirports} />
+      </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-background">
         <Table>

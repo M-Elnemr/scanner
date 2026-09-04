@@ -337,7 +337,8 @@
       "companies": "Companies",
       "trips": "Trips",
       "hotels": "Hotels",
-      "leads": "Leads"
+      "leads": "Leads",
+      "analytics": "Analytics"
     },
     "pageTitle": {
       "dashboard": "Dashboard",
@@ -349,7 +350,8 @@
       "leadDetail": "Lead detail · Admin",
       "trips": "Trips · Admin",
       "tripNew": "New trip · Admin",
-      "tripEdit": "Edit trip · Admin"
+      "tripEdit": "Edit trip · Admin",
+      "analytics": "Analytics · Admin"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -679,6 +681,21 @@
       "languageArabic": "Arabic",
       "languageEnglish": "English",
       "openInWhatsapp": "Open in WhatsApp"
+    },
+    "analytics": {
+      "title": "Analytics",
+      "subtitle": "Usage across the app and website — guests and signed-in users.",
+      "rangeLast30Days": "Last 30 days",
+      "totalEvents": "Total events",
+      "guestEvents": "Guest events",
+      "identifiedEvents": "Signed-in events",
+      "eventsByType": "Events by type",
+      "colEventType": "Event type",
+      "colCount": "Count",
+      "mostViewedTrips": "Most viewed trips",
+      "colTrip": "Trip",
+      "colViews": "Views",
+      "empty": "No events recorded in this period yet."
     }
   }
 }

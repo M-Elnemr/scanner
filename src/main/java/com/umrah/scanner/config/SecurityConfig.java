@@ -1,5 +1,6 @@
 package com.umrah.scanner.config;
 
+import com.umrah.scanner.analytics.infrastructure.AnalyticsRateLimitFilter;
 import com.umrah.scanner.auth.infrastructure.JjwtAccessTokenIssuer;
 import com.umrah.scanner.auth.infrastructure.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
@@ -45,6 +46,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.POST, API_V1 + "/auth/google", API_V1 + "/auth/refresh", API_V1 + "/auth/logout")
                             .permitAll()
+                            // Guest browsing is tracked too — a missing Authorization header
+                            // just means AnalyticsEventController records a null userId, see
+                            // its own comment. Rate-limited by AnalyticsRateLimitFilter since
+                            // this is now reachable with no auth at all.
+                            .requestMatchers(HttpMethod.POST, API_V1 + "/analytics/events")
+                            .permitAll()
                             // Reference lists are fixed lookup data with nothing sensitive in them, and the
                             // trip form needs them before a company has necessarily authenticated.
                             .requestMatchers(HttpMethod.GET, API_V1 + "/trips/**", API_V1 + "/companies/*/ratings",
@@ -67,7 +74,8 @@ public class SecurityConfig {
                                 writeJsonError(response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized", ex.getMessage()))
                         .accessDeniedHandler((request, response, ex) ->
                                 writeJsonError(response, objectMapper, HttpServletResponse.SC_FORBIDDEN, "Forbidden", ex.getMessage())))
-                .addFilterBefore(new JwtAuthenticationFilter(accessTokenIssuer, objectMapper), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(accessTokenIssuer, objectMapper), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new AnalyticsRateLimitFilter(), JwtAuthenticationFilter.class);
 
         return http.build();
     }

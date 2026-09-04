@@ -8,6 +8,7 @@ import { FilterBar } from "@/components/trip/filter-bar";
 import { TripGrid } from "@/components/trip/trip-grid";
 import { TripPagination } from "@/components/trip/trip-pagination";
 import { CompareTray } from "@/components/trip/compare-tray";
+import { TrackPageView } from "@/components/analytics/track-page-view";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("trips");
@@ -79,6 +80,12 @@ export default async function TripsPage(props: PageProps<"/trips">) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      {/* No separate "home view" event — "/" redirects here (see next.config.ts), so this page
+          is the site's effective landing page too. */}
+      <TrackPageView
+        eventType="trips_view"
+        metadata={{ tiers, roomSize, minPrice, maxPrice, priceSort, durationSort, page }}
+      />
       <div className="mb-8 flex flex-col gap-4">
         <div>
           <h1 className="font-heading text-3xl font-bold tracking-tight">{t("title")}</h1>

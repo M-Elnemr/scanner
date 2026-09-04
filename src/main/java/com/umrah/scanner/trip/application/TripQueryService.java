@@ -156,6 +156,19 @@ public class TripQueryService {
         if (filter.search() != null && !filter.search().isBlank()) {
             specs.add(TripSpecifications.titleOrCodeContains(filter.search()));
         }
+        if (filter.minNights() != null || filter.maxNights() != null) {
+            specs.add(TripSpecifications.durationBetween(filter.minNights(), filter.maxNights()));
+        }
+        if (filter.minPrice() != null || filter.maxPrice() != null) {
+            RoomType roomType = filter.priceRoomType() != null ? filter.priceRoomType() : RoomType.QUAD;
+            specs.add(TripSpecifications.priceForRoomTypeBetween(roomType, filter.minPrice(), filter.maxPrice()));
+        }
+        if (filter.companyCityId() != null) {
+            specs.add(TripSpecifications.companyInCity(filter.companyCityId()));
+        }
+        if (filter.departureAirportId() != null) {
+            specs.add(TripSpecifications.hasOutboundDepartureAirport(filter.departureAirportId()));
+        }
         return tripRepository.findAll(Specification.allOf(specs), pageable);
     }
 

@@ -10,12 +10,14 @@ import com.umrah.scanner.trip.application.DeleteTripUseCase;
 import com.umrah.scanner.trip.application.ReassignTripCompanyUseCase;
 import com.umrah.scanner.trip.application.TripQueryService;
 import com.umrah.scanner.trip.application.UpdateTripUseCase;
+import com.umrah.scanner.trip.domain.RoomType;
 import com.umrah.scanner.trip.domain.Trip;
 import com.umrah.scanner.trip.domain.TripStatus;
 import com.umrah.scanner.trip.domain.TripTier;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -119,8 +121,21 @@ public class AdminTripController {
             @RequestParam(required = false) LocalDate departureFrom,
             @RequestParam(required = false) LocalDate departureTo,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer roomSize,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            // Same "whole trip days" convention as the public browse endpoint — converted to
+            // nights below before filtering.
+            @RequestParam(required = false) Integer minDays,
+            @RequestParam(required = false) Integer maxDays,
+            @RequestParam(required = false) UUID cityId,
+            @RequestParam(required = false) UUID departureAirportId,
             Pageable pageable) {
-        var filter = new AdminTripFilter(companyId, status, tier, departureFrom, departureTo, search);
+        var filter = new AdminTripFilter(
+                companyId, status, tier, departureFrom, departureTo, search,
+                RoomType.forSize(roomSize), minPrice, maxPrice,
+                minDays != null ? minDays - 1 : null, maxDays != null ? maxDays - 1 : null,
+                cityId, departureAirportId);
         Page<Trip> trips = tripQueryService.listForAdmin(filter, pageable);
         return ApiResponse.of(PageResponse.of(trips, AdminTripSummaryResponse::from));
     }

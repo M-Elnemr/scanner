@@ -163,7 +163,7 @@ public class TripController {
             @RequestParam(required = false) String durationSort,
             Pageable pageable) {
         var filter = new TripBrowseFilter(
-                tiers, roomTypeForSize(roomSize), minPrice, maxPrice,
+                tiers, RoomType.forSize(roomSize), minPrice, maxPrice,
                 minDays != null ? minDays - 1 : null, maxDays != null ? maxDays - 1 : null,
                 departureFrom, departureTo, cityId, departureAirportId,
                 parseSortDirection(priceSort, "priceSort"), parseSortDirection(durationSort, "durationSort"));
@@ -172,22 +172,6 @@ public class TripController {
         Map<UUID, TripHotelPhotos> hotelPhotos = tripQueryService.hotelPhotos(tripIds(trips));
         return ApiResponse.of(PageResponse.of(trips, trip -> TripSummaryResponse.from(
                 trip, priceStartsFrom.get(trip.getId()), hotelPhotos.getOrDefault(trip.getId(), TripHotelPhotos.EMPTY))));
-    }
-
-    // "Room size" is the customer-facing term for how many people the room sleeps; null defaults
-    // to QUAD (4-bed), the same room type "price starts from" is based on.
-    private RoomType roomTypeForSize(Integer roomSize) {
-        if (roomSize == null) {
-            return null;
-        }
-        return switch (roomSize) {
-            case 1 -> RoomType.SINGLE;
-            case 2 -> RoomType.DOUBLE;
-            case 3 -> RoomType.TRIPLE;
-            case 4 -> RoomType.QUAD;
-            case 5 -> RoomType.QUINT;
-            default -> throw new ValidationException("roomSize must be 1, 2, 3, 4, or 5");
-        };
     }
 
     private Sort.Direction parseSortDirection(String value, String paramName) {

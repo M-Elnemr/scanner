@@ -17,6 +17,11 @@ public class AnalyticsEventService {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsEventService.class);
 
+    // metadata is the one unbounded field on this request — now that the endpoint also accepts
+    // unauthenticated (guest) traffic, a caller could otherwise attach an arbitrarily large blob.
+    // Truncated rather than rejected: a best-effort analytics write never fails the caller.
+    private static final int MAX_METADATA_JSON_LENGTH = 2048;
+
     private final AnalyticsEventRepository analyticsEventRepository;
     private final ObjectMapper objectMapper;
 
@@ -33,10 +38,18 @@ public class AnalyticsEventService {
             event.setEventType(eventType);
             event.setEntityType(entityType);
             event.setEntityId(entityId);
-            event.setMetadata(metadata == null || metadata.isEmpty() ? null : objectMapper.writeValueAsString(metadata));
+            event.setMetadata(serializeMetadata(metadata));
             analyticsEventRepository.save(event);
         } catch (RuntimeException e) {
             log.warn("Discarding analytics event {} — failed to record", eventType, e);
         }
+    }
+
+    private String serializeMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+        String json = objectMapper.writeValueAsString(metadata);
+        return json.length() > MAX_METADATA_JSON_LENGTH ? null : json;
     }
 }
